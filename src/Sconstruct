@@ -1,0 +1,52 @@
+# Comment lines start with the # symbol
+# The following sets up an Compile Environment Object with gfortran as the linker.
+env = Environment(F90='gfortran',LINK='gfortran',LINKFLAGS='-Ofast -funroll-loops -march=native',F90FLAGS='-Ofast -funroll-loops -march=native')  # Initialize the environment
+# The next line of code is an array of the source files names used in the program.
+sources = [
+'advect.f90',
+'backup_phi_c_plus_c_minus.f90',
+'check_charge_distribution_equilibrium.f90',
+'close_simu.f90',
+'comp_j.f90',
+'comp_rho.f90',
+'drop_tracers.f90',
+'electrostatic_pot.f90',
+'equilibration_with_constraints.f90',
+'equilibration_without_constraint.f90',
+'execution_timer.f90',
+'init_simu.f90',
+'just_eq_smolu.f90',
+'main.f90',
+'mod_charges.f90',
+'mod_constants.f90',
+'mod_geometry.f90',
+'mod_input.f90',
+'mod_moment_propagation.f90',
+'mod_parallel.f90',
+'mod_populations.f90',
+'mod_precision_kinds.f90',
+'mod_supercell.f90',
+'mod_system.f90',
+'poisson_nernst_planck.f90',
+'print4darray.f90',
+'print_everything_related_to_charge_equil.f90',
+'print_header.f90',
+'print_input_in_output_folder.f90',
+'print_vacf.f90',
+'propagation.f90',
+'put_input_in_character_array.f90',
+'read_charge_distrib.f90',
+'read_elec_slope.f90',
+'read_f_ext.f90',
+'read_lambda_d.f90',
+'read_lncb_slope.f90',
+'smolu.f90',
+'sor.f90',
+'supercell_definition.f90',
+'velocity_profiles.f90',
+'write_to_cube_file.f90'
+]
+
+# The next line is the actual code that links the executable. env.Program generates an executable
+
+objs = env.Program('laboetie', sources)

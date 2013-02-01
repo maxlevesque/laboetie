@@ -1,0 +1,67 @@
+################################################################################
+# LaBo INPUT FILE
+################################################################################
+
+lx = 5
+ly = 5
+lz = 50
+
+rho_0 = 1.0 # fluid density in LB units
+f_ext = 0.0 0.0 0.0 # external force
+
+# time starts at -D_equil => -1: equilibration without constraint nor flux, ie charge equilibration only
+# then 0 => t_equil: equilibration without constraint but solvent flux, ie no applied forces but non-zero flux
+# then t_equil+1 => tmom-1: full evolution with constraints
+# then tmom => tmax: moment propagation
+
+D_equil = 10 # number of steps for equilibrating charges (finding PB solution). 1 if charge (salt) free fluid.
+t_equil = 20 # number of steps for equilibrating the flux without constraints
+tmom = 30 # between t_equil and tmom, constraints are applieds (pression, electric field,...)
+tmax = 5000 # between tmom and tmax, moment propagation is done
+
+delta = 0.1
+
+restart = 0
+write = 1
+
+stripes = 0.0 0.0 0.0
+wall = 1 # 1 for two walls normal to Z
+         # 2 for a cylinder along Z. lx have to be equal to ly.
+         # 3 for a body centered cubic cell with solid spheres in contact
+         # 4 for a face centered cubic cell with solid spheres in contact
+PorousMedia = 0 # 0 for free fluid
+
+################################################################################
+# charge of the solid
+################################################################################
+charge_distrib = int # sol) charge distributed in the whole solid. int) charge distributed on interfacial nodes only
+sigma = 0.0 # charge distributed in solid
+bjl = 0.4 # bjerum length
+lambda_D = -2.0 # old debye_l
+
+D_plus = 0.05
+D_minus = 0.05
+D_iter = 1
+
+
+################################################################################
+# Moment Propagation
+################################################################################
+D_tracer = 0.01
+z_tracer = 0.0
+tracer_ka = 0.1
+tracer_kd = 0.001
+
+
+
+################################################################################
+# Useless for now
+################################################################################
+c_tracer_0 = 0.1
+left wall vel = 0.0
+right wall vel = 0.0
+Tprint_eq = 1000
+Tprint_run = 10000
+elec_slope = 0.0 0.0 0.0 # external electric field
+lncb_slope = 0.0 0.0 0.0 # external gradient of salt concentration 
+f_gen = 0.0 0.0 0.0
