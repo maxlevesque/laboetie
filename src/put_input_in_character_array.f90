@@ -9,7 +9,7 @@ subroutine put_input_in_character_array
   integer ( kind = i2b ) :: ios ! input output status of readen file
   character ( len = 100 ) :: text ! temporary input line
   character ( len = 100 ) , allocatable , dimension ( : ):: arraytemp  ! Temporary array to stock data for resizing input_line
-  character( len = len('input/lb.in') ), parameter :: inputfilename = "input/lb.in"
+  character( len = len('lb.in') ), parameter :: inputfilename = "lb.in"
   integer(kind=i2b) :: totalnumberofinputlines
 
   ! open the file in which you have all inputs

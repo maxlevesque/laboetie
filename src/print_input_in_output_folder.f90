@@ -11,7 +11,7 @@ subroutine print_input_in_output_folder
   integer(kind=i2b) :: i ! dummy for loop
  
   ! open file to write in
-  open( unit = 99 , file='output/input.out' )
+  open( unit = 99 , file='output/lb.in' )
 
   ! print each line of input_line()
   do i = 1 , size( input_line )

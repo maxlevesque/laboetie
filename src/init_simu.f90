@@ -5,18 +5,17 @@ subroutine init_simu
   ! print header
   call print_header
 
-  ! check that input, output folder and file ./input/lb.in exist
+  ! check that input, output folder and file ./lb.in exist
 block
   logical :: file_exists
-  inquire(file="./input/.", exist=file_exists)
-  if( .not. file_exists) stop "./input folder does not exist"
   inquire(file="./output/.", exist=file_exists)
   if( .not. file_exists) then
     print*,"./output folder does not exist. I create one."
+    ! the system should be linux TODO TEST LINUX OR MAC DERIVATIVE HERE
     call system('mkdir -p output') ! -p do not print error if exist and create parent directory if needed
   end if
-  inquire(file="./input/lb.in", exist=file_exists)
-  if( .not. file_exists) stop "./input/lb.in does not exist"
+  inquire(file="./lb.in", exist=file_exists)
+  if( .not. file_exists) stop "./lb.in does not exist"
 end block
 
   ! go read the input file(s) and put everything in a character array
