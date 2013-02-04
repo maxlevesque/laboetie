@@ -19,10 +19,9 @@ t_equil = 20 # number of steps for equilibrating the flux without constraints
 tmom = 30 # between t_equil and tmom, constraints are applieds (pression, electric field,...)
 tmax = 5000 # between tmom and tmax, moment propagation is done
 
-delta = 0.1
-
-restart = 0
-write = 1
+#delta = 0.1
+#restart = 0
+#write = 1
 
 stripes = 0.0 0.0 0.0
 wall = 1 # 1 for two walls normal to Z

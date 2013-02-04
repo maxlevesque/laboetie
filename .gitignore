@@ -1,0 +1,4 @@
+laboetie
+*.o
+src/.sconsign.dblite
+output

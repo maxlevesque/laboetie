@@ -3,7 +3,6 @@ subroutine equilibration_with_constraints
   use precision_kinds, only: i2b, dp
   use system, only: tmom, D_iter, t_equil, time, jx, jy, jz, rho, inside, fluid, sigma, lx, ly, lz
   use populations, only: calc_n
-  use charges, only: charge_conservation
 
   implicit none
   integer(i2b) :: i
@@ -53,7 +52,7 @@ subroutine equilibration_with_constraints
         call sor ! TODO ! compute phi with sucessive overrelaxation method     
         call electrostatic_pot ! sum the electrostatic potential due to internal charges to the external field imposed by elec_slope_x:z
         call smolu ! Smoluchowski
-        if( .not. charge_conservation() ) stop 'charge not conserved'
+        call charge_test ! make sure charge is kept constant during simulation
       end do
     end if
 

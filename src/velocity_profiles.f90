@@ -1,6 +1,6 @@
 SUBROUTINE VELOCITY_PROFILES (time)
   use precision_kinds, only : i2b, dp
-  use system, only: jx, rho
+  use system, only: jx, jy, jz, rho
   use constants, only : x
   implicit none
   integer(i2b), intent(in) :: time

@@ -28,7 +28,7 @@ module system
 
   ! fluid related
   integer(i2b), allocatable, dimension(:,:,:) :: inside ! fluid or solid at each node
-!  real(dp), allocatable, dimension(:,:,:,:) :: normal_c ! TODO REMOVE CERTAINLY. DONT KNOW WHAT IS FOR.
+  real(dp), allocatable, dimension(:,:,:,:) :: normal_c
   real(dp), allocatable, dimension(:,:,:,:) :: normal ! nfft1, nfft2, nfft3, 3
   real(dp) :: rho_0 ! solvent density in the bulk
   real(dp), allocatable, dimension(:,:,:,:) :: n ! population :(lx,ly,lz,velocities)
@@ -87,11 +87,7 @@ module system
   real(dp) :: elec_slope_x, elec_slope_y, elec_slope_z
   real(dp) :: el_curr_x, el_curr_y, el_curr_z
   real(dp) :: ion_curr_x, ion_curr_y, ion_curr_z
-  type type_solute
-    real(dp) :: density
-  end type
-  type(type_solute) :: solute
-
+  real(dp) :: rho_ch ! charge density?
 
   ! external force given by user
   real(dp), dimension(x:z) :: f_ext ! external force (constraints) applied to flux

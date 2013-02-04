@@ -9,8 +9,6 @@ subroutine equilibration_without_constraint
                      elec_slope_x, elec_slope_y, elec_slope_z,&
                      lncb_slope_x, lncb_slope_y, lncb_slope_z
   use populations, only: calc_n
-  use charges, only: charge_conservation
-
   implicit none
   integer(kind=i2b) :: iteration
 
@@ -59,7 +57,7 @@ subroutine equilibration_without_constraint
       ! this time full smolu, not just_equ_smolu
       call smolu
       ! check charge conservation
-      if ( .not. charge_conservation() ) stop 'solute charge not conserved'
+      call charge_test
     end do
 
   end do timeloop

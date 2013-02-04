@@ -1,6 +1,4 @@
-SUBROUTINE INIT_SIMU
-
-  use charges, only: charges_init
+subroutine init_simu
 
   implicit none
 
@@ -8,16 +6,24 @@ SUBROUTINE INIT_SIMU
   call print_header
 
   ! check that input, output folder and file ./input/lb.in exist
-  call check_files
+block
+  logical :: file_exists
+  inquire(file="./input/.", exist=file_exists)
+  if( .not. file_exists) stop "./input folder does not exist"
+  inquire(file="./output/.", exist=file_exists)
+  if( .not. file_exists) then
+    print*,"./output folder does not exist. I create one."
+    call system('mkdir -p output') ! -p do not print error if exist and create parent directory if needed
+  end if
+  inquire(file="./input/lb.in", exist=file_exists)
+  if( .not. file_exists) stop "./input/lb.in does not exist"
+end block
 
   ! go read the input file(s) and put everything in a character array
   call put_input_in_character_array
 
   ! Print input parameters found to output folder
   call print_input_in_output_folder
-
-!  ! get informations relative to space decomposition, ie relative to parallelization
-!  call 
 
   ! prepare supercell geometry
   call supercell_definition ! porousmedia, inside_model, lx, ly, lz
@@ -31,32 +37,17 @@ SUBROUTINE INIT_SIMU
   ! init charge distribution
   call charges_init
 
-CONTAINS
+end subroutine init_simu
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-SUBROUTINE CHECK_FILES
-  implicit none
-  logical :: file_exists
-  inquire(file="./input/.", exist=file_exists)
-  if( .not. file_exists) stop "./input folder does not exist"
-  inquire(file="./output/.", exist=file_exists)
-  if( .not. file_exists) then
-    print*,"./output folder does not exist. I create one."
-    call system('mkdir -p output') ! -p do not print error if exist and create parent directory if needed
-  end if
-  inquire(file="./input/lb.in", exist=file_exists)
-  if( .not. file_exists) stop "./input/lb.in does not exist"
-END SUBROUTINE CHECK_FILES
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-END SUBROUTINE INIT_SIMU
+
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-SUBROUTINE INIT_MOMENTS_FOR_LB
+subroutine init_moments_for_LB
 
   use precision_kinds, only: dp
   use system, only: rho_0, jx, jy, jz, lx, ly, lz, rho, n, NbVel
@@ -76,11 +67,11 @@ SUBROUTINE INIT_MOMENTS_FOR_LB
   ! put rho_0 as init for density array rho
   allocate( rho(lx,ly,lz), source=rho_0 )
 
-END SUBROUTINE INIT_MOMENTS_FOR_LB
+end subroutine init_moments_for_LB
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-SUBROUTINE SCHEDULER
+subroutine scheduler
   use precision_kinds, only: i2b
   use system, only: t_equil, tmom, tmax, D_iter, time
   use input, only: input_int
@@ -115,4 +106,4 @@ SUBROUTINE SCHEDULER
     stop 'tracer moment propagation should come after equilibration.tmom should be >= t_equil. check input file.'
   end if
 
-END SUBROUTINE SCHEDULER
+end subroutine scheduler
