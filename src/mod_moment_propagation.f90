@@ -11,7 +11,6 @@ MODULE MOMENT_PROPAGATION
   real(dp), allocatable, dimension(:,:,:,:,:) :: Propagated_Quantity_Adsorbed
   integer(i2b), parameter :: now=0, next=1, past=-1
   real(dp), dimension(x:z, past:next) :: vacf
-  real(dp), dimension(x:z), save :: int_vacf
   real(dp) :: lambda
   TYPE TYPE_TRACER
     real(dp) :: ka, kd, K, z, D !K=ka/kd, z=tracer charge
@@ -66,13 +65,13 @@ SUBROUTINE INIT
       Propagated_Quantity(:,i,j,k,now) = Propagated_Quantity(:,i,j,k,now) &
                  + exp_min_dphi * scattprop_p * c(:,l_inv) * boltz_weight
     end do
-    if(is_interfacial(i,j,k)) Propagated_Quantity_Adsorbed(:,i,j,k,now) = 0.0_dp!MAX tracer%K * boltz_weight
+    if(is_interfacial(i,j,k)) Propagated_Quantity_Adsorbed(:,i,j,k,now) = 0.0_dp
   end do
 
   print*, 0, vacf(x,past), vacf(y,past), vacf(z,past)
   open(unit=99, file='output/vacf.dat')
-  write(99,*)'# time t, VACF_x(t), VACF_y(t), VACF_z(t), Integrate[vacf_x,t], Integrate[vacf_y,t], Integrate[vacf_z,t]'
-  write(99,*) 0, vacf(x,past), vacf(y,past), vacf(z,past), 0.0_dp, 0.0_dp, 0.0_dp ! time, vacf_x, vacf_y, vacf_z, int_vacf_x, int_vacf_y, int_vacf_z
+  write(99,*)'# time t, VACF_x(t), VACF_y(t), VACF_z(t)'
+  write(99,*) 0, vacf(x,past), vacf(y,past), vacf(z,past)
   close(99)
 END SUBROUTINE INIT
 
@@ -137,10 +136,8 @@ SUBROUTINE PROPAGATE(it)
   Propagated_Quantity_Adsorbed(:,:,:,:,now) = Propagated_Quantity_Adsorbed(:,:,:,:,next)
   Propagated_Quantity_Adsorbed(:,:,:,:,next) = 0.0_dp
 
-  int_vacf(:) = int_vacf(:)+ 0.5_dp*(vacf(:,now)+vacf(:,past)) ! trapeze integration
-
   open(unit=99, file='output/vacf.dat', access='append')
-  write(99,*) it, vacf(x,now), vacf(y,now), vacf(z,now), int_vacf(x), int_vacf(y), int_vacf(z)
+  write(99,*) it, vacf(x,now), vacf(y,now), vacf(z,now)
 
   vacf(:,past) = vacf(:,now)
   vacf(:,now) = 0.0_dp

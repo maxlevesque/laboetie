@@ -1,3 +1,7 @@
+obj
+src/*.mod
+*.mod
+.sconsign.dblite
 laboetie
 *.o
 src/.sconsign.dblite

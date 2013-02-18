@@ -88,5 +88,9 @@ lb.in
  For now, almost everything is in this file.
 \end_layout
 
+\begin_layout Section
+Media file : media.in
+\end_layout
+
 \end_body
 \end_document
