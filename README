@@ -11,3 +11,14 @@ There is a license associated to this program. Read the LICENSE file.
 
 
 Github originaly created on 2013/02/01.
+
+
+
+HOW TO BUILD
+------------
+
+You need to have scons installed. It is a modern "make" with much easier syntax and above all a very good dependence tracking.
+Once installed, just type:
+$ scons
+
+That's all.
