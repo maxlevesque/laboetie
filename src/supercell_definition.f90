@@ -1,7 +1,7 @@
 ! Here we define the supercell: where are solid nodes and where are liquid nodes.
 subroutine supercell_definition
 
-  use precision_kinds, only: i2b, dp
+  use precision_kinds!, only: i2b, dp
   use constants, only: x, y, z
   use system, only: wall, fluid, solid, lx, ly, lz, inside, &
                     normal, normal_c, a1, c, NbVel,&
@@ -11,7 +11,7 @@ subroutine supercell_definition
                        check_that_all_nodes_are_wether_fluid_or_solid,&
                        define_periodic_boundary_conditions
   use input, only: input_int
-  use geometry, only: construct_wall, construct_cylinder, construct_cc
+  use geometry, only: construct_slit, construct_cylinder, construct_cc, construct_disc_benichou
 
   implicit none
   integer(kind=i2b) :: i, j, k, ip, jp, kp, l !dummy
@@ -31,13 +31,15 @@ subroutine supercell_definition
   ! construct medium geometry
   select case (wall)
   case (1) ! wall = 1 is two solid walls normal to Z axis.
-    call construct_wall(inside)
-
+    call construct_slit
   case (2) ! wall = 2 => cylinder around Z axis.
-    call construct_cylinder(inside)
-
+    call construct_cylinder
   case (3) ! wall = 3 => solid spheres in cubic face centred unit cell with at contact
-    call construct_cc(inside)
+    call construct_cc
+  case (4) ! wall = 4 => benichou disc with exists
+    call construct_disc_benichou
+  case default
+    stop 'wall should be 1, 2 or 3 only'
   end select
 
   ! counts number of solid and fluid nodes
@@ -61,7 +63,7 @@ subroutine supercell_definition
       end do
     end do
   end do
-  close( 99)
+  close(99)
 
   ! localise interface and define its normal vector
   allocate( normal( lx, ly, lz, x:z),source=0.0_dp ) ! vector normal to interface

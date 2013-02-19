@@ -4,7 +4,7 @@
 
 module system
 
-  use precision_kinds, only: i2b, dp
+  use precision_kinds
   use constants, only : x, y, z
   implicit none
 
@@ -21,13 +21,12 @@ module system
   ! supercell geometry related
   integer(i2b) :: PorousMedia
   integer(i2b) :: wall
-  integer(i2b) :: inside_model
   integer(i2b) :: lx, ly, lz
-  integer(i2b), parameter :: fluid=0, solid=1
+  integer(i0b), parameter :: fluid=0, solid=1
   integer(i2b), parameter :: NbVel=19 ! D3Q19 lattice
 
   ! fluid related
-  integer(i2b), allocatable, dimension(:,:,:) :: inside ! fluid or solid at each node
+  integer(i0b), allocatable, dimension(:,:,:) :: inside ! fluid or solid at each node
   real(dp), allocatable, dimension(:,:,:,:) :: normal_c
   real(dp), allocatable, dimension(:,:,:,:) :: normal ! nfft1, nfft2, nfft3, 3
   real(dp) :: rho_0 ! solvent density in the bulk

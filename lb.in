@@ -2,9 +2,9 @@
 # LaBo INPUT FILE
 ################################################################################
 
-lx = 5
-ly = 5
-lz = 50
+lx = 100
+ly = 100
+lz = 1
 
 rho_0 = 1.0 # fluid density in LB units
 f_ext = 0.0 0.0 0.0 # external force
@@ -17,17 +17,17 @@ f_ext = 0.0 0.0 0.0 # external force
 D_equil = 10 # number of steps for equilibrating charges (finding PB solution). 1 if charge (salt) free fluid.
 t_equil = 20 # number of steps for equilibrating the flux without constraints
 tmom = 30 # between t_equil and tmom, constraints are applieds (pression, electric field,...)
-tmax = 5000 # between tmom and tmax, moment propagation is done
+tmax = 10000 # between tmom and tmax, moment propagation is done
 
 #delta = 0.1
 #restart = 0
 #write = 1
 
 stripes = 0.0 0.0 0.0
-wall = 1 # 1 for two walls normal to Z
+wall = 2 # 1 for a slit, i.e. two walls at z=zmin and z=zmax
          # 2 for a cylinder along Z. lx have to be equal to ly.
          # 3 for a body centered cubic cell with solid spheres in contact
-         # 4 for a face centered cubic cell with solid spheres in contact
+         # 4 for disc benichou with exists at 0, 3, 6 and 9 oclock
 PorousMedia = 0 # 0 for free fluid
 
 ################################################################################
@@ -46,10 +46,10 @@ D_iter = 1
 ################################################################################
 # Moment Propagation
 ################################################################################
-D_tracer = 0.01
+D_tracer = 0.05
 z_tracer = 0.0
-tracer_ka = 0.1
-tracer_kd = 0.001
+tracer_ka = 0.0
+tracer_kd = 0.0
 
 
 

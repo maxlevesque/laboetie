@@ -1,44 +1,32 @@
 MODULE GEOMETRY
   use precision_kinds, only: dp, i2b
-  use system, only: lx, ly, lz, fluid, solid
+  use system, only: lx, ly, lz, fluid, solid, inside
   implicit none
   private
-  public construct_wall, construct_cylinder, construct_cc
+  public construct_slit, construct_cylinder, construct_cc, construct_disc_benichou
 
 CONTAINS
 
-SUBROUTINE CONSTRUCT_WALL(inside)
-  implicit none
-  integer(i2b), dimension(:,:,:), intent(out) :: inside
+
+
+
+SUBROUTINE CONSTRUCT_SLIT
+  integer(i2b) :: mi, ma
+  mi = lbound(inside,3)
+  ma = ubound(inside,3)
   inside = fluid
-  inside( :, :, lbound(inside,3)) = solid ! the lower bound of the thrid dimension of inside is solid
-  inside( :, :, ubound(inside,3)) = solid ! so is the upper bound
-END SUBROUTINE CONSTRUCT_WALL
+  inside( :, :, mi) = solid ! the lower bound of the thrid dimension of inside is solid
+  inside( :, :, ma) = solid ! so is the upper bound
+END SUBROUTINE CONSTRUCT_SLIT
 
-SUBROUTINE CONSTRUCT_CYLINDER(inside)
+
+
+
+
+
+
+SUBROUTINE CONSTRUCT_CC
   implicit none
-  integer(i2b), dimension(:,:,:), intent(out) :: inside
-  real(dp) :: radius ! radius of cylinder
-  real(dp), dimension(2) :: rnode, rorigin ! coordinates of each node and center of cylinder in x,y coordinates
-  integer(i2b) :: i, j ! dummy
-
-  if( lx /= ly) stop 'wall=2 is for cylinders, which should have same lx and ly'
-  rorigin = (/ real(lx,dp)/2.0_dp, real(ly,dp)/2.0_dp /)
-  radius = real(lx,dp)/2.0_dp
-
-  do concurrent (i=lbound(inside,1):ubound(inside,1), j=lbound(inside,2):ubound(inside,2))
-    rnode = (/ i, j /)
-    if( norm2(rnode-rorigin) > radius ) then
-      inside(i,j,:) = solid
-    else
-      inside(i,j,:) = fluid
-    end if
-  end do
-END SUBROUTINE CONSTRUCT_CYLINDER
-
-SUBROUTINE CONSTRUCT_CC(inside)
-  implicit none
-  integer(i2b), dimension(:,:,:), intent(out) :: inside
   integer(i2b) :: i,j,k ! dummy
   if( lx /= ly .or. lx /= lz ) stop 'with wall = 3, i.e. cfc cell, the supercell should be cubic with lx=ly=lz'
   inside = fluid
@@ -71,5 +59,83 @@ SUBROUTINE CONSTRUCT_CC(inside)
       end if
     END FUNCTION IS_IN_SOLID_SPHERE
 END SUBROUTINE CONSTRUCT_CC
+
+
+
+
+
+
+
+SUBROUTINE CONSTRUCT_CYLINDER
+  implicit none
+  real(dp) :: radius ! radius of cylinder
+  real(dp), dimension(2) :: rnode, rorigin ! coordinates of each node and center of cylinder in x,y coordinates
+  integer(i2b) :: i, j ! dummy
+
+  if( lx /= ly) stop 'wall=2 is for cylinders, which should have same lx and ly'
+  rorigin = [ real(lx+1,dp)/2.0_dp, real(ly+1,dp)/2.0_dp ]
+  radius = real(lx-1,dp)/2.0_dp
+
+  do i = 1, lx
+    do j = 1, ly
+      rnode = [real(i,dp),real(j,dp)] - rorigin
+      if( norm2(rnode) >= radius ) then ! = radius is important because without it one has exists
+        inside(i,j,:) = solid
+      else
+        inside(i,j,:) = fluid
+      end if
+    end do
+  end do
+END SUBROUTINE CONSTRUCT_CYLINDER
+
+
+
+
+
+
+SUBROUTINE CONSTRUCT_DISC_BENICHOU
+! this program computes the time-dependent diffusion coefficient
+! of a two-dimensional system. it is a test of Olivier Benichou's
+! problem as expressed during the unformal discussion in PECSA
+! to present him the numerical results of LB with sorption.
+! The system is a circle, in which four entrances (exit) are found
+! at 0, 3, 6 and 9".
+!
+!ooooo ooooo
+!ooo     ooo
+!oo       oo
+!o         o
+!o         o
+!           
+!o         o
+!o         o
+!oo       oo
+!ooo     ooo
+!ooooo ooooo
+
+! Note the four exits at 0, 3, 6 and 9".
+  real(dp) :: radius ! radius of cylinder
+  real(dp), dimension(2) :: rnode, rorigin ! coordinates of each node and center of cylinder in x,y coordinates
+  integer(i2b) :: i, j ! dummy
+
+  if( lx /= ly) stop 'wall=2 is for cylinders, which should have same lx and ly'
+  if( mod(lx,2) == 0 ) stop 'lx should be odd'
+  rorigin = [ real(lx+1,dp)/2.0_dp, real(ly+1,dp)/2.0_dp ]
+  radius = norm2( [1,(lx+1)/2] - rorigin) ! take great care as this is lx/2 only if rorigin falls in a lattice point.
+  do i = 1, lx
+    do j = 1, ly
+      rnode = [real(i,dp),real(j,dp)] - rorigin
+      if( norm2(rnode) > radius ) then
+        inside(i,j,:) = solid
+      else
+        inside(i,j,:) = fluid
+      end if
+    end do
+  end do
+
+END SUBROUTINE CONSTRUCT_DISC_BENICHOU
+
+
+
 
 END MODULE GEOMETRY

@@ -52,7 +52,7 @@ SUBROUTINE INIT
          +sum(exp(-tracer%z*phi)*tracer%K, mask=(is_interfacial))
 
   do concurrent (i=1:lx, j=1:ly, k=1:lz, inside(i,j,k)==fluid )
-    boltz_weight = exp(-tracer%z*phi(i,j,k))/Pstat ! boltz_weight=1 if tracer%z=0
+    boltz_weight = exp(-tracer%z*phi(i,j,k))/Pstat ! boltz_weight=1/Pstat if tracer%z=0
     do concurrent (l=2:NbVel, inside(plusx(i+c(x,l)), plusy(j+c(y,l)), plusz(k+c(z,l)))==fluid)
       ip = plusx(i+c(x,l)) ; jp = plusy(j+c(y,l)) ; kp = plusz(k+c(z,l))
       exp_dphi = calc_exp_dphi( i, j, k, ip, jp, kp)

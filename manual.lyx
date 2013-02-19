@@ -92,5 +92,93 @@ lb.in
 Media file : media.in
 \end_layout
 
+\begin_layout Section
+Code
+\end_layout
+
+\begin_layout Standard
+Laboetie is written in Fortran 2008 and thus needs gfortran version 7 or
+ later.
+\end_layout
+
+\begin_layout Subsection
+Precision of variables
+\end_layout
+
+\begin_layout Standard
+All available precisions in the code are defined in module mod_precision_kinds.f9
+0.
+ It uses fortran 2008 iso_fortran_env to be non-architecture-dependent.
+ Integers can be 
+\end_layout
+
+\begin_layout Itemize
+i0b = INT8 ! 8 bits integer, from 
+\begin_inset Formula $-128$
+\end_inset
+
+ to 
+\begin_inset Formula $127$
+\end_inset
+
+, ie 
+\begin_inset Formula $2^{8}-1$
+\end_inset
+
+ values
+\end_layout
+
+\begin_layout Itemize
+i1b = INT16 ! 16 bits integer, from 
+\begin_inset Formula $-32768$
+\end_inset
+
+ to 
+\begin_inset Formula $32767$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+i2b = INT32 ! 32 bits integer, from 
+\begin_inset Formula $-2,147,483,648$
+\end_inset
+
+ to 
+\begin_inset Formula $2,147,483,647$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+i4b = INT64 ! 64 bits integer, from
+\begin_inset Formula $-9,223,372,036,854,775,808$
+\end_inset
+
+ to 
+\begin_inset Formula $9,223,372,036,854,775,807$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Reals can be
+\end_layout
+
+\begin_layout Itemize
+sp = REAL32 ! 32 bits real number (often called single precision)
+\end_layout
+
+\begin_layout Itemize
+dp = REAL64 ! 64 bits real number (often called double precision)
+\end_layout
+
+\begin_layout Itemize
+qp = REAL128 ! 128 bits real number (often called quad precision)
+\end_layout
+
 \end_body
 \end_document
