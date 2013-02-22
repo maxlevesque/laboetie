@@ -1,11 +1,42 @@
 MODULE GEOMETRY
-  use precision_kinds, only: dp, i2b
+  use precision_kinds ! all precision kinds defined in the dedicated module
   use system, only: lx, ly, lz, fluid, solid, inside
   implicit none
-  private
-  public construct_slit, construct_cylinder, construct_cc, construct_disc_benichou
+!  private
+!  public construct_slit, construct_cylinder, construct_cc, construct_disc_benichou
 
 CONTAINS
+
+
+SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
+  ! tunnel along lx, ly is the width of the tunnel
+  real(dp) :: x, y
+  real(dp) :: a, b
+  real(dp), parameter :: pi = acos(-1.0_dp)
+  integer(i2b) :: i, j, ninty, mirror, midly
+  ! ly should be odd, so that the middle of ly is on a node (w(x)=0)
+  if( mod(ly,2)==0 ) stop 'ly should be odd'
+  midly = (ly+1)/2
+  b = 2./3.*midly
+  a = midly - b - 1
+  if( a<=0 .or. b<=0 ) stop 'pb in def geometry function'
+  do i = 1, lx
+    x = real(i-1,dp)
+    y = a*sin(2._dp*pi*x/Lx) + b + midly
+    ninty = nint(y)
+    mirror = midly
+    do j = midly, ly
+      if( j < ninty ) then
+        inside(i,j,:) = fluid
+      else
+        inside(i,j,:) = solid
+      end if
+      inside(i, mirror, :) = inside(i, j, :)
+      mirror = mirror - 1
+    end do
+  end do
+
+END SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
 
 
 

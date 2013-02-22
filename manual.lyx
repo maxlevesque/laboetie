@@ -92,6 +92,30 @@ lb.in
 Media file : media.in
 \end_layout
 
+\begin_layout Subsection
+Sinusoidal surface
+\end_layout
+
+\begin_layout Standard
+The deformable surface function is
+\begin_inset Formula 
+\begin{equation}
+w^{\pm}\left(x\right)=\pm\left[a\sin\left(\frac{2\pi x}{L}\right)+b\right].
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Its maximum is 
+\begin_inset Formula $w_{\mbox{max/min}}^{\pm}=\pm(a+b)$
+\end_inset
+
+
+\end_layout
+
 \begin_layout Section
 Code
 \end_layout

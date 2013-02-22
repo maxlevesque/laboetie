@@ -11,10 +11,13 @@ subroutine supercell_definition
                        check_that_all_nodes_are_wether_fluid_or_solid,&
                        define_periodic_boundary_conditions
   use input, only: input_int
-  use geometry, only: construct_slit, construct_cylinder, construct_cc, construct_disc_benichou
+  use geometry, only: construct_slit, construct_cylinder, construct_cc, construct_disc_benichou,&
+                      construct_sinusoidal_walls_2d
 
   implicit none
   integer(kind=i2b) :: i, j, k, ip, jp, kp, l !dummy
+  character(len=150) :: filename
+  real(dp), dimension(lx,ly,lz) :: testarray
 
   ! geometry
   wall = input_int("wall")
@@ -38,32 +41,16 @@ subroutine supercell_definition
     call construct_cc
   case (4) ! wall = 4 => benichou disc with exists
     call construct_disc_benichou
+  case (5)
+    call construct_sinusoidal_walls_2d
   case default
     stop 'wall should be 1, 2 or 3 only'
   end select
 
+  call print_supercell_xsf
+
   ! counts number of solid and fluid nodes
   print*, 'number of solid nodes / fluid nodes = ', count(inside==solid),' / ', count(inside==fluid)
-
-  ! print solid nodes as atoms in a .xyz file so that any atomic visualisation tool can make solid nodes visible
-  open( unit=99, file='output/solidliquid.xyz', iostat=i)
-  if( i /= 0 ) stop 'problem in init_simu.f90 to opening output/solidliquid.xyz'
-  write(99,*) lx*ly*lz
-  write(99,*) ! blank line needed as second line in xyz format. 
-  do i= 1, lx
-    do j= 1, ly
-      do k = 1, lz
-        if( inside( i, j, k) == solid ) then
-          write(99,*)'C ', real(i-1,dp), real(j-1,dp), real(k-1,dp)
-        else if( inside( i, j, k) == fluid ) then
-          write(99,*)'H ', real(i-1,dp), real(j-1,dp), real(k-1,dp)
-        else
-          stop 'unattended stop at subroutine supercell_definition in charges_init.f90'
-        end if
-      end do
-    end do
-  end do
-  close(99)
 
   ! localise interface and define its normal vector
   allocate( normal( lx, ly, lz, x:z),source=0.0_dp ) ! vector normal to interface
@@ -105,5 +92,6 @@ end block
 
   ! give a table that tells if you're interfacial or not
   call where_is_it_fluid_and_interfacial
+
 
 end subroutine supercell_definition
