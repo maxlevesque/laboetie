@@ -142,6 +142,8 @@ SUBROUTINE PROPAGATE(it)
   vacf(:,past) = vacf(:,now)
   vacf(:,now) = 0.0_dp
 
+  if( it>2 .and. all(abs(vacf)<1.e-9) ) stop 'VACF converged to 0 without error before reaching tmax.'
+
 END SUBROUTINE PROPAGATE
 
 ! ==============================================================================

@@ -8,6 +8,69 @@ MODULE GEOMETRY
 CONTAINS
 
 
+
+SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
+! construct the system described in Makhnovskii et al., Chem. Phys. 367, 110 (2010)
+! 4 effective variables: length of big pore lw, narrow pore ln, radius of each, R and a, respectively.
+! the tube is along x, with infinity sym along z (ie lz = 1 ok)
+  real(dp) :: R, a, ln, lw, lw_o_lx, a_o_R
+  real(dp), dimension(2) :: r0, rjk
+  integer(i2b) :: i, j, k
+  logical :: is_here
+  if(ly/=lz) stop 'ly should be equal to lz cause it is a tube'
+  inside = solid
+  inquire(file='tube.in',exist=is_here)
+  if(.not.is_here) stop 'tube.in cannot be read'
+  open(unit=12,file='tube.in')
+  read(12,*) lw_o_lx, a_o_R
+  R = real(ly-1)/2.0
+  a = a_o_R*R
+  r0 = [real(ly+1)/2.,real(lz+1)/2.]
+  do concurrent(i=1:lx, j=1:ly, k=1:lz)
+    rjk = [real(j),real(k)]
+    if(i>lw_o_lx*lx) then
+      if( norm2( rjk-r0 ) < a ) then
+        inside(i,j,k) = fluid
+      else
+        inside(i,j,k) = solid
+      end if
+    else if(i<=lw_o_lx*lx) then
+      if( norm2( rjk-r0 ) < R ) then
+        inside(i,j,k) = fluid
+      else
+        inside(i,j,k) = solid
+      end if
+    end if
+  end do
+END SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
+
+
+
+
+
+
+SUBROUTINE CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D
+! construct the system described in Makhnovskii et al., Chem. Phys. 367, 110 (2010)
+! 4 effective variables: length of big pore lw, narrow pore ln, radius of each, R and a, respectively.
+! the tube is along x, with infinity sym along z (ie lz = 1 ok)
+  real(dp) :: R, a, ln, lw
+  integer(i2b) :: i
+!  R = real(ly-2,dp)/2._dp
+!  a = R/2._dp
+!  lw = real(lx,dp)/2._dp
+!  ln = lw
+  inside = fluid
+  inside(:,1,:) = solid
+  inside(:,ly,:) = solid
+  do i=1,lx
+    if( i>lx/2 ) then
+      inside(i,2:1+(ly-2)/4,:) = solid
+      inside(i,ly-(ly-2)/4:ly-1,:) = solid
+    end if
+  end do
+END SUBROUTINE CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D
+
+
 SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
   ! tunnel along lx, ly is the width of the tunnel
   real(dp) :: x, y

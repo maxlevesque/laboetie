@@ -43,7 +43,7 @@ implicit none
  write(5,100)'# The second number is always 1 for PRIMCOORD coordinates.'
  write(5,100)'# in angstroms and cartesian coordinates'
  write(5,100)'PRIMCOORD'
- write(5,102) lx*ly*lz, 1
+ write(5,*) lx*ly*lz, 1
 do i = 1, lx
   do j = 1, ly
     do k = 1, lz

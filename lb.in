@@ -2,34 +2,28 @@
 # LaBo INPUT FILE
 ################################################################################
 
-lx = 100
-ly = 101
-lz = 3
-
-rho_0 = 1.0 # fluid density in LB units
-f_ext = 0.0 0.0 0.0 # external force
-
-# time starts at -D_equil => -1: equilibration without constraint nor flux, ie charge equilibration only
-# then 0 => t_equil: equilibration without constraint but solvent flux, ie no applied forces but non-zero flux
-# then t_equil+1 => tmom-1: full evolution with constraints
-# then tmom => tmax: moment propagation
+lx = 1
+ly = 1
+lz = 50
 
 D_equil = 10 # number of steps for equilibrating charges (finding PB solution). 1 if charge (salt) free fluid.
 t_equil = 20 # number of steps for equilibrating the flux without constraints
 tmom = 30 # between t_equil and tmom, constraints are applieds (pression, electric field,...)
 tmax = 100000 # between tmom and tmax, moment propagation is done
 
-#delta = 0.1
-#restart = 0
-#write = 1
-
-stripes = 0.0 0.0 0.0
-wall = 5 # 1 for a slit, i.e. two walls at z=zmin and z=zmax
+wall = 1 # 1 for a slit, i.e. two walls at z=zmin and z=zmax
          # 2 for a cylinder along Z. lx have to be equal to ly.
          # 3 for a body centered cubic cell with solid spheres in contact
          # 4 for disc benichou with exists at 0, 3, 6 and 9 oclock
-         # 5 corrugated wall (sinusoidal and mirored wrt to y=ly/2.
+         # 5 for corrugated wall (sinusoidal and mirored wrt to y=ly/2.
+         # 6 for a slit with various diameter (2D)
+         # 7 for a tube with various diameter (3D)
+
 PorousMedia = 0 # 0 for free fluid
+
+stripes = 0.0 0.0 0.0
+rho_0 = 1.0 # fluid density in LB units
+f_ext = 0.0 0.0 0.0 # external force
 
 ################################################################################
 # charge of the solid
@@ -47,7 +41,7 @@ D_iter = 1
 ################################################################################
 # Moment Propagation
 ################################################################################
-D_tracer = 0.05
+D_tracer = 0.1
 z_tracer = 0.0
 tracer_ka = 0.0
 tracer_kd = 0.0
