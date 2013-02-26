@@ -167,6 +167,7 @@ SUBROUTINE CONSTRUCT_CYLINDER
   integer(i2b) :: i, j ! dummy
 
   if( lx /= ly) stop 'wall=2 is for cylinders, which should have same lx and ly'
+  if( lx<3 ) stop 'the diameter of the cylinder (lx) should be greater than 3'
   rorigin = [ real(lx+1,dp)/2.0_dp, real(ly+1,dp)/2.0_dp ]
   radius = real(lx-1,dp)/2.0_dp
 
