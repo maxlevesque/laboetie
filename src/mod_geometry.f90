@@ -136,17 +136,19 @@ SUBROUTINE CONSTRUCT_CC
       implicit none
       integer(i2b), intent(in) :: i,j,k
       real(dp), dimension(9) :: distances
-      distances(1) = norm2( (/real(i,dp),real(j,dp),real(k,dp)/) - (/0.0_dp, 0.0_dp, 0.0_dp/) )
-      distances(2) = norm2( (/real(i,dp),real(j,dp),real(k,dp)/) - (/real(lx,dp), 0.0_dp, 0.0_dp/) )
-      distances(3) = norm2( (/real(i,dp),real(j,dp),real(k,dp)/) - (/0.0_dp, real(ly,dp), 0.0_dp/) )
-      distances(4) = norm2( (/real(i,dp),real(j,dp),real(k,dp)/) - (/0.0_dp, 0.0_dp, real(lz,dp)/) )
-      distances(5) = norm2( (/real(i,dp),real(j,dp),real(k,dp)/) - (/real(lx,dp), real(ly,dp), 0.0_dp/) )
-      distances(6) = norm2( (/real(i,dp),real(j,dp),real(k,dp)/) - (/real(lx,dp), 0.0_dp, real(lz,dp)/) )
-      distances(7) = norm2( (/real(i,dp),real(j,dp),real(k,dp)/) - (/0.0_dp, real(ly,dp), real(lz,dp)/) )
-      distances(8) = norm2( (/real(i,dp),real(j,dp),real(k,dp)/) - (/real(lx,dp), real(ly,dp), real(lz,dp)/) )
-      distances(9) = norm2( (/real(i,dp),real(j,dp),real(k,dp)/) - (/real(lx,dp)/2.0_dp, real(ly,dp)/2.0_dp, real(lz,dp)/2.0_dp/) ) ! center
+      real(dp), dimension(3) :: r
+      r = real([i,j,k],dp)
+      distances(1) = norm2( r - real([1,1,1]) ) ! origin is not 0,0,0 but 1,1,1 in our referential 1:lx
+      distances(2) = norm2( r - real([lx,1,1]) )
+      distances(3) = norm2( r - real([1,ly,1]) )
+      distances(4) = norm2( r - real([1,1,lz]) )
+      distances(5) = norm2( r - real([lx,ly,1]) )
+      distances(6) = norm2( r - real([lx,1,lz]) )
+      distances(7) = norm2( r - real([1,ly,lz]) )
+      distances(8) = norm2( r - real([lx,ly,lz]) )
+      distances(9) = norm2( r - real([lx+1,ly+1,lz+1])/2._dp )
       ! put distances to all of corners of the cube and to its center (=9 points) in an array
-      if ( any(distances <= real(lx,dp)*sqrt(3.0_dp)/4.0_dp) ) then
+      if ( any(distances <= real(lx-1,dp)*sqrt(3.0_dp)/4.0_dp) ) then
         is_in_solid_sphere = .true.
       else
         is_in_solid_sphere = .false.
