@@ -243,7 +243,7 @@ SUBROUTINE CONSTRUCT_DISC_BENICHOU
   real(dp), dimension(2) :: rnode, rorigin ! coordinates of each node and center of cylinder in x,y coordinates
   integer(i2b) :: i, j ! dummy
 
-  if( lx /= ly) stop 'wall=2 is for cylinders, which should have same lx and ly'
+  if( lx /= ly) stop 'wall=4 should have same lx and ly'
   if( mod(lx,2) == 0 ) stop 'lx should be odd'
   rorigin = [ real(lx+1,dp)/2.0_dp, real(ly+1,dp)/2.0_dp ]
   radius = norm2( [1,(lx+1)/2] - rorigin) ! take great care as this is lx/2 only if rorigin falls in a lattice point.

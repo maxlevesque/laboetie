@@ -92,10 +92,6 @@ module system
   real(dp), dimension(x:z) :: f_ext ! external force (constraints) applied to flux
   real(dp), allocatable, dimension(:,:,:,:) :: solute_force ! (lx, ly, lz, 3)
 
-  ! tracer related
-  real(dp) :: D_tracer ! diffusion coefficient of tracers for moment propagation
-  real(dp) :: z_tracer ! charge of tracer
-
 
   ! thermo
   real(dp), parameter :: kBT = 1.0_dp/3.0_dp ! boltzmann constant * temperature

@@ -13,7 +13,7 @@ MODULE MOMENT_PROPAGATION
   real(dp), dimension(x:z, past:next) :: vacf
   real(dp) :: lambda
   TYPE TYPE_TRACER
-    real(dp) :: ka, kd, K, z, D !K=ka/kd, z=tracer charge
+    real(dp) :: ka, kd, K, z, Db !K=ka/kd, z=tracer charge
   END TYPE TYPE_TRACER
   type(type_tracer) :: tracer
   contains
@@ -21,7 +21,7 @@ MODULE MOMENT_PROPAGATION
 ! ==============================================================================
 
 SUBROUTINE INIT
-  use system, only: phi, z_tracer, NbVel, inside, fluid, solid,&
+  use system, only: phi, NbVel, inside, fluid, solid,&
                      lx, ly, lz, a0, c, vel_inv, plusx, plusy, plusz, rho, n
   use supercell, only: is_interfacial
   use input, only: input_dp
@@ -31,6 +31,8 @@ SUBROUTINE INIT
 
   tracer%ka = input_dp('tracer_ka')
   tracer%kd = input_dp('tracer_kd')
+  tracer%Db = input_dp('tracer_Db'); if(tracer%Db<=0.0_dp) stop 'tracer_Db in input is invalid'
+
   if( .not. test(tracer%ka) ) stop 'problem in tracer%ka in module moment_propagation'
   if( .not. test(tracer%kd) ) stop 'problem in tracer%kd in module moment_propagation'
   if(tracer%kd==0.0_dp) then
@@ -38,8 +40,7 @@ SUBROUTINE INIT
   else
     tracer%K = (tracer%ka)/(tracer%kd)
   end if
-  tracer%z = input_dp('z_tracer')
-  if( tracer%z /= z_tracer ) stop 'problem in tracer charge GRRRR'
+  tracer%z = input_dp('tracer_z')
 
   lambda = calc_lambda()
 
@@ -77,7 +78,7 @@ END SUBROUTINE INIT
 
 ! ==============================================================================
 
-SUBROUTINE PROPAGATE(it)
+SUBROUTINE PROPAGATE(it, is_converged)
   use system, only: lx, ly, lz, inside, fluid, solid,&
                      n, rho, a0, c, vel_inv,&
                      NbVel, plusx, plusy, plusz
@@ -89,6 +90,7 @@ SUBROUTINE PROPAGATE(it)
   real(dp), dimension(3) :: u_star
   integer(kind=i2b) :: i, j, k, l, l_inv, ip, jp, kp
   logical :: error
+  logical, intent(out) :: is_converged
 
   lambda = calc_lambda()
 
@@ -142,9 +144,16 @@ SUBROUTINE PROPAGATE(it)
   vacf(:,past) = vacf(:,now)
   vacf(:,now) = 0.0_dp
 
-  if( it>2 .and. all(abs(vacf)<1.e-9) ) stop 'VACF converged to 0 without error before reaching tmax.'
+  if( it>2 .and. all(abs(vacf)<1._dp/(2._dp*lx*ly*lz/tracer%Db)) .and. all(abs(vacf)<1.e-10) ) then
+    is_converged = .true.
+  else
+    is_converged = .false.
+  end if
+
 
 END SUBROUTINE PROPAGATE
+
+
 
 ! ==============================================================================
 
@@ -183,9 +192,9 @@ END FUNCTION DPHI
 ! ==============================================================================
 
 REAL(DP) PURE FUNCTION CALC_LAMBDA()
-  use system, only: D_tracer, kBT
+  use system, only: kBT
   implicit none
-  calc_lambda = 4.0_dp*D_tracer/kBT
+  calc_lambda = 4.0_dp*tracer%Db/kBT
 END FUNCTION CALC_LAMBDA
 
 ! ==============================================================================

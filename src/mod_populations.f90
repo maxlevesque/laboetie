@@ -32,18 +32,22 @@ END SUBROUTINE CALC_N
 
 SUBROUTINE CALC_N_MOMPROP
   use system, only: n, f_ext, rho, inside, fluid,&
-                     D_tracer, z_tracer, jx, jy, jz, a0, a1, elec_slope_x, elec_slope_y, elec_slope_z,&
+                     jx, jy, jz, a0, a1, elec_slope_x, elec_slope_y, elec_slope_z,&
                      c, NbVel
+  use input, only: input_dp
   implicit none
   integer(kind=i2b) :: l
+  real(dp) :: D_tracer, tracer_z
+  D_tracer = input_dp('tracer_Db'); if(D_tracer<=0.0_dp) stop 'D_tracer, ie tracer_Db in input is invalid'
+  tracer_z = input_dp('tracer_z')
 
   ! apply force on all fluid nodes and update populations
   do concurrent( l=1:NbVel )
     where( inside==fluid )
       n(:,:,:,l) = a0(l)*rho(:,:,:) &
-                 + a1(l)*( c(x,l)*(jx + f_ext(x) - rho*z_tracer *D_tracer *elec_slope_x) &
-                         + c(y,l)*(jy + f_ext(y) - rho*z_tracer *D_tracer *elec_slope_y) &
-                         + c(z,l)*(jz + f_ext(z) - rho*z_tracer *D_tracer *elec_slope_z) )
+                 + a1(l)*( c(x,l)*(jx + f_ext(x) - rho*tracer_z *D_tracer *elec_slope_x) &
+                         + c(y,l)*(jy + f_ext(y) - rho*tracer_z *D_tracer *elec_slope_y) &
+                         + c(z,l)*(jz + f_ext(z) - rho*tracer_z *D_tracer *elec_slope_z) )
     elsewhere
       n(:,:,:,l) = a0(l)*rho + a1(l)*( c(x,l)*jx + c(y,l)*jy + c(z,l)*jz )
     end where

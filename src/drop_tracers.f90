@@ -8,21 +8,17 @@
 subroutine drop_tracers
 
   use precision_kinds, only: dp, i2b
-  use system, only: tmom, tmax, elec_slope_x, elec_slope_y, elec_slope_z, D_tracer, z_tracer
+  use system, only: tmom, tmax, elec_slope_x, elec_slope_y, elec_slope_z
   use populations, only: calc_n_momprop
   use moment_propagation, only: init, propagate, deallocate_propagated_quantity!, print_vacf, integrate_vacf!, not_yet_converged
   use input, only: input_dp
 
   implicit none
   integer(kind=i2b) :: it
+  logical :: is_converged
 
   print*,'       step           VACF(x)                   VACF(y)                   VACF(z)'
   print*,'       ----------------------------------------------------------------------------------'
-
-  ! read diffusion coefficient and charge of tracers in input file
-  d_tracer = input_dp('D_tracer')
-  z_tracer = input_dp('z_tracer')
-  if(d_tracer < 0.0_dp) stop 'D_tracer <0. critical'
 
   ! include elec_slope_ in population n
   call calc_n_momprop
@@ -38,15 +34,17 @@ subroutine drop_tracers
 
   call init ! init moment propagation
 
+
   ! propagate in time
-  do it= 1, tmax-tmom
+  momproploop: do it= 1, tmax-tmom
 !  it=0
 !  do while (not_yet_converged(it))
 !   call elec_pot
-    call propagate(it) ! propagate the propagated quantity
+    call propagate(it, is_converged) ! propagate the propagated quantity
 !    if( modulo(it,50000)==0 ) print_vacf
 !    it = it + 1
-  end do
+    if( is_converged ) exit momproploop
+  end do momproploop
 
   print*,
 
