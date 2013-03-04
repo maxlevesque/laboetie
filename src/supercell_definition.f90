@@ -13,7 +13,8 @@ subroutine supercell_definition
   use input, only: input_int
   use geometry, only: construct_slit, construct_cylinder, construct_cc, construct_disc_benichou,&
                       construct_sinusoidal_walls_2d, CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D,&
-                      CONSTRUCT_TUBE_WITH_VARYING_DIAMETER, CONSTRUCT_SPHERICAL_CAVITY
+                      CONSTRUCT_TUBE_WITH_VARYING_DIAMETER, CONSTRUCT_SPHERICAL_CAVITY,&
+                      CONSTRUCT_SPHERE_BENICHOU
 
   implicit none
   integer(kind=i2b) :: i, j, k, ip, jp, kp, l !dummy
@@ -50,8 +51,10 @@ subroutine supercell_definition
     call CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
   case (8)
     call CONSTRUCT_SPHERICAL_CAVITY
+  case (9)
+    call CONSTRUCT_SPHERE_BENICHOU
   case default
-    stop 'wall should be 1, 2 or 3 only'
+    stop 'wall tag in input file is invalid'
   end select
 
   call print_supercell_xsf

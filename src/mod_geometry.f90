@@ -218,6 +218,66 @@ END SUBROUTINE CONSTRUCT_CYLINDER
 
 
 
+
+
+
+SUBROUTINE CONSTRUCT_SPHERE_BENICHOU
+! this program computes the time-dependent diffusion coefficient
+! of a tri-dimensional system. it is a test of Olivier Benichou's
+! problem as expressed during the unformal discussion in PECSA
+! to present him the numerical results of LB with sorption.
+! The system is a circle, in which four entrances (exit) are found
+! at 0, 3, 6 and 9", and in front and bottom. (like at center of faces of tangeantial cube)
+!
+!ooooo ooooo
+!ooo     ooo
+!oo       oo
+!o         o
+!o         o
+!           
+!o         o
+!o         o
+!oo       oo
+!ooo     ooo
+!ooooo ooooo
+
+! Note the four exits at 0, 3, 6 and 9", bottom and behind
+  real(dp) :: radius ! radius of cylinder
+  real(dp), dimension(3) :: rnode, rorigin ! coordinates of each node and center of cylinder in x,y coordinates
+  integer(i2b) :: i, j, k ! dummy
+
+  if( lx /= ly .or. lx/=lz) stop 'wall=9 should have same lx, ly and lz'
+  if( mod(lx,2) == 0 ) stop 'lx should be odd'
+  rorigin = [ real(lx+1,dp)/2.0_dp, real(ly+1,dp)/2.0_dp, real(lz+1,dp)/2.0_dp ]
+  radius = norm2( [1, (ly+1)/2, (lz+1)/2 ] - rorigin ) ! take great care as this is lx/2 only if rorigin falls in a lattice point.
+  do i = 1, lx
+    do j = 1, ly
+      do k = 1, lz
+        rnode = [real(i,dp),real(j,dp),real(k,dp)] - rorigin
+        if( norm2(rnode) > radius ) then
+          inside(i,j,k) = solid
+        else
+          inside(i,j,k) = fluid
+        end if
+      end do
+    end do
+  end do
+
+END SUBROUTINE CONSTRUCT_SPHERE_BENICHOU
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 SUBROUTINE CONSTRUCT_DISC_BENICHOU
 ! this program computes the time-dependent diffusion coefficient
 ! of a two-dimensional system. it is a test of Olivier Benichou's
@@ -259,6 +319,7 @@ SUBROUTINE CONSTRUCT_DISC_BENICHOU
   end do
 
 END SUBROUTINE CONSTRUCT_DISC_BENICHOU
+
 
 
 
