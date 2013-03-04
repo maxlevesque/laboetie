@@ -11,13 +11,14 @@ t_equil = 20 # number of steps for equilibrating the flux without constraints
 tmom = 30 # between t_equil and tmom, constraints are applieds (pression, electric field,...)
 tmax = 100000 # between tmom and tmax, moment propagation is done
 
-wall = 3 # 1 for a slit, i.e. two walls at z=zmin and z=zmax
+wall = 8 # 1 for a slit, i.e. two walls at z=zmin and z=zmax
          # 2 for a cylinder along Z. lx have to be equal to ly.
          # 3 for a body centered cubic cell with solid spheres in contact
          # 4 for disc benichou with exists at 0, 3, 6 and 9 oclock
          # 5 for corrugated wall (sinusoidal and mirored wrt to y=ly/2.
          # 6 for a slit with various diameter (2D)
          # 7 for a tube with various diameter (3D)
+         # 8 for a spherical cavity (3D)
 
 PorousMedia = 0 # 0 for free fluid
 

@@ -118,6 +118,34 @@ END SUBROUTINE CONSTRUCT_SLIT
 
 
 
+SUBROUTINE CONSTRUCT_SPHERICAL_CAVITY
+  implicit none
+  real(dp) :: radius ! radius of cylinder
+  real(dp), dimension(3) :: rnode, rorigin ! coordinates of each node and center of cylinder in x,y coordinates
+  integer(i2b) :: i, j, k ! dummy
+  if( lx /= ly .or. lx/=lz) stop 'wall=8 for a spherical cavity so lx=ly=lz. check input file.'
+  if( lx<3 ) stop 'the diameter of the cylinder (lx) should be greater than 3'
+  rorigin = [ real(lx+1,dp)/2.0_dp, real(ly+1,dp)/2.0_dp, real(lz+1,dp)/2.0_dp ]
+  radius = real(lx-1,dp)/2.0_dp
+  do i = 1, lx
+    do j = 1, ly
+      do k = 1, lz
+        rnode = [real(i,dp),real(j,dp),real(k,dp)] - rorigin
+        if( norm2(rnode) >= radius ) then ! = radius is important because without it one has exists
+          inside(i,j,k) = solid
+        else
+          inside(i,j,k) = fluid
+        end if
+      end do
+    end do
+  end do
+END SUBROUTINE CONSTRUCT_SPHERICAL_CAVITY
+
+
+
+
+
+
 
 SUBROUTINE CONSTRUCT_CC
   implicit none

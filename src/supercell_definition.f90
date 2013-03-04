@@ -13,7 +13,7 @@ subroutine supercell_definition
   use input, only: input_int
   use geometry, only: construct_slit, construct_cylinder, construct_cc, construct_disc_benichou,&
                       construct_sinusoidal_walls_2d, CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D,&
-                      CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
+                      CONSTRUCT_TUBE_WITH_VARYING_DIAMETER, CONSTRUCT_SPHERICAL_CAVITY
 
   implicit none
   integer(kind=i2b) :: i, j, k, ip, jp, kp, l !dummy
@@ -48,6 +48,8 @@ subroutine supercell_definition
     call CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D
   case (7)
     call CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
+  case (8)
+    call CONSTRUCT_SPHERICAL_CAVITY
   case default
     stop 'wall should be 1, 2 or 3 only'
   end select
