@@ -14,7 +14,8 @@ subroutine supercell_definition
   use geometry, only: construct_slit, construct_cylinder, construct_cc, construct_disc_benichou,&
                       construct_sinusoidal_walls_2d, CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D,&
                       CONSTRUCT_TUBE_WITH_VARYING_DIAMETER, CONSTRUCT_SPHERICAL_CAVITY,&
-                      CONSTRUCT_SPHERE_BENICHOU
+                      CONSTRUCT_SPHERE_BENICHOU,&
+                      CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
 
   implicit none
   integer(kind=i2b) :: i, j, k, ip, jp, kp, l !dummy
@@ -53,6 +54,8 @@ subroutine supercell_definition
     call CONSTRUCT_SPHERICAL_CAVITY
   case (9)
     call CONSTRUCT_SPHERE_BENICHOU
+  case (10)
+    call CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
   case default
     stop 'wall tag in input file is invalid'
   end select

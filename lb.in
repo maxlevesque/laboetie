@@ -2,24 +2,25 @@
 # LaBo INPUT FILE
 ################################################################################
 
-lx = 51
-ly = 51
-lz = 51
+lx = 50 
+ly = 87
+lz = 30
 
 D_equil = 10 # number of steps for equilibrating charges (finding PB solution). 1 if charge (salt) free fluid.
 t_equil = 20 # number of steps for equilibrating the flux without constraints
 tmom = 30 # between t_equil and tmom, constraints are applieds (pression, electric field,...)
 tmax = 100000000 # between tmom and tmax, moment propagation is done
 
-wall = 9 # 1 for a slit, i.e. two walls at z=zmin and z=zmax
-         # 2 for a cylinder along Z. lx have to be equal to ly.
-         # 3 for a body centered cubic cell with solid spheres in contact
-         # 4 for disc benichou with exists at 0, 3, 6 and 9 oclock
-         # 5 for corrugated wall (sinusoidal and mirored wrt to y=ly/2.
-         # 6 for a slit with various diameter (2D)
-         # 7 for a tube with various diameter (3D)
-         # 8 for a spherical cavity (3D)
-         # 9 for sphere with 6 exits as asked by benichou
+wall = 10 # 1 for a slit, i.e. two walls at z=zmin and z=zmax
+          # 2 for a cylinder along Z. lx have to be equal to ly.
+          # 3 for a body centered cubic cell with solid spheres in contact
+          # 4 for disc benichou with exists at 0, 3, 6 and 9 oclock
+          # 5 for corrugated wall (sinusoidal and mirored wrt to y=ly/2.
+          # 6 for a slit with various diameter (2D)
+          # 7 for a tube with various diameter (3D)
+          # 8 for a spherical cavity (3D)
+          # 9 for sphere with 6 exits as asked by benichou
+          # 10 for the supercell given by Xudong, Vincent, Marie and Benjamin from COMSOL
 
 PorousMedia = 0 # 0 for free fluid
 

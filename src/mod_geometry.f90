@@ -9,6 +9,46 @@ CONTAINS
 
 
 
+
+SUBROUTINE CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
+  real(dp), dimension(1:2, 1:4) :: r ! there are 7 cylinders in the supercell, whose only x and y (1:2) coordinates are important
+  ! lx is the half of the big size of the hexagon == length/2
+  ! ly is the small size of the hexagone = length*sqrt(3)/2
+  integer(i2b) :: i, j, k
+  real(dp) :: midx, midy, quartx, quarty, cylrad, dist_to_cylcenter
+  logical :: is_incyl
+  midx = real(lx+1,dp)/2._dp
+  midy = real(ly+1,dp)/2._dp
+  r(:,1) = [ 1._dp, midy ]
+  r(:,2) = [ real(lx,dp), midy ]
+  r(:,3) = [ midx, 1._dp ]
+  r(:,4) = [ midx, real(ly,dp) ]
+  cylrad = 0.2_dp * real(lx,dp)
+  do i = 1, lx
+    do j = 1, ly
+      is_incyl = .false.
+      checkincyl: do k = lbound(r,2), ubound(r,2)
+                    dist_to_cylcenter = norm2(  [i,j] - r(1:2,k) )
+                    if ( dist_to_cylcenter <= cylrad ) then
+                      is_incyl = .true.
+                      exit checkincyl
+                    end if
+                  end do checkincyl
+      if( is_incyl ) inside(i,j,:) = solid
+    end do
+  end do
+  inside(:,:,1) = solid
+  inside(:,:,lz) = solid
+END SUBROUTINE CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
+
+
+
+
+
+
+
+
+
 SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
 ! construct the system described in Makhnovskii et al., Chem. Phys. 367, 110 (2010)
 ! 4 effective variables: length of big pore lw, narrow pore ln, radius of each, R and a, respectively.
