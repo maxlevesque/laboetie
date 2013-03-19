@@ -13,7 +13,7 @@ MODULE MOMENT_PROPAGATION
   real(dp), dimension(x:z, past:next) :: vacf
   real(dp) :: lambda
   TYPE TYPE_TRACER
-    real(dp) :: ka, kd, K, z, Db !K=ka/kd, z=tracer charge
+    real(dp) :: ka, kd, K, z, Db, Ds !K=ka/kd, z=tracer charge
   END TYPE TYPE_TRACER
   type(type_tracer) :: tracer
   contains
@@ -31,7 +31,10 @@ SUBROUTINE INIT
 
   tracer%ka = input_dp('tracer_ka')
   tracer%kd = input_dp('tracer_kd')
-  tracer%Db = input_dp('tracer_Db'); if(tracer%Db<=0.0_dp) stop 'tracer_Db in input is invalid'
+  tracer%Db = input_dp('tracer_Db') ! bulk diffusion coefficient of tracer, i.e. the molecular diffusion coefficient
+  tracer%Ds = input_dp('tracer_Ds') ! surface diffusion coefficient of tracer
+  if (tracer%Db<=0.0_dp) stop 'tracer_Db as readen in input is invalid'
+  if (tracer%Ds <= 0.0_dp ) stop 'tracer_Ds as readen in input file is invalid'
 
   if( .not. test(tracer%ka) ) stop 'problem in tracer%ka in module moment_propagation'
   if( .not. test(tracer%kd) ) stop 'problem in tracer%kd in module moment_propagation'

@@ -27,7 +27,7 @@ module system
 
   ! fluid related
   integer(i0b), allocatable, dimension(:,:,:) :: inside ! fluid or solid at each node
-  real(dp), allocatable, dimension(:,:,:,:) :: normal_c
+!  real(dp), allocatable, dimension(:,:,:,:) :: normal_c
   real(dp), allocatable, dimension(:,:,:,:) :: normal ! nfft1, nfft2, nfft3, 3
   real(dp) :: rho_0 ! solvent density in the bulk
   real(dp), allocatable, dimension(:,:,:,:) :: n ! population :(lx,ly,lz,velocities)

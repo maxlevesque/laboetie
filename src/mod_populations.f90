@@ -13,9 +13,8 @@ SUBROUTINE CALC_N
   use system, only: jx, jy, jz, a0, a1, c, NbVel, fluid, rho, f_ext, inside, n, solid
   implicit none
   integer(kind=i2b) :: l
-
   ! apply force on all fluid nodes and update populations
-  do concurrent( l= lbound(n,4):ubound(n,4) )
+  do l=1,nbvel
     where( inside==fluid)
       n(:,:,:,l) = a0(l)*rho + a1(l)*( c(x,l)*(jx + f_ext(x)) + c(y,l)*(jy + f_ext(y)) + c(z,l)*(jz + f_ext(z)) )
     elsewhere

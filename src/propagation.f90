@@ -8,30 +8,24 @@ SUBROUTINE PROPAGATION
 
   implicit none
   integer(i2b) :: i, j, k, l, ip, jp, kp
-  real(dp), dimension(lx,ly,lz,NbVel) :: old_n
-
+  real(dp), dimension(lx,ly,lz) :: old_n
 
   call boundPM
 
-  ! backup population before propagation
-  old_n = n
-
   ! for each velocity, find the futur node and put it population at current time
   do l= 1, NbVel
-
+    old_n = n(:,:,:,l) ! backup population before propagation
     ! propagate for each starting node i,j,k to ip, jp, kp
-    do concurrent (i= 1: lx)
-      ip= plusx( i+ c(x, l))
-      do concurrent (j= 1: ly)
-        jp= plusy( j+ c(y, l))
-        do concurrent (k= 1: lz)
-          kp= plusz( k+ c(z, l))
-          ! evolve the system (propagate) ie evolve population of (i,j,k) to (ip,jp,kp)
-          n (ip,jp,kp,l) = old_n (i,j,k,l)
+    do k=1,lz
+      kp=plusz(k+c(z,l))
+      do j=1,ly
+        jp=plusy(j+c(y,l))
+        do i=1,lx
+          ip=plusx(i+c(x,l))
+          n (ip,jp,kp,l) = old_n (i,j,k) ! evolve the system (propagate) ie evolve population of (i,j,k) to (ip,jp,kp)
         end do
       end do
     end do
-
   end do
 
 END SUBROUTINE PROPAGATION

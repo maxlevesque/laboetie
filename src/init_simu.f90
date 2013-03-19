@@ -47,25 +47,14 @@ end subroutine init_simu
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine init_moments_for_LB
-
   use precision_kinds, only: dp
   use system, only: rho_0, jx, jy, jz, lx, ly, lz, rho, n, NbVel
   use constants, only: x, z
   use input, only: input_dp
   implicit none
-
-  ! read rho_0 in input file
-  rho_0 = input_dp('rho_0')
-
-  ! zeroth order moment == population(r,v) == mass density
-  if( .not. allocated(n) ) allocate(n(lx,ly,lz,NbVel), source=0.0_dp)
-
-  ! momentum density (current)
-  allocate( jx(lx, ly, lz), jy(lx,ly,lz), jz( lx, ly, lz), source=0.0_dp )
-
-  ! put rho_0 as init for density array rho
-  allocate( rho(lx,ly,lz), source=rho_0 )
-
+  rho_0 = input_dp('rho_0') ! read the initial, homogeneous, solvent density in input file
+  allocate( rho(lx,ly,lz), source=rho_0 ) ! the density will evolve with time. It is initiated with rho_0 from input file
+  if (.not. allocated(n)) allocate(n(lx,ly,lz,NbVel), source=0.0_dp)  ! zeroth order moment == population(r,v) == mass density
 end subroutine init_moments_for_LB
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
