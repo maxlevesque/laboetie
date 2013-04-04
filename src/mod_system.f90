@@ -25,6 +25,7 @@ module system
   integer(i0b), parameter :: fluid=0, solid=1
   integer(i2b), parameter :: NbVel=19 ! D3Q19 lattice
 
+
   ! fluid related
   integer(i0b), allocatable, dimension(:,:,:) :: inside ! fluid or solid at each node
 !  real(dp), allocatable, dimension(:,:,:,:) :: normal_c
@@ -39,7 +40,7 @@ module system
   real(dp), allocatable, dimension(:,:,:) :: flux_site_plus, flux_site_minus
 
   ! integration quadrature related
-  real(dp), private, parameter :: a_00 = 1.0_dp/3.0_dp ! should be calculated in the code. Easy TODO. NO MAGIC NUMBERS ALLOWED
+  real(dp), private, parameter :: a_00 = 1.0_dp/3.0_dp ! Weighting factors wi for two different LB models for the discrete velocity vectors e_i
   real(dp), private, parameter :: a_01 = 1.0_dp/18.0_dp
   real(dp), private, parameter :: a_02 = 1.0_dp/36.0_dp
   real(dp), private, parameter :: a_10 = 0.0_dp
@@ -58,18 +59,14 @@ module system
   real(dp) :: anormf0
 
   real(dp), dimension(NbVel), parameter :: a0 = &
-                              (/ a_00, a_01, a_01, a_01, a_01, a_01, a_01, &
-                                       a_02, a_02, a_02, a_02, a_02, a_02, &
-                                       a_02, a_02, a_02, a_02, a_02, a_02  /)
+        [ a_00, a_01, a_01, a_01, a_01, a_01, a_01, a_02, a_02, a_02, a_02, a_02, a_02, a_02, a_02, a_02, a_02, a_02, a_02 ]
   real(dp), dimension(NbVel), parameter :: a1 = &
-                              (/ a_10, a_11, a_11, a_11, a_11, a_11, a_11, &
-                                       a_12, a_12, a_12, a_12, a_12, a_12, &
-                                       a_12, a_12, a_12, a_12, a_12, a_12  /)
+        [ a_10, a_11, a_11, a_11, a_11, a_11, a_11, a_12, a_12, a_12, a_12, a_12, a_12, a_12, a_12, a_12, a_12, a_12, a_12 ]
 
   real(dp), private, parameter :: itself=0.0_dp, nn=1.0_dp, nnn=sqrt(2.0_dp) ! nearest and next nearest neighbour distance
-  real(dp), dimension( 1:NbVel), parameter :: delta = &
-                              (/ itself, nn, nn, nn, nn, nn, nn, nnn, nnn, nnn, &
-                                 nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn /)
+
+  real(dp), dimension(NbVel), parameter :: delta = &
+        [ itself, nn, nn, nn, nn, nn, nn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn ]
 
   ! electrostatic related
   real(dp) :: bjl ! Bjerum length

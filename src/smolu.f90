@@ -18,12 +18,6 @@ subroutine smolu
   real(kind=dp) :: flux_link_plus, flux_link_minus
 
 
-  ! init
-!  if( time == 1 ) then
-!    force_x = 0.0_dp
-!    force_y = 0.0_dp
-!    force_z = 0.0_dp
-!  end if
   flux_site_plus = 0.0_dp
   flux_site_minus = 0.0_dp
 

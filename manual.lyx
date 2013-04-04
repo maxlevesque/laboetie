@@ -72,6 +72,628 @@ Manual for LABOETIE
 Maximilien Levesque
 \end_layout
 
+\begin_layout Chapter
+Theory
+\end_layout
+
+\begin_layout Standard
+Major source (copy paste sometimes): Keijo Mattila, PhD, Implementation
+ Techniques for the Lattice Boltzmann Method.
+ The extraordinary simple dynamics with local update rules was ideally suited
+ for parallel computing.
+ McNamara and Zanetti proposed to replace the boolean variables with real
+ numbers (1988).
+ Their pro- posal in 1988 has been considered as the introduction of the
+ lattice Boltzmann method (LBM).
+\end_layout
+
+\begin_layout Section
+The Lattice Boltzmann Method (LBM)
+\end_layout
+
+\begin_layout Standard
+LBM comes from a modified version of the Lattice-Gas Automaton (LGA) for
+ the Navier-Stokes equation by Frisch, Hasslacher, and Pomeau (1986).
+\begin_inset Formula 
+\begin{equation}
+f_{i}\left(\mathbf{r}+\mathbf{c}_{i}\Delta t,t+\Delta t\right)=f_{i}\left(\mathbf{r},t\right)+\Omega_{i}\left(f_{i}\right)
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Particles move (advect, stream, whatever name you want to give), then collide.
+\end_layout
+
+\begin_layout Section
+The collision term
+\end_layout
+
+\begin_layout Subsection
+Lattice BGK (LBGK)
+\end_layout
+
+\begin_layout Standard
+The one we use in the code.
+ Bhatnagar, Gross, Krooks:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\Omega_{i}\left(f_{i}\right)=-\frac{1}{\tau}\left(f_{i}\left(\mathbf{r},t\right)-f_{i}^{eq}\left(\mathbf{r},t\right)\right).
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For incompressible flows in BGK scheme, 
+\begin_inset Formula 
+\begin{equation}
+f_{i}^{eq}\left(\rho,\mathbf{u}\right)=\omega_{i}\rho\left(1+3\frac{\mathbf{e}_{i}\cdot\mathbf{u}}{c^{2}}+\frac{9}{2}\frac{\left(\mathbf{e}_{i}\cdot\mathbf{u}\right)^{2}}{c^{4}}-\frac{3}{2}\frac{\mathbf{u}^{2}}{c^{2}}\right),
+\end{equation}
+
+\end_inset
+
+where the weights 
+\begin_inset Formula $\omega_{i}$
+\end_inset
+
+ depend upon the Lattice BGK model.
+\end_layout
+
+\begin_layout Standard
+Various lattice BGK models as presented by Qian et al.
+ (1992).
+ They enumerate the models with the notation D
+\begin_inset Formula $_{d}$
+\end_inset
+
+Q
+\begin_inset Formula $_{q}$
+\end_inset
+
+, where 
+\begin_inset Formula $d$
+\end_inset
+
+ and 
+\begin_inset Formula $q$
+\end_inset
+
+ refer to the spatial dimension and number of discrete velocities, respectively.
+ The relation 
+\begin_inset Formula $\theta=c_{r}^{2}/3$
+\end_inset
+
+ is true for each model.
+ Likewise, the models have a common expression for the viscosity: 
+\begin_inset Formula $\nu=\theta\left(1/\omega-1/2\right)\Delta t$
+\end_inset
+
+.
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="6" columns="5">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Model
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $W_{0}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $W_{1}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $W_{2}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $W_{3}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+D1Q3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2/3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1/6
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+D2Q9
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+4/9
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1/9
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1/36
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+D3Q15
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2/9
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1/9
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1/72
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+D3Q19
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1/3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1/18
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1/36
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+D4Q25
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1/3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1/36
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Various lattice BGK models as presented by Qian et al.
+ (1992)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Kinetic boundary conditions
+\end_layout
+
+\begin_layout Standard
+In a typical scenario, fluid flow is either confined or diverted by solid
+ boundaries -- walls if you like.
+ Let 
+\begin_inset Formula $\mathbf{n}\left(\mathbf{r}\right)$
+\end_inset
+
+ denote an outward unit normal at the solid boundary 
+\begin_inset Formula $\Gamma_{s}$
+\end_inset
+
+, i.e.
+ 
+\begin_inset Formula $\mathbf{n}$
+\end_inset
+
+ points from the solid to the gas domain.
+ The first and most natural boundary condition is the 
+\end_layout
+
+\begin_layout Subsection
+specular reflection law
+\emph on
+ 
+\end_layout
+
+\begin_layout Standard
+(
+\emph on
+conditions miroirs 
+\emph default
+in French):
+\begin_inset Formula 
+\begin{equation}
+f\left(\mathbf{r},R\mathbf{c},t\right)=f\left(\mathbf{r},\mathbf{c},t\right),\quad R\mathbf{c}=\mathbf{c}-2\left[\mathbf{c}\cdot\mathbf{n}\left(\mathbf{r}\right)\right]\mathbf{n}\left(\mathbf{r}\right),\quad\mathbf{r}\in\Gamma_{S}.
+\end{equation}
+
+\end_inset
+
+Here the tangential velocities of impinging molecules remain unchanged,
+ but the normal components of the velocities are reversed.
+ Since specular reflection im- plies zero friction in the tangential direction
+ of the boundary, molecules so emitted to the gas do not impose drag on
+ the solid body – there are no shear stresses acting on the wall.
+ In reality solid walls do resist gas flows, and thus there has to be a
+ mechanism responsible for friction at the boundary.
+ 
+\end_layout
+
+\begin_layout Subsection
+Diffuse reflection wall
+\end_layout
+
+\begin_layout Standard
+Maxwell took this into consideration (adding drag) by introducing the diffuse
+ reflection law:
+\begin_inset Formula 
+\begin{equation}
+f\left(\mathbf{r},\mathbf{c},t\right)=f^{M}\left(\rho_{W},\mathbf{u}_{W},T_{W}\right),\quad\mathbf{c}\cdot\mathbf{n}\left(\mathbf{r}\right)>0,\quad\mathbf{r}\in\Gamma_{s}.
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathbf{u}_{W}$
+\end_inset
+
+ and 
+\begin_inset Formula $T_{W}$
+\end_inset
+
+ are the local wall velocity and temperature, respectively.
+ The local density 
+\begin_inset Formula $\rho_{W}$
+\end_inset
+
+ is chosen carefully so that the wall does not accumulate or disperse molecules
+ on that site.
+ Here the colliding molecules interact strongly with the wall, and the emitted
+ molecules leave the wall in a Maxwellian distribution determined by 
+\begin_inset Formula $\rho_{W}$
+\end_inset
+
+ , 
+\begin_inset Formula $\mathbf{u}_{W}$
+\end_inset
+
+ , and 
+\begin_inset Formula $T_{W}$
+\end_inset
+
+ .
+ Finally, Maxwell proposed that a realistic boundary condition, at least
+ to some degree, is a linear combination of the two conditions above: a
+ portion
+\begin_inset Formula $\chi$
+\end_inset
+
+ of the incident molecules is specularly reflected and the rest 
+\begin_inset Formula $\left(1-\chi\right)$
+\end_inset
+
+ interact diffusively with the wall.
+ This combination, with various expressions for the accommodation coefficient
+ 
+\begin_inset Formula $\chi$
+\end_inset
+
+, is still a very popular boundary condition.
+\end_layout
+
+\begin_layout Subsection
+Reverse reflection law (bounce back), i.e.
+ no-slip
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+f\left(\mathbf{r},-\mathbf{c},t\right)=f\left(\mathbf{r},\mathbf{c},t\right),\quad\mathbf{r}\in\Gamma_{s},
+\end{equation}
+
+\end_inset
+
+which implies zero fluid flow velocity at the boundary.
+ It is an experimental fact that, in the hydrodynamic regime, most of the
+ real gases in ordinary conditions effectively stick to a solid wall, i.e.
+ they do not slip or, in other words, the rel- ative velocity between the
+ gas and the wall is zero at the boundary.
+ Of course, fluids do slip to some extent when the Knudsen number for a
+ flow is not neglible anymore.
+ For example in the Maxwell’s composite boundary condition, the slip can
+ be adjusted with the accommodation coefficient 
+\begin_inset Formula $\chi$
+\end_inset
+
+.
+ All this suggests that no- slip is an approximation, on a macroscopic level,
+ to what actually happens at the boundary of a fluid.
+ Unfortunately the distinction between the slip and no-slip boundary conditions
+ is not so clear-cut as it may seem from the above discussion.
+ For a 
+\emph on
+Plane Poiseuille flow
+\emph default
+, that is for a fluid flow between two par- allel plates induced by a pressure
+ gradient, the analytical solution he found for the velocity profile is
+ a parabola.
+ However, this parabola is shifted by a constant amount, proportional to
+ the square of the Knudsen number.
+ That is, although the reverse reflection law gives no microscopic slip
+ at the boundary, it may distort the bulk flow by giving rise to a kind
+ of effective macroscopic slip.
+\end_layout
+
+\begin_layout Standard
+
+\bar under
+This is the only boundary condition actually implemented in the code.
+\end_layout
+
+\begin_layout Standard
+Halfway bounce back.
+\end_layout
+
+\begin_layout Subsection
+Bounce forward, i.e.
+ slip
+\end_layout
+
+\begin_layout Chapter
+The code
+\end_layout
+
 \begin_layout Section
 Input file : lb.in
 \end_layout

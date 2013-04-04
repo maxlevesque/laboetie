@@ -33,11 +33,9 @@ subroutine equilibration_without_constraint
   ! start timer
   timeloop: do time = 1, t_equil
 
-    ! fluid motion: apply external forces on fluid
-    call calc_n
+    call calc_n ! populations
 
-    ! fluid motion: propagate ie make n evolve accordingly to velocities
-    call propagation
+    call propagation ! propagatoin of the distribution functions according to their direction to the next nodes
 
     ! compute density
     call comp_rho

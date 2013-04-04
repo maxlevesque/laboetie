@@ -11,7 +11,7 @@ MODULE MOMENT_PROPAGATION
   real(dp), allocatable, dimension(:,:,:,:,:) :: Propagated_Quantity_Adsorbed
   integer(i2b), parameter :: now=0, next=1, past=-1
   real(dp), dimension(x:z, past:next) :: vacf
-  real(dp) :: lambda
+  real(dp) :: lambda, lambda_s ! lambda bulk and surface
   TYPE TYPE_TRACER
     real(dp) :: ka, kd, K, z, Db, Ds !K=ka/kd, z=tracer charge
   END TYPE TYPE_TRACER
@@ -31,11 +31,6 @@ SUBROUTINE INIT
 
   tracer%ka = input_dp('tracer_ka')
   tracer%kd = input_dp('tracer_kd')
-  tracer%Db = input_dp('tracer_Db') ! bulk diffusion coefficient of tracer, i.e. the molecular diffusion coefficient
-  tracer%Ds = input_dp('tracer_Ds') ! surface diffusion coefficient of tracer
-  if (tracer%Db<=0.0_dp) stop 'tracer_Db as readen in input is invalid'
-  if (tracer%Ds <= 0.0_dp ) stop 'tracer_Ds as readen in input file is invalid'
-
   if( .not. test(tracer%ka) ) stop 'problem in tracer%ka in module moment_propagation'
   if( .not. test(tracer%kd) ) stop 'problem in tracer%kd in module moment_propagation'
   if(tracer%kd==0.0_dp) then
@@ -44,8 +39,13 @@ SUBROUTINE INIT
     tracer%K = (tracer%ka)/(tracer%kd)
   end if
   tracer%z = input_dp('tracer_z')
+  tracer%Db = input_dp('tracer_Db') ! bulk diffusion coefficient of tracer, i.e. the molecular diffusion coefficient
+  tracer%Ds = input_dp('tracer_Ds') ! surface diffusion coefficient of tracer
+  if (tracer%Db <= 0.0_dp ) stop 'tracer_Db as readen in input is invalid'
+  if (tracer%Ds < 0.0_dp ) stop 'tracer_Ds as readen in input file is invalid'
 
   lambda = calc_lambda()
+  lambda_s = calc_lambda_s()
 
   vacf = 0.0_dp
 
@@ -88,7 +88,7 @@ SUBROUTINE PROPAGATE(it, is_converged)
   use supercell, only: is_interfacial
   implicit none
   integer(kind=i2b), intent(in) :: it
-  real(kind=dp) :: lambda, fermi, restpart, scattprop, scattprop_p, exp_dphi
+  real(kind=dp) :: fermi, restpart, scattprop, scattprop_p, exp_dphi
   integer(kind=i2b), parameter :: now=0, next=1, past=-1
   real(dp), dimension(3) :: u_star
   integer(kind=i2b) :: i, j, k, l, l_inv, ip, jp, kp
@@ -96,10 +96,11 @@ SUBROUTINE PROPAGATE(it, is_converged)
   logical, intent(out) :: is_converged
 
   lambda = calc_lambda()
+  lambda_s = calc_lambda_s()
 
   error=.false.
 
-  do concurrent (i=1:lx, j=1:ly, k=1:lz, inside(i,j,k)==fluid )
+  fluidnodes: do concurrent (i=1:lx, j=1:ly, k=1:lz, inside(i,j,k)==fluid )
     u_star = 0.0_dp ! the average velocity at r
     restpart = 1.0_dp ! fraction of particles staying at r; decreases in the loop over neighbours
 
@@ -121,15 +122,38 @@ SUBROUTINE PROPAGATE(it, is_converged)
     if (is_interfacial(i,j,k)) then
       restpart = restpart - tracer%ka
       if (restpart<0.0_dp) error=.true.
-      Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity(:,i,j,k,next) + restpart*Propagated_Quantity(:,i,j,k,now) &
-                                          + Propagated_Quantity_Adsorbed(:,i,j,k,now)*tracer%kd
-      Propagated_Quantity_Adsorbed(:,i,j,k,next) = Propagated_Quantity_Adsorbed(:,i,j,k,now)*(1.0_dp-tracer%kd) &
-                                                  + Propagated_Quantity(:,i,j,k,now)*tracer%ka
+
+      Propagated_Quantity(:,i,j,k,next) = &
+          Propagated_Quantity (:,i,j,k,next) &
+        + restpart * Propagated_Quantity (:,i,j,k,now) &
+        + Propagated_Quantity_Adsorbed (:,i,j,k,now) * tracer%kd
+
+      Propagated_Quantity_Adsorbed(:,i,j,k,next) = &
+          Propagated_Quantity_Adsorbed(:,i,j,k,now) * (1.0_dp - tracer%kd) &
+        + Propagated_Quantity(:,i,j,k,now)*tracer%ka
+
+      vel: do concurrent (l=2:nbvel)
+        ip = plusx (i+c(x,l))
+        jp = plusy (j+c(y,l))
+        kp = plusz (k+c(z,l))
+        if (.not. is_interfacial (ip,jp,kp)) cycle ! is_interfacial is fluid AND interface
+        fermi = 1.0_dp/(1.0_dp + calc_exp_dphi(i,j,k,ip,jp,kp)) ! 1/2 when tracer has no charge
+        scattprop = calc_scattprop( n(i,j,k,l), rho(i,j,k), a0(l), lambda_s, fermi)
+        restpart = restpart - scattprop
+        scattprop_p = calc_scattprop( n(ip,jp,kp,vel_inv(l)), rho(ip,jp,kp), a0(vel_inv(l)), lambda_s, 1.0_dp-fermi)
+        Propagated_Quantity_adsorbed (:,i,j,k,next) = &
+            Propagated_Quantity_adsorbed (:,i,j,k,next) &
+          + Propagated_Quantity_adsorbed (:,ip,jp,kp,now)*scattprop_p
+        u_star = u_star + scattprop*c(:,l)
+      end do vel
+
+
+
     else if( .not. is_interfacial(i,j,k)) then
       Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity(:,i,j,k,next) + restpart*Propagated_Quantity(:,i,j,k,now)
     end if
 
-  end do
+  end do fluidnodes
 
   if(error) stop 'somewhere restpart is negative' ! TODO one should find a better function for ads and des, as did Benjamin for pi
 
@@ -199,6 +223,14 @@ REAL(DP) PURE FUNCTION CALC_LAMBDA()
   implicit none
   calc_lambda = 4.0_dp*tracer%Db/kBT
 END FUNCTION CALC_LAMBDA
+
+! ==============================================================================
+
+REAL(DP) PURE FUNCTION CALC_LAMBDA_S()
+  use system, only: kBT
+  implicit none
+  calc_lambda_s = 4.0_dp*tracer%Ds/kBT
+END FUNCTION CALC_LAMBDA_S
 
 ! ==============================================================================
 

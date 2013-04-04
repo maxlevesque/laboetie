@@ -2,16 +2,16 @@
 # LaBo INPUT FILE
 ################################################################################
 
-lx = 30 
-ly = 30 
-lz = 30 
+lx = 1 
+ly = 1 
+lz = 5
 
 D_equil = 10 # number of steps for equilibrating charges (finding PB solution). 1 if charge (salt) free fluid.
 t_equil = 20 # number of steps for equilibrating the flux without constraints
 tmom = 30 # between t_equil and tmom, constraints are applieds (pression, electric field,...)
 tmax = 100000000 # between tmom and tmax, moment propagation is done
 
-wall = 3 # 1 for a slit, i.e. two walls at z=zmin and z=zmax
+wall = 1  # 1 for a slit, i.e. two walls at z=zmin and z=zmax
           # 2 for a cylinder along Z. lx have to be equal to ly.
           # 3 for a body centered cubic cell with solid spheres in contact
           # 4 for disc benichou with exists at 0, 3, 6 and 9 oclock
@@ -44,8 +44,8 @@ D_iter = 1
 ################################################################################
 # Moment Propagation
 ################################################################################
-tracer_Db = 0.1   # bulk diffusion coefficient of the tracer
-tracer_Ds = 0.1   # surface diffusion coefficient of the tracer
+tracer_Db = 0.01   # bulk diffusion coefficient of the tracer
+tracer_Ds = 0.0   # surface diffusion coefficient of the tracer
 tracer_z = 0.0     # charge of the tracer
 tracer_ka = 0.0    # adsorption coefficient of the tracer
 tracer_kd = 0.0    # desorption coefficient of the tracer

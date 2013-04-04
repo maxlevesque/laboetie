@@ -40,15 +40,25 @@ END SUBROUTINE PROPAGATION
 !/**   other is a SOLID state.*/
 !/**   It prepares the 'n's to be propagated all in the SAME way*/
 !/**/*/
-! TODO ROUTINE A AMELIORER SUPER FACILE
+!As the lattice Boltzmann method is a kinetic method, macroscopic boundary con-
+!ditions do not have direct equivalents. They have to be replaced by appropriate mi-
+!croscopic rules which induce the desired macroscopic behavior. The easiest solution
+!for introducing solid walls (i.e. a no-slip boundary condition) is the introduction of
+!the bounce back rule on wall nodes
+!   f_out (x,l,t) = f_in(x,-l,t), with x+l ∈ wall,
+!This rule rotates the distribution functions on the wall node and
+!thus they return back to the fluid with opposite momentum in the next time step. This
+!results in zero velocities at the wall (which is located half-way between the last fluid
+!cell and the first wall node) and ensures that there is no flux across the wall. This is
+!equivalent to the macroscopic no-slip boundary condition.
+
 SUBROUTINE BOUNDPM
   use precision_kinds
-  use system, only: lx, ly, lz, nbvel, c, plusx, plusy, plusz, inside, vel_inv, n
+  use system, only: lx, ly, lz, nbvel, c, plusx, plusy, plusz, inside, vel_inv, n,solid,fluid
   use constants, only: x, y, z
   implicit none
   integer(i2b) :: i, j, k, l, w, ip, jp, kp
   real(dp) :: tmp
-
   do i= 1, lx
     do j= 1, ly
       do k= 1, lz
