@@ -2,10 +2,10 @@
 
 subroutine advect
 
-  use precision_kinds, only: dp, i2b
+  use precision_kinds
+  use constants, only: x, y, z
   use system, only: c_plus, c_minus, flux_site_minus, flux_site_plus, el_curr_x, el_curr_y, el_curr_z, &
-                    ion_curr_x, ion_curr_y, ion_curr_z, lx, ly, lz, inside, jx, jy, jz, fluid,&
-                    plusx, plusy, plusz
+                    ion_curr_x, ion_curr_y, ion_curr_z, lx, ly, lz, inside, jx, jy, jz, fluid, plus
   implicit none
   real(kind=dp) :: c_minus_total_old, c_plus_total_old, c_minus_total_new, c_plus_total_new
   integer(kind=i2b) :: i, j, k, ix, iy, iz, ip, jp, kp
@@ -58,9 +58,9 @@ subroutine advect
           do iy= -1, 1
             do iz= -1, 1
 
-              ip = plusx( i+ ix)
-              jp = plusy( j+ iy)
-              kp = plusz( k+ iz)
+              ip = plus( i+ ix,x)
+              jp = plus( j+ iy,y)
+              kp = plus( k+ iz,z)
 
               ax = vx * real(ix,kind=dp)
               ay = vy * real(iy,kind=dp)

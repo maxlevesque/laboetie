@@ -1,12 +1,12 @@
 subroutine smolu
 
   use precision_kinds, only: dp, i2b
-  use system, only: time, D_iter, inside, a1, c, D_plus, D_minus, delta, solute_force,&
-                     elec_slope_x, elec_slope_y, elec_slope_z, lncb_slope_x, lncb_slope_y, lncb_slope_z,&
-                     NbVel, phi_tot, lx, ly, lz,&
+  use system, only: time, D_iter, inside, D_plus, D_minus, solute_force,&
+                     elec_slope, lncb_slope, phi_tot, lx, ly, lz,&
                      kbt, fluid, solid, c_plus, c_minus, el_curr_x, el_curr_y, el_curr_z,&
-                     ion_curr_x, ion_curr_y, ion_curr_z, plusx, plusy, plusz
+                     ion_curr_x, ion_curr_y, ion_curr_z, plus
   use constants, only: x, y, z
+  use mod_lbmodel, only: lbm
 
   implicit none
   integer(kind=i2b) :: i, j, k, ip, jp, kp, l
@@ -30,12 +30,12 @@ subroutine smolu
       do k = 1, lz
 
         ! find arrival sites corresponding to each velocity
-        do l = 2, NbVel ! not l==1 which is (ip,jp,kp)==(i,j,k). One may begin at l=1 but cycle if delta(l)==0. For instance in a where(delta/=0.0_dp)
+        do l= lbm%lmin+1, lbm%lmax ! not first l which is (ip,jp,kp)==(i,j,k). One may begin at l=1 but cycle if delta(l)==0. For instance in a where(delta/=0.0_dp)
 
           ! apply periodic boundary conditions
-          ip= plusx( i+ c(x,l) )
-          jp= plusy( j+ c(y,l) )
-          kp= plusz( k+ c(z,l) )
+          ip= plus( i+ lbm%vel(l)%coo(x) ,x)
+          jp= plus( j+ lbm%vel(l)%coo(y) ,y)
+          kp= plus( k+ lbm%vel(l)%coo(z) ,z)
 
           ! if both nodes are in fluid
           if( inside(i,j,k) == fluid .and. inside(ip,jp,kp) == fluid ) then
@@ -44,18 +44,18 @@ subroutine smolu
             exp_dphi = exp( phi_tot(ip,jp,kp) - phi_tot(i,j,k) ) ! arrival minus departure
 
             ! here is a very bizarre trick to correct for the jump in the external potential (elec_slope)
-            if( i == lx .and. ip == 1  ) exp_dphi = exp_dphi* exp( elec_slope_x* lx )
-            if( j == ly .and. jp == 1  ) exp_dphi = exp_dphi* exp( elec_slope_y* ly )
-            if( k == lz .and. kp == 1  ) exp_dphi = exp_dphi* exp( elec_slope_z* lz )
-            if( i == 1  .and. ip == lx ) exp_dphi = exp_dphi* exp(-elec_slope_x* lx )
-            if( j == 1  .and. jp == ly ) exp_dphi = exp_dphi* exp(-elec_slope_y* ly )
-            if( k == 1  .and. kp == lz ) exp_dphi = exp_dphi* exp(-elec_slope_z* lz )
+            if( i == lx .and. ip == 1  ) exp_dphi = exp_dphi* exp( elec_slope(x)* lx )
+            if( j == ly .and. jp == 1  ) exp_dphi = exp_dphi* exp( elec_slope(y)* ly )
+            if( k == lz .and. kp == 1  ) exp_dphi = exp_dphi* exp( elec_slope(z)* lz )
+            if( i == 1  .and. ip == lx ) exp_dphi = exp_dphi* exp(-elec_slope(x)* lx )
+            if( j == 1  .and. jp == ly ) exp_dphi = exp_dphi* exp(-elec_slope(y)* ly )
+            if( k == 1  .and. kp == lz ) exp_dphi = exp_dphi* exp(-elec_slope(z)* lz )
 
             ! inverse
             exp_min_dphi = 1.0_dp / exp_dphi
 
             ! contribution of the applied salt gradient (contribution of Magali)
-            exp_dlncb = exp( lncb_slope_x*c(x,l) +lncb_slope_y*c(y,l) +lncb_slope_z*c(z,l) )
+            exp_dlncb = exp (sum (lncb_slope*lbm%vel(l)%coo(:)))
             exp_min_dlncb = 1.0_dp / exp_dlncb  ! inverse
 
             ! flux due to electrostatic potential, density gradients and applied salt gradient
@@ -73,34 +73,34 @@ subroutine smolu
             ! Subtract a term equal to the gradient of the charged densities
             f_microions = f_microions -kBT*(c_plus(ip,jp,kp)-c_plus(i,j,k)+c_minus(ip,jp,kp)-c_minus(i,j,k))
 
-            flux_link_plus = flux_link_plus * (D_plus / delta(l))
-            flux_link_minus = flux_link_minus * (D_minus / delta(l))
+            flux_link_plus = flux_link_plus * (D_plus / lbm%vel(l)%delta )
+            flux_link_minus = flux_link_minus * (D_minus / lbm%vel(l)%delta )
 
             flux_site_plus(i,j,k) = flux_site_plus(i,j,k) + flux_link_plus
             flux_site_minus(i,j,k) = flux_site_minus(i,j,k) + flux_link_minus
 
             ! flux. real flux is arriving at node. Real flux and el_curr are opposite. 
-            el_curr_x  = el_curr_x +a1(l) *c(x,l) *el_curr / D_iter
-            el_curr_y  = el_curr_y +a1(l) *c(y,l) *el_curr / D_iter
-            el_curr_z  = el_curr_z +a1(l) *c(z,l) *el_curr / D_iter
-            ion_curr_x = ion_curr_x +a1(l) *c(x,l) *ion_curr / D_iter
-            ion_curr_y = ion_curr_y +a1(l) *c(y,l) *ion_curr / D_iter
-            ion_curr_z = ion_curr_z +a1(l) *c(z,l) *ion_curr / D_iter
+            el_curr_x  = el_curr_x + lbm%vel(l)%a1 *lbm%vel(l)%coo(x) *el_curr / D_iter
+            el_curr_y  = el_curr_y + lbm%vel(l)%a1 *lbm%vel(l)%coo(y) *el_curr / D_iter
+            el_curr_z  = el_curr_z + lbm%vel(l)%a1 *lbm%vel(l)%coo(z) *el_curr / D_iter
+            ion_curr_x = ion_curr_x + lbm%vel(l)%a1 *lbm%vel(l)%coo(x) *ion_curr / D_iter
+            ion_curr_y = ion_curr_y + lbm%vel(l)%a1 *lbm%vel(l)%coo(y) *ion_curr / D_iter
+            ion_curr_z = ion_curr_z + lbm%vel(l)%a1 *lbm%vel(l)%coo(z) *ion_curr / D_iter
 
             ! force exerted on fluid
-            solute_force(i,j,k,:) = solute_force(i,j,k,:) + a1(l)*c(:,l) *f_microions/D_iter
+            solute_force(i,j,k,:) = solute_force(i,j,k,:) + lbm%vel(l)%a1 *lbm%vel(l)%coo(:) *f_microions/D_iter
 
           else if( inside(i,j,k)==fluid .and. inside(ip,jp,kp)==solid) then
             
 !            dphi = phi(ip,jp,kp)-phi(i,j,k)
 
 !            ! If needed correct for the jump in the external potential (slope) 
-!            if(i==lx .and. ip==1) dphi = dphi+elec_slope_x*lx
-!            if(i==1 .and. ip==lx) dphi = dphi-elec_slope_x*lx
-!            if(j==ly .and. jp==1) dphi = dphi+elec_slope_y*ly
-!            if(j==1 .and. jp==ly) dphi = dphi-elec_slope_y*ly
-!            if(k==lz .and. kp==1) dphi = dphi+elec_slope_z*lz
-!            if(k==1 .and. kp==lz) dphi = dphi-elec_slope_z*lz
+!            if(i==lx .and. ip==1) dphi = dphi+elec_slope(x)*lx
+!            if(i==1 .and. ip==lx) dphi = dphi-elec_slope(x)*lx
+!            if(j==ly .and. jp==1) dphi = dphi+elec_slope(y)*ly
+!            if(j==1 .and. jp==ly) dphi = dphi-elec_slope(y)*ly
+!            if(k==lz .and. kp==1) dphi = dphi+elec_slope(z)*lz
+!            if(k==1 .and. kp==lz) dphi = dphi-elec_slope(z)*lz
 
             ! force acting on the solid. NO contribution of lncb_slope
             exp_dphi = exp(phi_tot(ip,jp,kp)-phi_tot(i,j,k))
@@ -108,7 +108,7 @@ subroutine smolu
             f_plus = c_plus(i,j,k)*(1.0_dp-exp_min_dphi)
             f_minus = c_minus(i,j,k)*(1.0_dp-exp_dphi)
             f_microions = kBT*(f_plus + f_minus)
-            solute_force(i,j,k,:) = solute_force(i,j,k,:) +a1(l)*c(:,l)*f_microions/D_iter
+            solute_force(i,j,k,:) = solute_force(i,j,k,:) + lbm%vel(l)%a1*lbm%vel(l)%coo(:)*f_microions/D_iter
 
           end if
 

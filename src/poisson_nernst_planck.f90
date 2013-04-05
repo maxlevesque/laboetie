@@ -5,30 +5,29 @@
 subroutine poisson_nernst_planck
 
   use precision_kinds, only: i2b, dp
-  use system, only: D_equil, sigma, time
-  use input, only: input_dp
+  use system, only: D_equil, sigma, time, elec_slope, lncb_slope
+  use input
+  use io, only: print_everything_related_to_charge_equil
   implicit none
   logical :: is_converged = .false.
 
   ! test if salt free system, no solute to equilibrate: return to main
   sigma = input_dp('sigma')
-  if( sigma == 0.0_dp ) then ! sigma has already been read in charge initialisation
-    print*,'salt free system.'
-    ! it remains important to go through all next steps in order to insure the reading of everything, etc.
-  end if
+  if( sigma == 0.0_dp ) print*,'salt free system.' ! sigma has already been read in charge initialisation
+  ! it remains important to go through all next steps in order to insure the reading of everything, etc.
 
   ! read the number of iterations one does for the first step of equilibration (D_iter)
-  call read_D_equil
+  D_equil = input_int("D_equil")
+  if (D_equil<0) stop "D_equil should be >= 0"
 
   ! read electrostatic related stuff
-  call read_lncb_slope
-  call read_elec_slope
+  lncb_slope = input_dp3("lncb_slope")
+  elec_slope = input_dp3("elec_slope")
 
   ! iterate until charges are equilibrated
   equiloop: do time = -D_equil, 0 ! time 0 being first step with flux
 
     ! print time
-!    print*,;print*,'time =',time
 
     ! backup potential and solute concentrations from last step
     call backup_phi_c_plus_c_minus

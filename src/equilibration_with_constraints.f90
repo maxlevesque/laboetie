@@ -1,8 +1,9 @@
 subroutine equilibration_with_constraints
 
   use precision_kinds, only: i2b, dp
-  use system, only: tmom, D_iter, t_equil, time, jx, jy, jz, rho, inside, fluid, sigma, lx, ly, lz
+  use system, only: tmom, D_iter, t_equil, time, jx, jy, jz, rho, inside, fluid, sigma, lx, ly, lz, f_ext
   use populations, only: calc_n
+  use input
 
   implicit none
   integer(i2b) :: i
@@ -14,7 +15,7 @@ subroutine equilibration_with_constraints
   print*,'       --------------------------------------------------------------------------------------------------------'
 
   ! read external forces
-  call read_f_ext
+  f_ext = input_dp3("f_ext")
 
   ! continue time
   timeloop: do time = t_equil, tmom
@@ -41,8 +42,6 @@ subroutine equilibration_with_constraints
     ! momenta
     call comp_j
 
-
-
     ! solute motion: advection step
     call advect
 
@@ -50,7 +49,7 @@ subroutine equilibration_with_constraints
     if( sigma /= 0.0_dp ) then
       do i= 1, D_iter
         call sor ! TODO ! compute phi with sucessive overrelaxation method     
-        call electrostatic_pot ! sum the electrostatic potential due to internal charges to the external field imposed by elec_slope_x:z
+        call electrostatic_pot ! sum the electrostatic potential due to internal charges to the external field imposed by elec_slope(x:z))
         call smolu ! Smoluchowski
         call charge_test ! make sure charge is kept constant during simulation
       end do

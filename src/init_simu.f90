@@ -1,5 +1,6 @@
 subroutine init_simu
-
+  use mod_lbmodel, only: init_everything_related_to_lb_model => initialize
+  use io, only: print_header, print_input_in_output_folder
   implicit none
 
   ! print header
@@ -21,11 +22,12 @@ end block
   ! go read the input file(s) and put everything in a character array
   call put_input_in_character_array
 
-  ! Print input parameters found to output folder
-  call print_input_in_output_folder
+  call print_input_in_output_folder ! Print input parameters found to output folder
+
+  call init_everything_related_to_lb_model ! init everything related to D3Q15 or D3Q19 etc ie LB models
 
   ! prepare supercell geometry
-  call supercell_definition ! porousmedia, inside_model, lx, ly, lz
+  call supercell_definition
 
   ! schedule simulation
   call scheduler ! t_equil, tmom, tmax
@@ -48,13 +50,14 @@ end subroutine init_simu
 
 subroutine init_moments_for_LB
   use precision_kinds, only: dp
-  use system, only: rho_0, jx, jy, jz, lx, ly, lz, rho, n, NbVel
+  use system, only: rho_0, jx, jy, jz, lx, ly, lz, rho, n
   use constants, only: x, z
   use input, only: input_dp
+  use mod_lbmodel, only: lbm
   implicit none
   rho_0 = input_dp('rho_0') ! read the initial, homogeneous, solvent density in input file
   allocate( rho(lx,ly,lz), source=rho_0 ) ! the density will evolve with time. It is initiated with rho_0 from input file
-  if (.not. allocated(n)) allocate(n(lx,ly,lz,NbVel), source=0.0_dp)  ! zeroth order moment == population(r,v) == mass density
+  if (.not. allocated(n)) allocate(n(lx,ly,lz,lbm%nvel), source=0.0_dp)  ! zeroth order moment == population(r,v) == mass density
 end subroutine init_moments_for_LB
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

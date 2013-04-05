@@ -3,8 +3,9 @@
 SUBROUTINE PROPAGATION
 
   use precision_kinds, only: i2b, dp
-  use system, only: n, lx, ly, lz, c, NbVel, plusx, plusy, plusz
+  use system, only: n, lx, ly, lz, plus
   use constants, only: x, y, z
+  use mod_lbmodel, only: lbm
 
   implicit none
   integer(i2b) :: i, j, k, l, ip, jp, kp
@@ -13,15 +14,15 @@ SUBROUTINE PROPAGATION
   call boundPM
 
   ! for each velocity, find the futur node and put it population at current time
-  do l= 1, NbVel
+  do l= lbm%lmin, lbm%lmax
     old_n = n(:,:,:,l) ! backup population before propagation
     ! propagate for each starting node i,j,k to ip, jp, kp
     do k=1,lz
-      kp=plusz(k+c(z,l))
+      kp=plus(k+lbm%vel(l)%coo(z),z)
       do j=1,ly
-        jp=plusy(j+c(y,l))
+        jp=plus(j+lbm%vel(l)%coo(y),y)
         do i=1,lx
-          ip=plusx(i+c(x,l))
+          ip=plus(i+lbm%vel(l)%coo(x),x)
           n (ip,jp,kp,l) = old_n (i,j,k) ! evolve the system (propagate) ie evolve population of (i,j,k) to (ip,jp,kp)
         end do
       end do
@@ -54,20 +55,21 @@ END SUBROUTINE PROPAGATION
 
 SUBROUTINE BOUNDPM
   use precision_kinds
-  use system, only: lx, ly, lz, nbvel, c, plusx, plusy, plusz, inside, vel_inv, n,solid,fluid
+  use system, only: lx, ly, lz, plus, inside, n,solid,fluid
   use constants, only: x, y, z
+  use mod_lbmodel, only: lbm
   implicit none
   integer(i2b) :: i, j, k, l, w, ip, jp, kp
   real(dp) :: tmp
   do i= 1, lx
     do j= 1, ly
       do k= 1, lz
-        do l= 1, nbvel, 2
-          ip= plusx( i+ c(x, l))
-          jp= plusy( j+ c(y, l))
-          kp= plusz( k+ c(z, l))
+        do l= lbm%lmin, lbm%lmax, 2
+          ip= plus( i+ lbm%vel(l)%coo(x) ,x)
+          jp= plus( j+ lbm%vel(l)%coo(y) ,y)
+          kp= plus( k+ lbm%vel(l)%coo(z) ,z)
           if( inside(i,j,k) /= inside(ip,jp,kp) ) then
-            w = vel_inv(l)
+            w = lbm%vel(l)%inv
             tmp = n(i,j,k,l)
             n(i,j,k,l) = n(ip,jp,kp,w)
             n(ip,jp,kp,w) = tmp

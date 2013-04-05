@@ -6,7 +6,7 @@ subroutine charges_init
   use system, only: lambda_D, lx, ly, lz, c_plus, c_minus, phi, charge_distrib, sigma, &
                      inside, normal, fluid, solid, anormf0, bjl, kBT, rho_ch, D_plus, D_minus
   use constants, only: pi
-  use input, only: input_dp
+  use input
 
   implicit none
   integer(kind=i2b) :: count_solid, count_fluid, count_solid_int
@@ -45,7 +45,9 @@ print*,'rho_ch=',rho_ch
   print*,'nb of fluid nodes ',count_fluid
 
   ! read where are distributed the charges
-  call read_charge_distrib
+!  call read_charge_distrib
+  charge_distrib = input_ch("charge_distrib")
+  if( charge_distrib(1:3) /= 'int' .and. charge_distrib(1:3)/='sol') stop 'charge_distrib can only be int or sol for now'
 
   ! distribute charge, depending on where user asked
   if( charge_distrib(1:3) == 'sol') then

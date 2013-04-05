@@ -5,9 +5,7 @@
 subroutine equilibration_without_constraint
 
   use precision_kinds, only: i2b, dp
-  use system, only: t_equil, f_ext, D_iter, time, lx, ly, lz, jx, jy, jz,&
-                     elec_slope_x, elec_slope_y, elec_slope_z,&
-                     lncb_slope_x, lncb_slope_y, lncb_slope_z
+  use system, only: t_equil, f_ext, D_iter, time, lx, ly, lz, jx, jy, jz, elec_slope, lncb_slope
   use populations, only: calc_n
   implicit none
   integer(kind=i2b) :: iteration
@@ -22,12 +20,8 @@ subroutine equilibration_without_constraint
 
   ! In these equilibration steps, we do not apply the external forces
   f_ext = 0.0_dp ! f_ext(x:y)
-  elec_slope_x = 0.0_dp
-  elec_slope_y = 0.0_dp
-  elec_slope_z = 0.0_dp
-  lncb_slope_x = 0.0_dp
-  lncb_slope_y = 0.0_dp
-  lncb_slope_z = 0.0_dp
+  elec_slope = 0.0_dp
+  lncb_slope = 0.0_dp
   ! do not forget to read them when equilibrium is found ie in equilibration_with_constraints
 
   ! start timer
@@ -50,7 +44,7 @@ subroutine equilibration_without_constraint
     do iteration= 1, D_iter ! D_iter is read before in input file
       ! compute phi with sucessive overrelaxation method
       call sor
-      ! compute phi + phi_external (due to electrostatic field elec_slope_x, elec_slope_y, elec_slope,z)
+      ! compute phi + phi_external (due to electrostatic field elec_slope(x:z))
       call electrostatic_pot
       ! this time full smolu, not just_equ_smolu
       call smolu

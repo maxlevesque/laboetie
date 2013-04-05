@@ -8,7 +8,7 @@
 subroutine drop_tracers
 
   use precision_kinds, only: dp, i2b
-  use system, only: tmom, tmax, elec_slope_x, elec_slope_y, elec_slope_z
+  use system, only: tmom, tmax, elec_slope
   use populations, only: calc_n_momprop
   use moment_propagation, only: init, propagate, deallocate_propagated_quantity!, print_vacf, integrate_vacf!, not_yet_converged
   use input, only: input_dp
@@ -20,13 +20,11 @@ subroutine drop_tracers
   print*,'       step           VACF(x)                   VACF(y)                   VACF(z)'
   print*,'       ----------------------------------------------------------------------------------'
 
-  ! include elec_slope_ in population n
+  ! include elec_slope in population n
   call calc_n_momprop
 
   ! turn the electric field off for the rest of mom_prop (included in n)
-  elec_slope_x = 0.0_dp;
-  elec_slope_y = 0.0_dp;
-  elec_slope_z = 0.0_dp;
+  elec_slope = 0.0_dp
 
   ! add electrostatic potential computed by the SOR routine an external contribution
   ! elec_pot(singlx,ly,lz, ch, phi, phi2, inside, t, t_equil);

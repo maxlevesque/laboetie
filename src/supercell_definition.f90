@@ -1,22 +1,20 @@
 ! Here we define the supercell: where are solid nodes and where are liquid nodes.
 subroutine supercell_definition
-
   use precision_kinds!, only: i2b, dp
   use constants, only: x, y, z
   use system, only: wall, fluid, solid, lx, ly, lz, inside, &
-                    normal, a1, c, NbVel,&
-                    plusx, plusy, plusz!,normal_c
+                    normal, plus !,normal_c
   use supercell, only: where_is_it_fluid_and_interfacial,&
                        check_that_at_least_one_node_is_fluid,&
-                       check_that_all_nodes_are_wether_fluid_or_solid,&
-                       define_periodic_boundary_conditions
+                       check_that_all_nodes_are_wether_fluid_or_solid
   use input, only: input_int
   use geometry, only: construct_slit, construct_cylinder, construct_cc, construct_disc_benichou,&
                       construct_sinusoidal_walls_2d, CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D,&
                       CONSTRUCT_TUBE_WITH_VARYING_DIAMETER, CONSTRUCT_SPHERICAL_CAVITY,&
                       CONSTRUCT_SPHERE_BENICHOU,&
                       CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
-
+  use io, only: print_supercell_xsf
+  use mod_lbmodel, only: lbm
   implicit none
   integer(kind=i2b) :: i, j, k, ip, jp, kp, l !dummy
   character(len=150) :: filename
@@ -65,8 +63,6 @@ subroutine supercell_definition
   ! counts number of solid and fluid nodes
   print*, 'number of solid nodes / fluid nodes = ', count(inside==solid),' / ', count(inside==fluid)
 
-  call define_periodic_boundary_conditions
-
   call define_normal_to_surfaces
 
   ! check that at least one node (!!) is of fluid type
@@ -81,21 +77,18 @@ subroutine supercell_definition
 
 contains
 
-
-! here we define normal, which is the normal of the surface. It is not obvious to me (Maximilien Levesque) what it is usefull for. I even suspect it to be tricky if you're a single node vacancy, for instance, where normal will be zero but you're still in an interfacial node.
-subroutine define_normal_to_surfaces
-  use precision_kinds, only: i2b
-  use system, only: wall, lx, ly, lz, inside, normal, a1, c, NbVel, plusx, plusy, plusz
-  integer(i2b) :: i, j, k, l, ip, jp, kp
-  allocate( normal( lx, ly, lz, x:z),source=0.0_dp ) ! vector normal to interface
-  do concurrent ( i=1:lx, j=1:ly, k=1:lz, l=1:Nbvel )
-    ip= plusx( i+ c( x, l))
-    jp= plusy( j+ c( y, l))
-    kp= plusz( k+ c( z, l))
-    normal(i,j,k,:) = normal(i,j,k,:) - a1(l)*c(:,l)*(inside(ip,jp,kp) - inside(i,j,k))
-    if (any(normal(i,j,k,:)/=0.0_dp)) normal(i,j,k,:) = normal(i,j,k,:)/norm2(normal(i,j,k,:))
-  end do
-end subroutine define_normal_to_surfaces
+    ! here we define normal, which is the normal of the surface. It is not obvious to me (Maximilien Levesque) what it is usefull for. I even suspect it to be tricky if you're a single node vacancy, for instance, where normal will be zero but you're still in an interfacial node.
+    subroutine define_normal_to_surfaces
+        integer(i2b) :: i, j, k, l, ip, jp, kp
+        allocate( normal( lx, ly, lz, x:z), source=0.0_dp ) ! vector normal to interface
+        do concurrent ( i=1:lx, j=1:ly, k=1:lz, l= lbm%lmin: lbm%lmax )
+           ip = plus (i+ lbm%vel(l)%coo(x) ,x)
+           jp = plus (j+ lbm%vel(l)%coo(y) ,y)
+           kp = plus (k+ lbm%vel(l)%coo(z) ,z)
+           normal(i,j,k,:) = normal(i,j,k,:) - lbm%vel(l)%a1 * lbm%vel(l)%coo(:)*(inside(ip,jp,kp) - inside(i,j,k))
+           if (any(normal(i,j,k,:)/=0.0_dp)) normal(i,j,k,:) = normal(i,j,k,:)/norm2(normal(i,j,k,:))
+        end do
+    end subroutine define_normal_to_surfaces
 
 
 

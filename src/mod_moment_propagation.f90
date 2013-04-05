@@ -1,31 +1,29 @@
 MODULE MOMENT_PROPAGATION
-  use precision_kinds, only: dp, i2b
-  use constants, only: x, y, z
-  use system, only: tmax, tmom
-  implicit none
-  private
-  public :: init,&
-            propagate,&
-            deallocate_propagated_quantity!, not_yet_converged
-  real(dp), allocatable, dimension(:,:,:,:,:) :: Propagated_Quantity
-  real(dp), allocatable, dimension(:,:,:,:,:) :: Propagated_Quantity_Adsorbed
-  integer(i2b), parameter :: now=0, next=1, past=-1
-  real(dp), dimension(x:z, past:next) :: vacf
-  real(dp) :: lambda, lambda_s ! lambda bulk and surface
-  TYPE TYPE_TRACER
-    real(dp) :: ka, kd, K, z, Db, Ds !K=ka/kd, z=tracer charge
-  END TYPE TYPE_TRACER
-  type(type_tracer) :: tracer
-  contains
+    use precision_kinds
+    use constants, only: x, y, z
+    use system, only: tmax, tmom, plus
+    use mod_lbmodel, only: lbm
+    implicit none
+    private
+    public :: init, propagate, deallocate_propagated_quantity!, not_yet_converged
+    real(dp), allocatable, dimension(:,:,:,:,:) :: Propagated_Quantity
+    real(dp), allocatable, dimension(:,:,:,:,:) :: Propagated_Quantity_Adsorbed
+    integer(i2b), parameter :: now=0, next=1, past=-1
+    real(dp), dimension(x:z, past:next) :: vacf
+    real(dp) :: lambda, lambda_s ! lambda bulk and surface
+    type type_tracer
+        real(dp) :: ka, kd, K, z, Db, Ds !K=ka/kd, z=tracer charge
+    end type
+    type(type_tracer) :: tracer
+    contains
 
 ! ==============================================================================
 
 SUBROUTINE INIT
-  use system, only: phi, NbVel, inside, fluid, solid,&
-                     lx, ly, lz, a0, c, vel_inv, plusx, plusy, plusz, rho, n
+  use system, only: phi, inside, fluid, solid,&
+                     lx, ly, lz, rho, n
   use supercell, only: is_interfacial
   use input, only: input_dp
-  implicit none
   real(dp) :: boltz_weight, Pstat, scattprop, scattprop_p, fermi, exp_dphi, exp_min_dphi
   integer(i2b) :: i, j, k, l, l_inv, ip, jp, kp
 
@@ -57,17 +55,20 @@ SUBROUTINE INIT
 
   do concurrent (i=1:lx, j=1:ly, k=1:lz, inside(i,j,k)==fluid )
     boltz_weight = exp(-tracer%z*phi(i,j,k))/Pstat ! boltz_weight=1/Pstat if tracer%z=0
-    do concurrent (l=2:NbVel, inside(plusx(i+c(x,l)), plusy(j+c(y,l)), plusz(k+c(z,l)))==fluid)
-      ip = plusx(i+c(x,l)) ; jp = plusy(j+c(y,l)) ; kp = plusz(k+c(z,l))
+    do concurrent (l=lbm%lmin+1:lbm%lmax)
+      ip = plus (i+lbm%vel(l)%coo(x) ,x)
+      jp = plus (j+lbm%vel(l)%coo(y) ,y)
+      kp = plus (k+lbm%vel(l)%coo(z) ,z)
+      if (inside(ip,jp,kp)==solid) cycle
       exp_dphi = calc_exp_dphi( i, j, k, ip, jp, kp)
       exp_min_dphi = 1.0_dp/exp_dphi ! =1 if tracer%z=0
       fermi = 1.0_dp/(1.0_dp + exp_dphi) ! =0.5 if tracer%z=0
-      scattprop = calc_scattprop( n(i,j,k,l), rho(i,j,k), a0(l), lambda, fermi)
-      vacf(:,past) = vacf(:,past) + boltz_weight * scattprop * c(:,l)**2
-      l_inv = vel_inv(l)
-      scattprop_p = calc_scattprop( n(ip,jp,kp,l_inv), rho(ip,jp,kp), a0(l_inv), lambda, 1.0_dp-fermi)
+      scattprop = calc_scattprop( n(i,j,k,l), rho(i,j,k), lbm%vel(l)%a0, lambda, fermi)
+      vacf(:,past) = vacf(:,past) + boltz_weight * scattprop * lbm%vel(l)%coo(:)**2
+      l_inv = lbm%vel(l)%inv
+      scattprop_p = calc_scattprop( n(ip,jp,kp,l_inv), rho(ip,jp,kp), lbm%vel(l_inv)%a0, lambda, 1.0_dp-fermi)
       Propagated_Quantity(:,i,j,k,now) = Propagated_Quantity(:,i,j,k,now) &
-                 + exp_min_dphi * scattprop_p * c(:,l_inv) * boltz_weight
+                 + exp_min_dphi * scattprop_p * lbm%vel(l_inv)%coo(:) * boltz_weight
     end do
     if(is_interfacial(i,j,k)) Propagated_Quantity_Adsorbed(:,i,j,k,now) = 0.0_dp
   end do
@@ -82,11 +83,8 @@ END SUBROUTINE INIT
 ! ==============================================================================
 
 SUBROUTINE PROPAGATE(it, is_converged)
-  use system, only: lx, ly, lz, inside, fluid, solid,&
-                     n, rho, a0, c, vel_inv,&
-                     NbVel, plusx, plusy, plusz
+  use system, only: lx, ly, lz, inside, fluid, solid, n, rho
   use supercell, only: is_interfacial
-  implicit none
   integer(kind=i2b), intent(in) :: it
   real(kind=dp) :: fermi, restpart, scattprop, scattprop_p, exp_dphi
   integer(kind=i2b), parameter :: now=0, next=1, past=-1
@@ -104,17 +102,17 @@ SUBROUTINE PROPAGATE(it, is_converged)
     u_star = 0.0_dp ! the average velocity at r
     restpart = 1.0_dp ! fraction of particles staying at r; decreases in the loop over neighbours
 
-    do l = 2, nbvel
-      ip = plusx( i + c(x,l) )
-      jp = plusy( j + c(y,l) )
-      kp = plusz( k + c(z,l) )
+    do l = lbm%lmin+1, lbm%lmax
+      ip = plus(i+lbm%vel(l)%coo(x) ,x)
+      jp = plus(j+lbm%vel(l)%coo(y) ,y)
+      kp = plus(k+lbm%vel(l)%coo(z) ,z)
       if ( inside(ip,jp,kp) /= fluid ) cycle
       fermi = 1.0_dp/(1.0_dp + calc_exp_dphi(i,j,k,ip,jp,kp))
-      scattprop = calc_scattprop( n(i,j,k,l), rho(i,j,k), a0(l), lambda, fermi)
+      scattprop = calc_scattprop( n(i,j,k,l), rho(i,j,k), lbm%vel(l)%a0, lambda, fermi)
       restpart = restpart - scattprop
-      scattprop_p = calc_scattprop( n(ip,jp,kp,vel_inv(l)), rho(ip,jp,kp), a0(vel_inv(l)), lambda, 1.0_dp-fermi)
+      scattprop_p = calc_scattprop( n(ip,jp,kp,lbm%vel(l)%inv), rho(ip,jp,kp), lbm%vel((lbm%vel(l)%inv))%a0, lambda, 1.0_dp-fermi)
       Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity(:,i,j,k,next) + Propagated_Quantity(:,ip,jp,kp,now)*scattprop_p
-      u_star = u_star + scattprop*c(:,l)
+      u_star = u_star + scattprop * lbm%vel(l)%coo(:)
     end do
 
     vacf(:,now) = vacf(:,now) + Propagated_Quantity(:,i,j,k,now)*u_star(:)
@@ -132,19 +130,20 @@ SUBROUTINE PROPAGATE(it, is_converged)
           Propagated_Quantity_Adsorbed(:,i,j,k,now) * (1.0_dp - tracer%kd) &
         + Propagated_Quantity(:,i,j,k,now)*tracer%ka
 
-      vel: do concurrent (l=2:nbvel)
-        ip = plusx (i+c(x,l))
-        jp = plusy (j+c(y,l))
-        kp = plusz (k+c(z,l))
+      vel: do concurrent (l=lbm%lmin+1:lbm%lmax)
+          ip = plus(i+lbm%vel(l)%coo(x) ,x)
+          jp = plus(j+lbm%vel(l)%coo(y) ,y)
+          kp = plus(k+lbm%vel(l)%coo(z) ,z)
         if (.not. is_interfacial (ip,jp,kp)) cycle ! is_interfacial is fluid AND interface
         fermi = 1.0_dp/(1.0_dp + calc_exp_dphi(i,j,k,ip,jp,kp)) ! 1/2 when tracer has no charge
-        scattprop = calc_scattprop( n(i,j,k,l), rho(i,j,k), a0(l), lambda_s, fermi)
+        scattprop = calc_scattprop( n(i,j,k,l), rho(i,j,k), lbm%vel(l)%a0, lambda_s, fermi)
         restpart = restpart - scattprop
-        scattprop_p = calc_scattprop( n(ip,jp,kp,vel_inv(l)), rho(ip,jp,kp), a0(vel_inv(l)), lambda_s, 1.0_dp-fermi)
+        l_inv = lbm%vel(l)%inv
+        scattprop_p = calc_scattprop( n(ip,jp,kp,l_inv), rho(ip,jp,kp), lbm%vel(l_inv)%a0, lambda_s, 1.0_dp-fermi)
         Propagated_Quantity_adsorbed (:,i,j,k,next) = &
             Propagated_Quantity_adsorbed (:,i,j,k,next) &
           + Propagated_Quantity_adsorbed (:,ip,jp,kp,now)*scattprop_p
-        u_star = u_star + scattprop*c(:,l)
+        u_star = u_star + scattprop* lbm%vel(l)%coo(:)
       end do vel
 
 
@@ -185,7 +184,6 @@ END SUBROUTINE PROPAGATE
 ! ==============================================================================
 
 REAL(DP) PURE FUNCTION CALC_EXP_DPHI( i, j, k, ip, jp, kp)
-  implicit none
   integer(i2b), intent(in) :: i, j, k, ip, jp, kp
   if( tracer%z == 0.0_dp ) then
     calc_exp_dphi = 1.0_dp
@@ -197,22 +195,21 @@ END FUNCTION CALC_EXP_DPHI
 ! ==============================================================================
 
 REAL(DP) PURE FUNCTION DPHI(i,j,k,ip,jp,kp)
-  use system, only: phi, elec_slope_x, elec_slope_y, elec_slope_z, lx, ly, lz
-  implicit none
+  use system, only: phi, elec_slope, lx, ly, lz
   integer(i2b), intent(in) :: i, j, k, ip, jp, kp
   dphi = phi(ip,jp,kp) - phi(i,j,k)
   if      (i==lx .and. ip==1) then
-    dphi = dphi + elec_slope_x*(lx+1)
+    dphi = dphi + elec_slope(x)*(lx+1)
   else if(i==1 .and. ip==lx) then
-    dphi = dphi - elec_slope_x*(lx+1)
+    dphi = dphi - elec_slope(x)*(lx+1)
   else if(j==ly .and. jp==1) then
-    dphi = dphi + elec_slope_y*(ly+1)
+    dphi = dphi + elec_slope(y)*(ly+1)
   else if(j==1 .and. jp==ly) then
-    dphi = dphi - elec_slope_y*(ly+1)
+    dphi = dphi - elec_slope(y)*(ly+1)
   else if(k==lz .and. kp==1) then
-    dphi = dphi + elec_slope_z*(lz+1)
+    dphi = dphi + elec_slope(z)*(lz+1)
   else if(k==1 .and. kp==lz) then
-    dphi = dphi - elec_slope_z*(lz+1)
+    dphi = dphi - elec_slope(z)*(lz+1)
   end if
 END FUNCTION DPHI
 
@@ -220,7 +217,6 @@ END FUNCTION DPHI
 
 REAL(DP) PURE FUNCTION CALC_LAMBDA()
   use system, only: kBT
-  implicit none
   calc_lambda = 4.0_dp*tracer%Db/kBT
 END FUNCTION CALC_LAMBDA
 
@@ -228,14 +224,12 @@ END FUNCTION CALC_LAMBDA
 
 REAL(DP) PURE FUNCTION CALC_LAMBDA_S()
   use system, only: kBT
-  implicit none
   calc_lambda_s = 4.0_dp*tracer%Ds/kBT
 END FUNCTION CALC_LAMBDA_S
 
 ! ==============================================================================
 
 REAL(DP) PURE FUNCTION CALC_SCATTPROP(n,rho,w,lambda,fermi)
-  implicit none
   real(dp), intent(in) :: n, rho, w, lambda, fermi
   calc_scattprop = n/rho - w + lambda*w*fermi
 END FUNCTION CALC_SCATTPROP
@@ -243,7 +237,6 @@ END FUNCTION CALC_SCATTPROP
 ! ==============================================================================
 
 SUBROUTINE DEALLOCATE_PROPAGATED_QUANTITY
-  implicit none
   if (allocated(Propagated_Quantity)) deallocate(Propagated_Quantity)
   if (allocated(Propagated_Quantity_Adsorbed)) deallocate(Propagated_Quantity_Adsorbed)
 END SUBROUTINE DEALLOCATE_PROPAGATED_QUANTITY
@@ -252,7 +245,6 @@ END SUBROUTINE DEALLOCATE_PROPAGATED_QUANTITY
 
 SUBROUTINE TEST_AND_ALLOCATE_WHAT_IS_NEEDED_FOR_MOMENT_PROPAGATION
   use system, only: lx, ly, lz
-  implicit none
   ! Propagated_Quantity is the probability vector of arriving at r at time t
   if(allocated(Propagated_Quantity)) stop 'Propagated quantity should not be allocated in init_moment_propagation'
   allocate(Propagated_Quantity(x:z,lx,ly,lz,now:next), source=0.0_dp)
@@ -263,7 +255,6 @@ END SUBROUTINE TEST_AND_ALLOCATE_WHAT_IS_NEEDED_FOR_MOMENT_PROPAGATION
 ! ==============================================================================
 
 LOGICAL PURE FUNCTION TEST(ka)
-  implicit none
   real(dp), intent(in) :: ka
   test = .true.
   if( ka < 0.0_dp ) test = .false.
@@ -272,7 +263,6 @@ END FUNCTION TEST
 ! ==============================================================================
 
 !LOGICAL PURE FUNCTION NOT_YET_CONVERGED(t)
-!  implicit none
 !  integer(i2b), intent(in) :: t
 !  if(t < (lbound(vacf,2)+2)) then
 !    not_yet_converged = .true.
