@@ -5,13 +5,14 @@ subroutine advect
   use precision_kinds
   use constants, only: x, y, z
   use system, only: c_plus, c_minus, flux_site_minus, flux_site_plus, el_curr_x, el_curr_y, el_curr_z, &
-                    ion_curr_x, ion_curr_y, ion_curr_z, lx, ly, lz, inside, jx, jy, jz, fluid, plus
+                    ion_curr_x, ion_curr_y, ion_curr_z, lx, ly, lz, inside, jx, jy, jz, fluid, pbc, supercell
   implicit none
   real(kind=dp) :: c_minus_total_old, c_plus_total_old, c_minus_total_new, c_plus_total_new
   integer(kind=i2b) :: i, j, k, ix, iy, iz, ip, jp, kp
   real(kind=dp) :: vx, vy, vz, ax, ay, az
   real(kind=dp) :: flux_link_minus, flux_link_plus
 
+  supercell%node%nature = inside !TODO REMOVE
 
   ! set fluxes to zero. allocate them if necessary
   if (.not. allocated(flux_site_minus)) allocate( flux_site_minus(lx,ly,lz),source=0.0_dp )
@@ -33,13 +34,13 @@ subroutine advect
 
 
   ! convective contribution to the electric current
-  el_curr_x  = -sum( jx*( c_plus - c_minus ) , mask=inside==fluid)
-  el_curr_y  = -sum( jy*( c_plus - c_minus ) , mask=inside==fluid)
-  el_curr_z  = -sum( jz*( c_plus - c_minus ) , mask=inside==fluid)
+  el_curr_x  = -sum( jx*( c_plus - c_minus ) , mask=supercell%node%nature==fluid)
+  el_curr_y  = -sum( jy*( c_plus - c_minus ) , mask=supercell%node%nature==fluid)
+  el_curr_z  = -sum( jz*( c_plus - c_minus ) , mask=supercell%node%nature==fluid)
 
-  ion_curr_x = -sum( jx*( c_plus + c_minus ) , mask=inside==fluid)
-  ion_curr_y = -sum( jy*( c_plus + c_minus ) , mask=inside==fluid)
-  ion_curr_z = -sum( jz*( c_plus + c_minus ) , mask=inside==fluid)
+  ion_curr_x = -sum( jx*( c_plus + c_minus ) , mask=supercell%node%nature==fluid)
+  ion_curr_y = -sum( jy*( c_plus + c_minus ) , mask=supercell%node%nature==fluid)
+  ion_curr_z = -sum( jz*( c_plus + c_minus ) , mask=supercell%node%nature==fluid)
 
   ! compute concentration before advection step
   c_plus_total_old = sum( c_plus)
@@ -58,9 +59,9 @@ subroutine advect
           do iy= -1, 1
             do iz= -1, 1
 
-              ip = plus( i+ ix,x)
-              jp = plus( j+ iy,y)
-              kp = plus( k+ iz,z)
+              ip = pbc( i+ ix,x)
+              jp = pbc( j+ iy,y)
+              kp = pbc( k+ iz,z)
 
               ax = vx * real(ix,kind=dp)
               ay = vy * real(iy,kind=dp)
@@ -68,7 +69,7 @@ subroutine advect
 
               ! check if link is accessible
               if( ax >= 0.0_dp .and. ay >= 0.0_dp .and. az >= 0.0_dp .and. &
-                         inside(i,j,k) == inside(ip,jp,kp) ) then ! link is accessible
+                         supercell%node(i,j,k)%nature == supercell%node(ip,jp,kp)%nature ) then ! link is accessible
 
                 if( ix == 0 ) ax = 1.0_dp - abs(vx)
                 if( iy == 0 ) ay = 1.0_dp - abs(vy)
@@ -96,7 +97,7 @@ subroutine advect
   end do
 
   ! update concentrations accordingly to flux calculated previously
-  where( inside == fluid )
+  where( supercell%node%nature == fluid )
     c_minus = c_minus + flux_site_minus
     c_plus  = c_plus  + flux_site_plus
   end where

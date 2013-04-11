@@ -4,7 +4,7 @@ subroutine charges_init
 
   use precision_kinds, only: i2b, dp
   use system, only: lambda_D, lx, ly, lz, c_plus, c_minus, phi, charge_distrib, sigma, &
-                     inside, normal, fluid, solid, anormf0, bjl, kBT, rho_ch, D_plus, D_minus
+                     inside, fluid, solid, anormf0, bjl, kBT, rho_ch, D_plus, D_minus, supercell, normal
   use constants, only: pi
   use input
 
@@ -37,8 +37,8 @@ subroutine charges_init
 print*,'rho_ch=',rho_ch
 
   ! count of solid, fluid and interfacial nodes
-  count_solid = count(inside==solid)
-  print*,'nb of solid nodes ',count_solid
+!  count_solid = count( supercell%node%nature == solid )
+  count_solid = count(inside==solid) ! TODO DELETE LINE NOW THAT SUPERCELL%NODE%NATURE IS DEFINED
   count_solid_int = count( (norm2(normal,4)/=0.0_dp) .and. (inside==solid) )
   print*,'nb of solid interfacial nodes ',count_solid_int
   count_fluid = count(inside==fluid)

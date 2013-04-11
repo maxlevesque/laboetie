@@ -2,8 +2,8 @@
 subroutine supercell_definition
   use precision_kinds!, only: i2b, dp
   use constants, only: x, y, z
-  use system, only: wall, fluid, solid, lx, ly, lz, inside, &
-                    normal, plus !,normal_c
+  use system, only: wall, fluid, solid, lx, ly, lz, &
+                    pbc, supercell, inside, normal
   use supercell, only: where_is_it_fluid_and_interfacial,&
                        check_that_at_least_one_node_is_fluid,&
                        check_that_all_nodes_are_wether_fluid_or_solid
@@ -31,6 +31,7 @@ subroutine supercell_definition
   ! define which nodes are fluid and solid
   ! begins with fluid everywhere. Remember one defined fluid=0 and solid=1 as parameters.
   allocate( inside( lx, ly, lz), source=fluid )
+  allocate( supercell%node(lx,ly,lz) )
 
   ! construct medium geometry
   select case (wall)
@@ -60,9 +61,6 @@ subroutine supercell_definition
 
   call print_supercell_xsf
 
-  ! counts number of solid and fluid nodes
-  print*, 'number of solid nodes / fluid nodes = ', count(inside==solid),' / ', count(inside==fluid)
-
   call define_normal_to_surfaces
 
   ! check that at least one node (!!) is of fluid type
@@ -73,23 +71,19 @@ subroutine supercell_definition
 
   ! give a table that tells if you're interfacial or not
   call where_is_it_fluid_and_interfacial
-
-
-contains
-
+  
+  contains
     ! here we define normal, which is the normal of the surface. It is not obvious to me (Maximilien Levesque) what it is usefull for. I even suspect it to be tricky if you're a single node vacancy, for instance, where normal will be zero but you're still in an interfacial node.
-    subroutine define_normal_to_surfaces
-        integer(i2b) :: i, j, k, l, ip, jp, kp
-        allocate( normal( lx, ly, lz, x:z), source=0.0_dp ) ! vector normal to interface
-        do concurrent ( i=1:lx, j=1:ly, k=1:lz, l= lbm%lmin: lbm%lmax )
-           ip = plus (i+ lbm%vel(l)%coo(x) ,x)
-           jp = plus (j+ lbm%vel(l)%coo(y) ,y)
-           kp = plus (k+ lbm%vel(l)%coo(z) ,z)
-           normal(i,j,k,:) = normal(i,j,k,:) - lbm%vel(l)%a1 * lbm%vel(l)%coo(:)*(inside(ip,jp,kp) - inside(i,j,k))
-           if (any(normal(i,j,k,:)/=0.0_dp)) normal(i,j,k,:) = normal(i,j,k,:)/norm2(normal(i,j,k,:))
-        end do
-    end subroutine define_normal_to_surfaces
+      subroutine define_normal_to_surfaces
+          integer(i2b) :: i, j, k, l, ip, jp, kp
+          allocate( normal( lx, ly, lz, x:z), source=0.0_dp ) ! vector normal to interface
+          do concurrent ( i=1:lx, j=1:ly, k=1:lz, l=lbm%lmin:lbm%lmax )
+             ip = pbc (i+ lbm%vel(l)%coo(x) ,x)
+             jp = pbc (j+ lbm%vel(l)%coo(y) ,y)
+             kp = pbc (k+ lbm%vel(l)%coo(z) ,z)
+             normal(i,j,k,:) = normal(i,j,k,:) - lbm%vel(l)%a1 * lbm%vel(l)%coo(:)*(inside(ip,jp,kp) - inside(i,j,k))
+             if (any(normal(i,j,k,:)/=0.0_dp)) normal(i,j,k,:) = normal(i,j,k,:)/norm2(normal(i,j,k,:))
+          end do
 
-
-
+      end subroutine define_normal_to_surfaces
 end subroutine supercell_definition

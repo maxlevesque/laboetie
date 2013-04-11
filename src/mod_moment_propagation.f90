@@ -1,7 +1,7 @@
 MODULE MOMENT_PROPAGATION
     use precision_kinds
     use constants, only: x, y, z
-    use system, only: tmax, tmom, plus
+    use system, only: tmax, tmom, pbc
     use mod_lbmodel, only: lbm
     implicit none
     private
@@ -56,9 +56,9 @@ SUBROUTINE INIT
   do concurrent (i=1:lx, j=1:ly, k=1:lz, inside(i,j,k)==fluid )
     boltz_weight = exp(-tracer%z*phi(i,j,k))/Pstat ! boltz_weight=1/Pstat if tracer%z=0
     do concurrent (l=lbm%lmin+1:lbm%lmax)
-      ip = plus (i+lbm%vel(l)%coo(x) ,x)
-      jp = plus (j+lbm%vel(l)%coo(y) ,y)
-      kp = plus (k+lbm%vel(l)%coo(z) ,z)
+      ip = pbc (i+lbm%vel(l)%coo(x) ,x)
+      jp = pbc (j+lbm%vel(l)%coo(y) ,y)
+      kp = pbc (k+lbm%vel(l)%coo(z) ,z)
       if (inside(ip,jp,kp)==solid) cycle
       exp_dphi = calc_exp_dphi( i, j, k, ip, jp, kp)
       exp_min_dphi = 1.0_dp/exp_dphi ! =1 if tracer%z=0
@@ -103,9 +103,9 @@ SUBROUTINE PROPAGATE(it, is_converged)
     restpart = 1.0_dp ! fraction of particles staying at r; decreases in the loop over neighbours
 
     do l = lbm%lmin+1, lbm%lmax
-      ip = plus(i+lbm%vel(l)%coo(x) ,x)
-      jp = plus(j+lbm%vel(l)%coo(y) ,y)
-      kp = plus(k+lbm%vel(l)%coo(z) ,z)
+      ip = pbc(i+lbm%vel(l)%coo(x) ,x)
+      jp = pbc(j+lbm%vel(l)%coo(y) ,y)
+      kp = pbc(k+lbm%vel(l)%coo(z) ,z)
       if ( inside(ip,jp,kp) /= fluid ) cycle
       fermi = 1.0_dp/(1.0_dp + calc_exp_dphi(i,j,k,ip,jp,kp))
       scattprop = calc_scattprop( n(i,j,k,l), rho(i,j,k), lbm%vel(l)%a0, lambda, fermi)
@@ -131,9 +131,9 @@ SUBROUTINE PROPAGATE(it, is_converged)
         + Propagated_Quantity(:,i,j,k,now)*tracer%ka
 
       vel: do concurrent (l=lbm%lmin+1:lbm%lmax)
-          ip = plus(i+lbm%vel(l)%coo(x) ,x)
-          jp = plus(j+lbm%vel(l)%coo(y) ,y)
-          kp = plus(k+lbm%vel(l)%coo(z) ,z)
+          ip = pbc(i+lbm%vel(l)%coo(x) ,x)
+          jp = pbc(j+lbm%vel(l)%coo(y) ,y)
+          kp = pbc(k+lbm%vel(l)%coo(z) ,z)
         if (.not. is_interfacial (ip,jp,kp)) cycle ! is_interfacial is fluid AND interface
         fermi = 1.0_dp/(1.0_dp + calc_exp_dphi(i,j,k,ip,jp,kp)) ! 1/2 when tracer has no charge
         scattprop = calc_scattprop( n(i,j,k,l), rho(i,j,k), lbm%vel(l)%a0, lambda_s, fermi)

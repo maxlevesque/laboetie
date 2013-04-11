@@ -3,7 +3,7 @@
 SUBROUTINE PROPAGATION
 
   use precision_kinds, only: i2b, dp
-  use system, only: n, lx, ly, lz, plus
+  use system, only: n, lx, ly, lz, pbc
   use constants, only: x, y, z
   use mod_lbmodel, only: lbm
 
@@ -18,11 +18,11 @@ SUBROUTINE PROPAGATION
     old_n = n(:,:,:,l) ! backup population before propagation
     ! propagate for each starting node i,j,k to ip, jp, kp
     do k=1,lz
-      kp=plus(k+lbm%vel(l)%coo(z),z)
+      kp=pbc(k+lbm%vel(l)%coo(z),z)
       do j=1,ly
-        jp=plus(j+lbm%vel(l)%coo(y),y)
+        jp=pbc(j+lbm%vel(l)%coo(y),y)
         do i=1,lx
-          ip=plus(i+lbm%vel(l)%coo(x),x)
+          ip=pbc(i+lbm%vel(l)%coo(x),x)
           n (ip,jp,kp,l) = old_n (i,j,k) ! evolve the system (propagate) ie evolve population of (i,j,k) to (ip,jp,kp)
         end do
       end do
@@ -55,7 +55,7 @@ END SUBROUTINE PROPAGATION
 
 SUBROUTINE BOUNDPM
   use precision_kinds
-  use system, only: lx, ly, lz, plus, inside, n,solid,fluid
+  use system, only: lx, ly, lz, pbc, inside, n,solid,fluid
   use constants, only: x, y, z
   use mod_lbmodel, only: lbm
   implicit none
@@ -65,9 +65,9 @@ SUBROUTINE BOUNDPM
     do j= 1, ly
       do k= 1, lz
         do l= lbm%lmin, lbm%lmax, 2
-          ip= plus( i+ lbm%vel(l)%coo(x) ,x)
-          jp= plus( j+ lbm%vel(l)%coo(y) ,y)
-          kp= plus( k+ lbm%vel(l)%coo(z) ,z)
+          ip= pbc( i+ lbm%vel(l)%coo(x) ,x)
+          jp= pbc( j+ lbm%vel(l)%coo(y) ,y)
+          kp= pbc( k+ lbm%vel(l)%coo(z) ,z)
           if( inside(i,j,k) /= inside(ip,jp,kp) ) then
             w = lbm%vel(l)%inv
             tmp = n(i,j,k,l)

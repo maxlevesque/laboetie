@@ -4,7 +4,7 @@ subroutine smolu
   use system, only: time, D_iter, inside, D_plus, D_minus, solute_force,&
                      elec_slope, lncb_slope, phi_tot, lx, ly, lz,&
                      kbt, fluid, solid, c_plus, c_minus, el_curr_x, el_curr_y, el_curr_z,&
-                     ion_curr_x, ion_curr_y, ion_curr_z, plus
+                     ion_curr_x, ion_curr_y, ion_curr_z, pbc
   use constants, only: x, y, z
   use mod_lbmodel, only: lbm
 
@@ -33,9 +33,9 @@ subroutine smolu
         do l= lbm%lmin+1, lbm%lmax ! not first l which is (ip,jp,kp)==(i,j,k). One may begin at l=1 but cycle if delta(l)==0. For instance in a where(delta/=0.0_dp)
 
           ! apply periodic boundary conditions
-          ip= plus( i+ lbm%vel(l)%coo(x) ,x)
-          jp= plus( j+ lbm%vel(l)%coo(y) ,y)
-          kp= plus( k+ lbm%vel(l)%coo(z) ,z)
+          ip= pbc( i+ lbm%vel(l)%coo(x) ,x)
+          jp= pbc( j+ lbm%vel(l)%coo(y) ,y)
+          kp= pbc( k+ lbm%vel(l)%coo(z) ,z)
 
           ! if both nodes are in fluid
           if( inside(i,j,k) == fluid .and. inside(ip,jp,kp) == fluid ) then

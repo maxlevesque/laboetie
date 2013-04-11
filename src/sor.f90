@@ -7,7 +7,7 @@
 subroutine sor
 
   use precision_kinds, only: dp, i2b ! dp machine specific double precision, i2b simple precision int
-  use system, only: bjl, sigma, plus, anormf0, phi, kbt, lx, ly, lz, c_plus, c_minus
+  use system, only: bjl, sigma, pbc, anormf0, phi, kbt, lx, ly, lz, c_plus, c_minus
   use constants, only: pi, x, y, z
   use mod_lbmodel, only: lbm
   implicit none
@@ -43,9 +43,9 @@ subroutine sor
 
           phistar = 0.0_dp
           do l= lbm%lmin, lbm%lmax
-            imin = plus(i-lbm%vel(l)%coo(x),x)
-            jmin = plus(j-lbm%vel(l)%coo(y),y)
-            kmin = plus(k-lbm%vel(l)%coo(z),z)
+            imin = pbc(i-lbm%vel(l)%coo(x),x)
+            jmin = pbc(j-lbm%vel(l)%coo(y),y)
+            kmin = pbc(k-lbm%vel(l)%coo(z),z)
             phistar = phistar + lbm%vel(l)%a0 * phi(imin,jmin,kmin)
           end do
           phistar = phistar +factor*(c_plus(i,j,k)-c_minus(i,j,k)) ! see PRE64, Horbach: Eq. 17

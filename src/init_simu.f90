@@ -19,8 +19,7 @@ block
   if( .not. file_exists) stop "./lb.in does not exist"
 end block
 
-  ! go read the input file(s) and put everything in a character array
-  call put_input_in_character_array
+  call put_input_in_character_array  ! go read the input file(s) and put everything in a character array
 
   call print_input_in_output_folder ! Print input parameters found to output folder
 

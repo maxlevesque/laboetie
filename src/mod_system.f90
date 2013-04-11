@@ -20,10 +20,14 @@ module system
 
     ! fluid related
     type type_latticenode
-        integer(i0b) :: nature ! solid liquid; replace latticenode(i,j,k)%nature = inside(i,j,k)
-        real(dp), allocatable, dimension(x:z) :: normal
+        integer(kind(fluid)) :: nature ! solid liquid; replace latticenode(i,j,k)%nature = inside(i,j,k)
+        real(dp), dimension(x:z) :: normal ! vector normal to interface if interfacial site
     end type
-    type (type_latticenode), public, allocatable, dimension(:,:,:) :: latticenode
+    type type_supercell
+        integer(i2b), dimension(x:z) :: length, lengthmin, lengthmax
+        type (type_latticenode), public, allocatable, dimension(:,:,:) :: node
+    end type
+    type (type_supercell), public :: supercell ! supercell%node(i,j,k)%nature  supercell%node(i,j,k)%normal(x)   supercell%length   supercell%lengthmin:supercell%lengthmax
     integer(i0b), allocatable, dimension(:,:,:) :: inside ! fluid or solid at each node
     !  real(dp), allocatable, dimension(:,:,:,:) :: normal_c
     real(dp), allocatable, dimension(:,:,:,:) :: normal ! nfft1, nfft2, nfft3, 3
@@ -51,20 +55,17 @@ module system
     real(dp) :: el_curr_x, el_curr_y, el_curr_z
     real(dp) :: ion_curr_x, ion_curr_y, ion_curr_z
     real(dp) :: rho_ch ! charge density?
-
-  ! external force given by user
-  real(dp), dimension(x:z) :: f_ext ! external force (constraints) applied to flux
-  real(dp), allocatable, dimension(:,:,:,:) :: solute_force ! (lx, ly, lz, 3)
-
-
-  ! thermo
-  real(dp), parameter :: kBT = 1.0_dp/3.0_dp ! boltzmann constant * temperature
-  real(dp), parameter :: beta = 1.0_dp/kBT
+    ! external force given by user
+    real(dp), dimension(x:z) :: f_ext ! external force (constraints) applied to flux
+    real(dp), allocatable, dimension(:,:,:,:) :: solute_force ! (lx, ly, lz, 3)
+    ! thermo
+    real(dp), parameter :: kBT = 1.0_dp/3.0_dp ! boltzmann constant * temperature
+    real(dp), parameter :: beta = 1.0_dp/kBT
 
     contains
     ! periodic boundary conditions
     pure function pbc (i,direction)
-        integer(i2b) :: plus
+        integer(i2b) :: pbc
         integer(i2b), intent(in) :: i, direction
         select case (direction)
             case (x)

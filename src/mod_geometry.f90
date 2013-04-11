@@ -1,15 +1,10 @@
 MODULE GEOMETRY
-  use precision_kinds ! all precision kinds defined in the dedicated module
-  use system, only: lx, ly, lz, fluid, solid, inside
-  implicit none
-!  private
-!  public construct_slit, construct_cylinder, construct_cc, construct_disc_benichou
-
-CONTAINS
-
-
-
-
+    use precision_kinds ! all precision kinds defined in the dedicated module
+    use system, only: lx, ly, lz, fluid, solid, inside, supercell
+    implicit none
+    !  private
+    !  public construct_slit, construct_cylinder, construct_cc, construct_disc_benichou
+    contains
 SUBROUTINE CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
   real(dp), dimension(1:2, 1:4) :: r ! there are 7 cylinders in the supercell, whose only x and y (1:2) coordinates are important
   ! lx is the half of the big size of the hexagon == length/2
@@ -39,15 +34,8 @@ SUBROUTINE CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
   end do
   inside(:,:,1) = solid
   inside(:,:,lz) = solid
+!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
-
-
-
-
-
-
-
-
 
 SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
 ! construct the system described in Makhnovskii et al., Chem. Phys. 367, 110 (2010)
@@ -82,6 +70,7 @@ SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
       end if
     end if
   end do
+!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
 
 
@@ -108,6 +97,7 @@ SUBROUTINE CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D
       inside(i,ly-(ly-2)/4:ly-1,:) = solid
     end if
   end do
+!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D
 
 
@@ -138,7 +128,7 @@ SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
       mirror = mirror - 1
     end do
   end do
-
+!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
 
 
@@ -151,6 +141,7 @@ SUBROUTINE CONSTRUCT_SLIT
   inside = fluid
   inside( :, :, mi) = solid ! the lower bound of the thrid dimension of inside is solid
   inside( :, :, ma) = solid ! so is the upper bound
+!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_SLIT
 
 
@@ -179,6 +170,7 @@ SUBROUTINE CONSTRUCT_SPHERICAL_CAVITY
       end do
     end do
   end do
+!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_SPHERICAL_CAVITY
 
 
@@ -199,6 +191,7 @@ SUBROUTINE CONSTRUCT_CC
       inside(i,j,k) = fluid
     end if
   end do
+!  supercell%node%nature = inside
   contains
     PURE LOGICAL FUNCTION IS_IN_SOLID_SPHERE(i,j,k)
       implicit none
@@ -251,6 +244,7 @@ SUBROUTINE CONSTRUCT_CYLINDER
       end if
     end do
   end do
+!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_CYLINDER
 
 
@@ -302,18 +296,8 @@ SUBROUTINE CONSTRUCT_SPHERE_BENICHOU
       end do
     end do
   end do
-
+!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_SPHERE_BENICHOU
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -357,11 +341,7 @@ SUBROUTINE CONSTRUCT_DISC_BENICHOU
       end if
     end do
   end do
-
+!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_DISC_BENICHOU
 
-
-
-
-
-END MODULE GEOMETRY
+end module geometry

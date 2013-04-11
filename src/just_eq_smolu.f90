@@ -7,7 +7,7 @@ subroutine just_eq_smolu
     use precision_kinds
     use system, only: D_plus, D_minus, &
         D_equil, time, inside, lx, ly, lz, fluid, phi, c_plus, c_minus,&
-        rho_0=>rho_ch, sigma, plus
+        rho_0=>rho_ch, sigma, pbc
     use constants, only: x, y, z
     use mod_lbmodel, only: lbm
     implicit none
@@ -72,9 +72,9 @@ subroutine just_eq_smolu
           do l= lbm%lmin+1, lbm%lmax, 2 ! at once flux in both directions ! l=1 corresponds to no velocity ie flux toward itself ie delta(l)=0
 
             ! periodic boundary conditions to neighbours
-            ip= plus( i+ lbm%vel(l)%coo(x) ,x)
-            jp= plus( j+ lbm%vel(l)%coo(y) ,y)
-            kp= plus( k+ lbm%vel(l)%coo(z) ,z)
+            ip= pbc( i+ lbm%vel(l)%coo(x) ,x)
+            jp= pbc( j+ lbm%vel(l)%coo(y) ,y)
+            kp= pbc( k+ lbm%vel(l)%coo(z) ,z)
 
             ! continue for fluid-fluid flux only
             if( inside(i,j,k) == fluid .and. inside(ip,jp,kp) == fluid) then
