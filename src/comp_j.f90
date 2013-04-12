@@ -3,7 +3,7 @@
 subroutine comp_j
 
   use precision_kinds, only: i2b, dp
-  use system, only: jx, jy, jz, n, lx, ly, lz !, f_ext, inside, solid
+  use system, only: jx, jy, jz, n, lx, ly, lz !, f_ext, solid
   ! n is the population in direction 1, 2 and 3 of velocity discrete value l (1:19)
   ! c is the quadrature in l mathematica direction
   ! j is the momentum density in direction x, ie jx, is   jx(i,j,k) = sum_l c_x(l) * n(i,j,k,l)    where c_x(l) = c(1,l)
@@ -39,7 +39,7 @@ subroutine comp_j
   end do
 
 ! USELESS FOR NOW THAT BOUNDPM HAS BEEN CHECKED CAREFULLY
-!  where( inside == solid )
+!  where( supercell%node%nature == solid )
 !    jx = 0.0_dp
 !    jy = 0.0_dp
 !    jz = 0.0_dp

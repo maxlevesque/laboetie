@@ -4,7 +4,7 @@
 
 lx = 1 
 ly = 1 
-lz = 5
+lz = 50
 
 lbmodel = D3Q19 # D3Q19, D3Q15 or whatever. pay attention to caps
 

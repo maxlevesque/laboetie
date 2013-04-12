@@ -1,10 +1,10 @@
 subroutine smolu
 
   use precision_kinds, only: dp, i2b
-  use system, only: time, D_iter, inside, D_plus, D_minus, solute_force,&
+  use system, only: time, D_iter, D_plus, D_minus, solute_force,&
                      elec_slope, lncb_slope, phi_tot, lx, ly, lz,&
                      kbt, fluid, solid, c_plus, c_minus, el_curr_x, el_curr_y, el_curr_z,&
-                     ion_curr_x, ion_curr_y, ion_curr_z, pbc
+                     ion_curr_x, ion_curr_y, ion_curr_z, pbc, supercell
   use constants, only: x, y, z
   use mod_lbmodel, only: lbm
 
@@ -38,7 +38,7 @@ subroutine smolu
           kp= pbc( k+ lbm%vel(l)%coo(z) ,z)
 
           ! if both nodes are in fluid
-          if( inside(i,j,k) == fluid .and. inside(ip,jp,kp) == fluid ) then
+          if( supercell%node(i,j,k)%nature == fluid .and. supercell%node(ip,jp,kp)%nature == fluid ) then
 
             ! compute potential difference between sites
             exp_dphi = exp( phi_tot(ip,jp,kp) - phi_tot(i,j,k) ) ! arrival minus departure
@@ -90,7 +90,7 @@ subroutine smolu
             ! force exerted on fluid
             solute_force(i,j,k,:) = solute_force(i,j,k,:) + lbm%vel(l)%a1 *lbm%vel(l)%coo(:) *f_microions/D_iter
 
-          else if( inside(i,j,k)==fluid .and. inside(ip,jp,kp)==solid) then
+          else if( supercell%node(i,j,k)%nature ==fluid .and. supercell%node(ip,jp,kp)%nature == solid) then
             
 !            dphi = phi(ip,jp,kp)-phi(i,j,k)
 
@@ -119,14 +119,14 @@ subroutine smolu
   end do
 
   ! update concentrations. Smoluchowski part.
-  where(inside==fluid)
+  where(supercell%node%nature==fluid)
     c_plus = c_plus + flux_site_plus
     c_minus = c_minus + flux_site_minus
   end where
 
   ! normalize by volume of fluid phase
   if( time > 0 ) then
-    n_fluidsites = sum(inside,mask=inside==fluid)
+    n_fluidsites = sum(supercell%node%nature, mask=supercell%node%nature==fluid)
     el_curr_x = el_curr_x / n_fluidsites
     el_curr_y = el_curr_y / n_fluidsites
     el_curr_z = el_curr_z / n_fluidsites
@@ -136,8 +136,9 @@ subroutine smolu
   end if
 
   ! check that the sum of all fluxes is zero
-  if( abs(sum( flux_site_plus,mask=inside==fluid)) > 1.0e-12 .or. abs(sum( flux_site_minus,mask=inside==fluid)) > 1.0e-12 ) then
-    stop 'in smolu.f90 the sum of all fluxes does not add up to zero! stop.'
+  if( abs(sum( flux_site_plus,mask=supercell%node%nature==fluid)) > 1.0e-12 .or. &
+      abs(sum( flux_site_minus,mask=supercell%node%nature==fluid)) > 1.0e-12 ) then
+      stop 'in smolu.f90 the sum of all fluxes does not add up to zero! stop.'
   end if
 
 end subroutine smolu

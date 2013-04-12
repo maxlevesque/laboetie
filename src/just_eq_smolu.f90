@@ -6,8 +6,8 @@
 subroutine just_eq_smolu
     use precision_kinds
     use system, only: D_plus, D_minus, &
-        D_equil, time, inside, lx, ly, lz, fluid, phi, c_plus, c_minus,&
-        rho_0=>rho_ch, sigma, pbc
+        D_equil, time, lx, ly, lz, fluid, phi, c_plus, c_minus,&
+        rho_0=>rho_ch, sigma, pbc, supercell
     use constants, only: x, y, z
     use mod_lbmodel, only: lbm
     implicit none
@@ -66,7 +66,7 @@ subroutine just_eq_smolu
       do j= 1, ly
         do k= 1, lz
 
-          ! here one could add a if(inside(i,j,k)==solid)cycle ! but things get hard to read
+          ! here one could add a if(supercell%node(i,j,k)%nature==solid)cycle ! but things get hard to read
 
           ! and all neighbours of this site
           do l= lbm%lmin+1, lbm%lmax, 2 ! at once flux in both directions ! l=1 corresponds to no velocity ie flux toward itself ie delta(l)=0
@@ -77,7 +77,7 @@ subroutine just_eq_smolu
             kp= pbc( k+ lbm%vel(l)%coo(z) ,z)
 
             ! continue for fluid-fluid flux only
-            if( inside(i,j,k) == fluid .and. inside(ip,jp,kp) == fluid) then
+            if( supercell%node(i,j,k)%nature == fluid .and. supercell%node(ip,jp,kp)%nature == fluid) then
 
               ! compute the difference in potential between sites i,j,k and ip,jp,kp
               exp_dphi = exp( phi(ip,jp,kp) - phi(i,j,k) ) ! be carefull to sign
@@ -109,7 +109,7 @@ subroutine just_eq_smolu
     end if
 
     ! update concentrations (smolushowski part)
-    where(inside==fluid)
+    where(supercell%node%nature==fluid)
       c_plus = c_plus + flux_site_plus
       c_minus = c_minus + flux_site_minus
     end where
@@ -118,8 +118,10 @@ subroutine just_eq_smolu
     ! compute the total flux in this equilibration step one wants to minimize.
     if( sigma/=0 .and. eD_plus/=0.0_dp .and. eD_minus/=0.0_dp ) then
       ! the sum of all flux
-      tot_diff_plus  = sqrt(sum(flux_site_plus**2,mask=(inside==fluid)))  / count(inside==fluid) / (0.5_dp*rho_0*eD_plus ) / sigma ! 1st denominator is the number of fluid nodes)
-      tot_diff_minus = sqrt(sum(flux_site_minus**2,mask=(inside==fluid))) / count(inside==fluid) / (0.5_dp*rho_0*eD_minus) / sigma ! norm2 is the Fortran intrinsic for euclidean norm
+      tot_diff_plus  = sqrt(sum(flux_site_plus**2,mask=(supercell%node%nature==fluid))) &
+          / count(supercell%node%nature==fluid) / (0.5_dp*rho_0*eD_plus ) / sigma ! 1st denominator is the number of fluid nodes)
+      tot_diff_minus = sqrt(sum(flux_site_minus**2,mask=(supercell%node%nature==fluid))) &
+          / count(supercell%node%nature==fluid) / (0.5_dp*rho_0*eD_minus) / sigma ! norm2 is the Fortran intrinsic for euclidean norm
 !      print*,'DIFF_plus =',tot_diff_plus,' DIFF_minus =',tot_diff_minus
     end if
 

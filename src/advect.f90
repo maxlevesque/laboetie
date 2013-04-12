@@ -5,14 +5,12 @@ subroutine advect
   use precision_kinds
   use constants, only: x, y, z
   use system, only: c_plus, c_minus, flux_site_minus, flux_site_plus, el_curr_x, el_curr_y, el_curr_z, &
-                    ion_curr_x, ion_curr_y, ion_curr_z, lx, ly, lz, inside, jx, jy, jz, fluid, pbc, supercell
+                    ion_curr_x, ion_curr_y, ion_curr_z, lx, ly, lz, jx, jy, jz, fluid, pbc, supercell
   implicit none
   real(kind=dp) :: c_minus_total_old, c_plus_total_old, c_minus_total_new, c_plus_total_new
   integer(kind=i2b) :: i, j, k, ix, iy, iz, ip, jp, kp
   real(kind=dp) :: vx, vy, vz, ax, ay, az
   real(kind=dp) :: flux_link_minus, flux_link_plus
-
-  supercell%node%nature = inside !TODO REMOVE
 
   ! set fluxes to zero. allocate them if necessary
   if (.not. allocated(flux_site_minus)) allocate( flux_site_minus(lx,ly,lz),source=0.0_dp )

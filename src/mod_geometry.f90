@@ -1,6 +1,6 @@
 MODULE GEOMETRY
     use precision_kinds ! all precision kinds defined in the dedicated module
-    use system, only: lx, ly, lz, fluid, solid, inside, supercell
+    use system, only: lx, ly, lz, fluid, solid, supercell
     implicit none
     !  private
     !  public construct_slit, construct_cylinder, construct_cc, construct_disc_benichou
@@ -29,12 +29,11 @@ SUBROUTINE CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
                       exit checkincyl
                     end if
                   end do checkincyl
-      if( is_incyl ) inside(i,j,:) = solid
+      if( is_incyl ) supercell%node(i,j,:)%nature = solid
     end do
   end do
-  inside(:,:,1) = solid
-  inside(:,:,lz) = solid
-!  supercell%node%nature = inside
+  supercell%node(:,:,1)%nature = solid
+  supercell%node(:,:,lz)%nature = solid
 END SUBROUTINE CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
 
 SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
@@ -46,7 +45,7 @@ SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
   integer(i2b) :: i, j, k
   logical :: is_here
   if(ly/=lz) stop 'ly should be equal to lz cause it is a tube'
-  inside = solid
+  supercell%node%nature = solid
   inquire(file='tube.in',exist=is_here)
   if(.not.is_here) stop 'tube.in cannot be read'
   open(unit=12,file='tube.in')
@@ -58,19 +57,18 @@ SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
     rjk = [real(j),real(k)]
     if(i>lw_o_lx*lx) then
       if( norm2( rjk-r0 ) < a ) then
-        inside(i,j,k) = fluid
+        supercell%node(i,j,k)%nature = fluid
       else
-        inside(i,j,k) = solid
+        supercell%node(i,j,k)%nature = solid
       end if
     else if(i<=lw_o_lx*lx) then
       if( norm2( rjk-r0 ) < R ) then
-        inside(i,j,k) = fluid
+        supercell%node(i,j,k)%nature = fluid
       else
-        inside(i,j,k) = solid
+        supercell%node(i,j,k)%nature = solid
       end if
     end if
   end do
-!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
 
 
@@ -88,16 +86,15 @@ SUBROUTINE CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D
 !  a = R/2._dp
 !  lw = real(lx,dp)/2._dp
 !  ln = lw
-  inside = fluid
-  inside(:,1,:) = solid
-  inside(:,ly,:) = solid
+  supercell%node%nature = fluid
+  supercell%node(:,1,:)%nature = solid
+  supercell%node(:,ly,:)%nature = solid
   do i=1,lx
     if( i>lx/2 ) then
-      inside(i,2:1+(ly-2)/4,:) = solid
-      inside(i,ly-(ly-2)/4:ly-1,:) = solid
+      supercell%node(i,2:1+(ly-2)/4,:)%nature = solid
+      supercell%node(i,ly-(ly-2)/4:ly-1,:)%nature = solid
     end if
   end do
-!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D
 
 
@@ -120,15 +117,14 @@ SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
     mirror = midly
     do j = midly, ly
       if( j < ninty ) then
-        inside(i,j,:) = fluid
+        supercell%node(i,j,:)%nature = fluid
       else
-        inside(i,j,:) = solid
+        supercell%node(i,j,:)%nature = solid
       end if
-      inside(i, mirror, :) = inside(i, j, :)
+      supercell%node(i, mirror, :)%nature = supercell%node(i, j, :)%nature
       mirror = mirror - 1
     end do
   end do
-!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
 
 
@@ -136,12 +132,11 @@ END SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
 
 SUBROUTINE CONSTRUCT_SLIT
   integer(i2b) :: mi, ma
-  mi = lbound(inside,3)
-  ma = ubound(inside,3)
-  inside = fluid
-  inside( :, :, mi) = solid ! the lower bound of the thrid dimension of inside is solid
-  inside( :, :, ma) = solid ! so is the upper bound
-!  supercell%node%nature = inside
+  mi = lbound(supercell%node%nature,3)
+  ma = ubound(supercell%node%nature,3)
+  supercell%node%nature = fluid
+  supercell%node( :, :, mi)%nature = solid ! the lower bound of the thrid dimension of inside is solid
+  supercell%node( :, :, ma)%nature = solid ! so is the upper bound
 END SUBROUTINE CONSTRUCT_SLIT
 
 
@@ -163,14 +158,13 @@ SUBROUTINE CONSTRUCT_SPHERICAL_CAVITY
       do k = 1, lz
         rnode = [real(i,dp),real(j,dp),real(k,dp)] - rorigin
         if( norm2(rnode) >= radius ) then ! = radius is important because without it one has exists
-          inside(i,j,k) = solid
+          supercell%node(i,j,k)%nature = solid
         else
-          inside(i,j,k) = fluid
+          supercell%node(i,j,k)%nature = fluid
         end if
       end do
     end do
   end do
-!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_SPHERICAL_CAVITY
 
 
@@ -183,15 +177,14 @@ SUBROUTINE CONSTRUCT_CC
   implicit none
   integer(i2b) :: i,j,k ! dummy
   if( lx /= ly .or. lx /= lz ) stop 'with wall = 3, i.e. cfc cell, the supercell should be cubic with lx=ly=lz'
-  inside = fluid
+  supercell%node%nature = fluid
   do concurrent( i=1:lx, j=1:ly, k=1:lz )
     if( is_in_solid_sphere(i,j,k) ) then
-      inside(i,j,k) = solid
+      supercell%node(i,j,k)%nature = solid
     else
-      inside(i,j,k) = fluid
+      supercell%node(i,j,k)%nature = fluid
     end if
   end do
-!  supercell%node%nature = inside
   contains
     PURE LOGICAL FUNCTION IS_IN_SOLID_SPHERE(i,j,k)
       implicit none
@@ -238,13 +231,12 @@ SUBROUTINE CONSTRUCT_CYLINDER
     do j = 1, ly
       rnode = [real(i,dp),real(j,dp)] - rorigin
       if( norm2(rnode) >= radius ) then ! = radius is important because without it one has exists
-        inside(i,j,:) = solid
+        supercell%node(i,j,:)%nature = solid
       else
-        inside(i,j,:) = fluid
+        supercell%node(i,j,:)%nature = fluid
       end if
     end do
   end do
-!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_CYLINDER
 
 
@@ -289,14 +281,13 @@ SUBROUTINE CONSTRUCT_SPHERE_BENICHOU
       do k = 1, lz
         rnode = [real(i,dp),real(j,dp),real(k,dp)] - rorigin
         if( norm2(rnode) > radius ) then
-          inside(i,j,k) = solid
+          supercell%node(i,j,k)%nature = solid
         else
-          inside(i,j,k) = fluid
+          supercell%node(i,j,k)%nature = fluid
         end if
       end do
     end do
   end do
-!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_SPHERE_BENICHOU
 
 
@@ -335,13 +326,12 @@ SUBROUTINE CONSTRUCT_DISC_BENICHOU
     do j = 1, ly
       rnode = [real(i,dp),real(j,dp)] - rorigin
       if( norm2(rnode) > radius ) then
-        inside(i,j,:) = solid
+        supercell%node(i,j,:)%nature = solid
       else
-        inside(i,j,:) = fluid
+        supercell%node(i,j,:)%nature = fluid
       end if
     end do
   end do
-!  supercell%node%nature = inside
 END SUBROUTINE CONSTRUCT_DISC_BENICHOU
 
 end module geometry

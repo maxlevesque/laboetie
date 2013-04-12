@@ -27,7 +27,7 @@ subroutine drop_tracers
   elec_slope = 0.0_dp
 
   ! add electrostatic potential computed by the SOR routine an external contribution
-  ! elec_pot(singlx,ly,lz, ch, phi, phi2, inside, t, t_equil);
+  ! elec_pot(singlx,ly,lz, ch, phi, phi2, t, t_equil);
   ! call elec_pot
 
   call init ! init moment propagation

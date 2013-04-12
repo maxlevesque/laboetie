@@ -3,8 +3,8 @@ subroutine supercell_definition
   use precision_kinds!, only: i2b, dp
   use constants, only: x, y, z
   use system, only: wall, fluid, solid, lx, ly, lz, &
-                    pbc, supercell, inside, normal
-  use supercell, only: where_is_it_fluid_and_interfacial,&
+                    pbc, supercell, normal
+  use look_at_supercell, only: where_is_it_fluid_and_interfacial,&
                        check_that_at_least_one_node_is_fluid,&
                        check_that_all_nodes_are_wether_fluid_or_solid
   use input, only: input_int
@@ -18,7 +18,6 @@ subroutine supercell_definition
   implicit none
   integer(kind=i2b) :: i, j, k, ip, jp, kp, l !dummy
   character(len=150) :: filename
-  real(dp), dimension(lx,ly,lz) :: testarray
 
   ! geometry
   wall = input_int("wall")
@@ -30,8 +29,8 @@ subroutine supercell_definition
 
   ! define which nodes are fluid and solid
   ! begins with fluid everywhere. Remember one defined fluid=0 and solid=1 as parameters.
-  allocate( inside( lx, ly, lz), source=fluid )
   allocate( supercell%node(lx,ly,lz) )
+  supercell%node%nature = fluid
 
   ! construct medium geometry
   select case (wall)
@@ -81,7 +80,8 @@ subroutine supercell_definition
              ip = pbc (i+ lbm%vel(l)%coo(x) ,x)
              jp = pbc (j+ lbm%vel(l)%coo(y) ,y)
              kp = pbc (k+ lbm%vel(l)%coo(z) ,z)
-             normal(i,j,k,:) = normal(i,j,k,:) - lbm%vel(l)%a1 * lbm%vel(l)%coo(:)*(inside(ip,jp,kp) - inside(i,j,k))
+             normal(i,j,k,:) = normal(i,j,k,:) - lbm%vel(l)%a1 * &
+                 lbm%vel(l)%coo(:)*(supercell%node(ip,jp,kp)%nature - supercell%node(i,j,k)%nature)
              if (any(normal(i,j,k,:)/=0.0_dp)) normal(i,j,k,:) = normal(i,j,k,:)/norm2(normal(i,j,k,:))
           end do
 

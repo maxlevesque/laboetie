@@ -1,7 +1,7 @@
 MODULE MOMENT_PROPAGATION
     use precision_kinds
     use constants, only: x, y, z
-    use system, only: tmax, tmom, pbc
+    use system, only: tmax, tmom, pbc, supercell
     use mod_lbmodel, only: lbm
     implicit none
     private
@@ -20,9 +20,9 @@ MODULE MOMENT_PROPAGATION
 ! ==============================================================================
 
 SUBROUTINE INIT
-  use system, only: phi, inside, fluid, solid,&
+  use system, only: phi, fluid, solid,&
                      lx, ly, lz, rho, n
-  use supercell, only: is_interfacial
+  use look_at_supercell, only: is_interfacial
   use input, only: input_dp
   real(dp) :: boltz_weight, Pstat, scattprop, scattprop_p, fermi, exp_dphi, exp_min_dphi
   integer(i2b) :: i, j, k, l, l_inv, ip, jp, kp
@@ -49,17 +49,17 @@ SUBROUTINE INIT
 
   call test_and_allocate_what_is_needed_for_moment_propagation
 
-  ! the sum of all boltzman weights is the sum over all exp(-z*phi) where inside == fluid. Note that is_interfacial == fluid + at interface
-  Pstat = sum(exp(-tracer%z*phi), mask=(inside==fluid))&
+  ! the sum of all boltzman weights is the sum over all exp(-z*phi) where supercell%node%nature == fluid. Note that is_interfacial == fluid + at interface
+  Pstat = sum(exp(-tracer%z*phi), mask=(supercell%node%nature==fluid))&
          +sum(exp(-tracer%z*phi)*tracer%K, mask=(is_interfacial))
 
-  do concurrent (i=1:lx, j=1:ly, k=1:lz, inside(i,j,k)==fluid )
+  do concurrent (i=1:lx, j=1:ly, k=1:lz, supercell%node(i,j,k)%nature==fluid )
     boltz_weight = exp(-tracer%z*phi(i,j,k))/Pstat ! boltz_weight=1/Pstat if tracer%z=0
     do concurrent (l=lbm%lmin+1:lbm%lmax)
       ip = pbc (i+lbm%vel(l)%coo(x) ,x)
       jp = pbc (j+lbm%vel(l)%coo(y) ,y)
       kp = pbc (k+lbm%vel(l)%coo(z) ,z)
-      if (inside(ip,jp,kp)==solid) cycle
+      if (supercell%node(ip,jp,kp)%nature==solid) cycle
       exp_dphi = calc_exp_dphi( i, j, k, ip, jp, kp)
       exp_min_dphi = 1.0_dp/exp_dphi ! =1 if tracer%z=0
       fermi = 1.0_dp/(1.0_dp + exp_dphi) ! =0.5 if tracer%z=0
@@ -83,8 +83,8 @@ END SUBROUTINE INIT
 ! ==============================================================================
 
 SUBROUTINE PROPAGATE(it, is_converged)
-  use system, only: lx, ly, lz, inside, fluid, solid, n, rho
-  use supercell, only: is_interfacial
+  use system, only: lx, ly, lz, supercell, fluid, solid, n, rho
+  use look_at_supercell, only: is_interfacial
   integer(kind=i2b), intent(in) :: it
   real(kind=dp) :: fermi, restpart, scattprop, scattprop_p, exp_dphi
   integer(kind=i2b), parameter :: now=0, next=1, past=-1
@@ -98,7 +98,7 @@ SUBROUTINE PROPAGATE(it, is_converged)
 
   error=.false.
 
-  fluidnodes: do concurrent (i=1:lx, j=1:ly, k=1:lz, inside(i,j,k)==fluid )
+  fluidnodes: do concurrent (i=1:lx, j=1:ly, k=1:lz, supercell%node(i,j,k)%nature==fluid )
     u_star = 0.0_dp ! the average velocity at r
     restpart = 1.0_dp ! fraction of particles staying at r; decreases in the loop over neighbours
 
@@ -106,7 +106,7 @@ SUBROUTINE PROPAGATE(it, is_converged)
       ip = pbc(i+lbm%vel(l)%coo(x) ,x)
       jp = pbc(j+lbm%vel(l)%coo(y) ,y)
       kp = pbc(k+lbm%vel(l)%coo(z) ,z)
-      if ( inside(ip,jp,kp) /= fluid ) cycle
+      if ( supercell%node(ip,jp,kp)%nature /= fluid ) cycle
       fermi = 1.0_dp/(1.0_dp + calc_exp_dphi(i,j,k,ip,jp,kp))
       scattprop = calc_scattprop( n(i,j,k,l), rho(i,j,k), lbm%vel(l)%a0, lambda, fermi)
       restpart = restpart - scattprop

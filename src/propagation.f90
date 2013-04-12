@@ -55,7 +55,7 @@ END SUBROUTINE PROPAGATION
 
 SUBROUTINE BOUNDPM
   use precision_kinds
-  use system, only: lx, ly, lz, pbc, inside, n,solid,fluid
+  use system, only: lx, ly, lz, pbc, supercell, n,solid,fluid
   use constants, only: x, y, z
   use mod_lbmodel, only: lbm
   implicit none
@@ -68,7 +68,7 @@ SUBROUTINE BOUNDPM
           ip= pbc( i+ lbm%vel(l)%coo(x) ,x)
           jp= pbc( j+ lbm%vel(l)%coo(y) ,y)
           kp= pbc( k+ lbm%vel(l)%coo(z) ,z)
-          if( inside(i,j,k) /= inside(ip,jp,kp) ) then
+          if( supercell%node(i,j,k)%nature /= supercell%node(ip,jp,kp)%nature ) then
             w = lbm%vel(l)%inv
             tmp = n(i,j,k,l)
             n(i,j,k,l) = n(ip,jp,kp,w)

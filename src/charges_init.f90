@@ -4,7 +4,7 @@ subroutine charges_init
 
   use precision_kinds, only: i2b, dp
   use system, only: lambda_D, lx, ly, lz, c_plus, c_minus, phi, charge_distrib, sigma, &
-                     inside, fluid, solid, anormf0, bjl, kBT, rho_ch, D_plus, D_minus, supercell, normal
+                     fluid, solid, anormf0, bjl, kBT, rho_ch, D_plus, D_minus, supercell, normal
   use constants, only: pi
   use input
 
@@ -38,10 +38,10 @@ print*,'rho_ch=',rho_ch
 
   ! count of solid, fluid and interfacial nodes
 !  count_solid = count( supercell%node%nature == solid )
-  count_solid = count(inside==solid) ! TODO DELETE LINE NOW THAT SUPERCELL%NODE%NATURE IS DEFINED
-  count_solid_int = count( (norm2(normal,4)/=0.0_dp) .and. (inside==solid) )
+  count_solid = count(supercell%node%nature==solid) ! TODO DELETE LINE NOW THAT SUPERCELL%NODE%NATURE IS DEFINED
+  count_solid_int = count( (norm2(normal,4)/=0.0_dp) .and. (supercell%node%nature==solid) )
   print*,'nb of solid interfacial nodes ',count_solid_int
-  count_fluid = count(inside==fluid)
+  count_fluid = count(supercell%node%nature==fluid)
   print*,'nb of fluid nodes ',count_fluid
 
   ! read where are distributed the charges
@@ -91,13 +91,13 @@ print*,'rho_ch=',rho_ch
 
   print*,'ATTENTION ONLY SURFACE CHARGE IS OK FOR NOW'
 
-  where(inside==solid .and. norm2(normal,dim=4)/=0)
+  where(supercell%node%nature==solid .and. norm2(normal,dim=4)/=0)
     c_plus = in_c_plus_solid
     c_minus = in_c_minus_solid
-  else where(inside==solid .and. norm2(normal,dim=4)==0)
+  else where(supercell%node%nature==solid .and. norm2(normal,dim=4)==0)
     c_plus = 0.0_dp
     c_minus = 0.0_dp
-  else where(inside==fluid)
+  else where(supercell%node%nature==fluid)
     c_plus = in_c_plus_fluid
     c_minus = in_c_minus_fluid
   end where
