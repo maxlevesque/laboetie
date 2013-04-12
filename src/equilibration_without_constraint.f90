@@ -5,18 +5,14 @@
 subroutine equilibration_without_constraint
 
   use precision_kinds, only: i2b, dp
-  use system, only: t_equil, f_ext, D_iter, time, lx, ly, lz, jx, jy, jz, elec_slope, lncb_slope
+  use system, only: t_equil, f_ext, D_iter, time, elec_slope, lncb_slope
   use populations, only: calc_n
+  use myallocations
+  use constants, only: x, y, z
   implicit none
   integer(kind=i2b) :: iteration
-
   print*,'       step       current(x)                current(y)                 current(z)'
   print*,'       ----------------------------------------------------------------------------------'
-
-  if(.not.allocated(jx)) allocate(jx(lx,ly,lz), source=0.0_dp)
-  if(.not.allocated(jy)) allocate(jy(lx,ly,lz), source=0.0_dp)
-  if(.not.allocated(jz)) allocate(jz(lx,ly,lz), source=0.0_dp)
-
 
   ! In these equilibration steps, we do not apply the external forces
   f_ext = 0.0_dp ! f_ext(x:y)
@@ -53,5 +49,4 @@ subroutine equilibration_without_constraint
     end do
 
   end do timeloop
-
 end subroutine equilibration_without_constraint

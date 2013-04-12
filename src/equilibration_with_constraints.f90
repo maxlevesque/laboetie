@@ -1,15 +1,17 @@
 subroutine equilibration_with_constraints
 
   use precision_kinds, only: i2b, dp
-  use system, only: tmom, D_iter, t_equil, time, jx, jy, jz, rho, fluid, sigma, lx, ly, lz, f_ext, supercell
+  use system, only: tmom, D_iter, t_equil, time, fluid, sigma, f_ext, supercell
   use populations, only: calc_n
   use input
-
+  use constants, only: x, y, z
   implicit none
   integer(i2b) :: i
   integer(i2b) :: fluid_nodes
 
   fluid_nodes = count(supercell%node%nature==fluid)
+
+
 
   print*,'       step       current(x)                current(y)                 current(z)          density(debug purp.)'
   print*,'       --------------------------------------------------------------------------------------------------------'
@@ -22,10 +24,10 @@ subroutine equilibration_with_constraints
 
     if( modulo(time, 10000) == 0) &
       print*,time,&
-             sum(jx/rho, mask=supercell%node%nature==fluid)/fluid_nodes, &
-             sum(jy/rho, mask=supercell%node%nature==fluid)/fluid_nodes, &
-             sum(jz/rho, mask=supercell%node%nature==fluid)/fluid_nodes, &
-             sum(rho)/(lx*ly*lz)
+             sum(supercell%node%solventFlux(x)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
+             sum(supercell%node%solventFlux(y)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
+             sum(supercell%node%solventFlux(z)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
+             sum(supercell%node%solventDensity) / real(product(supercell%geometry%dimensions%indiceMax(:)))
 
     ! populations
     call calc_n

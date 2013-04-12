@@ -1,25 +1,26 @@
 subroutine smolu
-
   use precision_kinds, only: dp, i2b
   use system, only: time, D_iter, D_plus, D_minus, solute_force,&
-                     elec_slope, lncb_slope, phi_tot, lx, ly, lz,&
+                     elec_slope, lncb_slope, phi_tot, &
                      kbt, fluid, solid, c_plus, c_minus, el_curr_x, el_curr_y, el_curr_z,&
                      ion_curr_x, ion_curr_y, ion_curr_z, pbc, supercell
   use constants, only: x, y, z
   use mod_lbmodel, only: lbm
-
+  use myallocations
   implicit none
   integer(kind=i2b) :: i, j, k, ip, jp, kp, l
   real(kind=dp) :: exp_dphi, exp_min_dphi, exp_dlncb, exp_min_dlncb
-  real(kind=dp), dimension(lx, ly, lz) :: flux_site_minus, flux_site_plus
+  real(dp), dimension(:,:,:), allocatable :: flux_site_minus, flux_site_plus
   integer(kind=i2b) :: n_fluidsites ! total number of fluid side
   real(kind=dp) :: el_curr, ion_curr
   real(kind=dp) :: f_microions, f_plus, f_minus
   real(kind=dp) :: flux_link_plus, flux_link_minus
-
-
-  flux_site_plus = 0.0_dp
-  flux_site_minus = 0.0_dp
+  integer(i2b) :: lx, ly, lz
+  lx = supercell%geometry%dimensions%indiceMax(x)
+  ly = supercell%geometry%dimensions%indiceMax(y)
+  lz = supercell%geometry%dimensions%indiceMax(z)
+  call allocateReal3D( flux_site_plus)
+  call allocateReal3D( flux_site_minus)
 
   if(.not.allocated(solute_force)) allocate(solute_force(lx,ly,lz,x:z),source=0.0_dp)
 
@@ -140,5 +141,4 @@ subroutine smolu
       abs(sum( flux_site_minus,mask=supercell%node%nature==fluid)) > 1.0e-12 ) then
       stop 'in smolu.f90 the sum of all fluxes does not add up to zero! stop.'
   end if
-
 end subroutine smolu

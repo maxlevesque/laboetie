@@ -14,40 +14,40 @@ module system
     integer(i2b) :: D_equil ! number of equilibration steps whithout constraints nor flux
     integer(i2b) :: D_iter
     ! supercell geometry related
-    integer(i2b) :: wall
-    integer(i2b), public :: lx, ly, lz ! TODO A REMPLACER PAR supercell%geometry%dimensions%indicemax(x:z)
+!    integer(i2b) :: wall
     integer(i0b), parameter, public :: fluid=0, liquid=0, solid=1
 
-    ! fluid related
     type type_dimensions
         real(dp), dimension(x:z) :: length
-        integer(i2b), dimension(x:z) :: indicemin
-        integer(i2b), dimension(x:z) :: indicemax
+        integer(i2b), dimension(x:z) :: indiceMin
+        integer(i2b), dimension(x:z) :: indiceMax
     end type
 
     type type_geometry
-        character(len=6) :: surname
+        integer(i2b) :: label
         type(type_dimensions), public :: dimensions
     end type
     
     type type_latticenode
         integer(kind(fluid)) :: nature ! solid liquid
-        real(dp), dimension(x:z) :: normal ! vector normal to interface if interfacial site
+!        real(dp), dimension(x:z) :: normal ! vector normal to interface if interfacial site
+        logical :: isInterfacial
+        real(dp) :: solventDensity ! old rho
+        real(dp), dimension(x:z) :: solventFlux
     end type
 
     type type_supercell
-        integer(i2b), dimension(x:z) :: length, lengthmin, lengthmax
+        integer(i2b), dimension(x:z) :: length, lengthMin, lengthMax
         type (type_latticenode), public, allocatable, dimension(:,:,:) :: node
         type(type_geometry), public :: geometry
     end type
 
     type (type_supercell), public :: supercell ! supercell%node(i,j,k)%nature  supercell%node(i,j,k)%normal(x)   supercell%length   supercell%lengthmin:supercell%lengthmax
 
-    real(dp), allocatable, dimension(:,:,:,:) :: normal ! nfft1, nfft2, nfft3, 3
-    real(dp) :: rho_0 ! solvent density in the bulk
+!    real(dp) :: rho_0 ! solvent density in the bulk
     real(dp), allocatable, dimension(:,:,:,:) :: n ! population :(lx,ly,lz,velocities)
-    real(dp), allocatable, dimension(:,:,:) :: rho ! rho(i,j,k) = sum_l n(i,j,k,l)
-    real(dp), allocatable, dimension(:,:,:) :: jx, jy, jz ! jx(i,j,k) = sum_l c_x(l) * n(i,j,k,l)    where c_x(l) = c(1,l)
+!    real(dp), allocatable, dimension(:,:,:) :: rho ! rho(i,j,k) = sum_l n(i,j,k,l)
+!    real(dp), allocatable, dimension(:,:,:) :: jx, jy, jz ! jx(i,j,k) = sum_l c_x(l) * n(i,j,k,l)    where c_x(l) = c(1,l)
 
     real(dp), allocatable, dimension(:,:,:) :: flux_site_plus, flux_site_minus
     real(dp) :: anormf0
@@ -82,24 +82,24 @@ module system
         select case (direction)
             case (x)
                 if (i==0) then
-                    pbc = lx
-                else if (i==lx+1) then
+                    pbc = supercell%geometry%dimensions%indiceMax(x)
+                else if (i==supercell%geometry%dimensions%indiceMax(x)+1) then
                     pbc = 1
                 else
                     pbc = i
                 end if
             case (y)
                 if (i==0) then
-                    pbc = ly
-                else if (i==ly+1) then
+                    pbc = supercell%geometry%dimensions%indiceMax(y)
+                else if (i==supercell%geometry%dimensions%indiceMax(y)+1) then
                     pbc = 1
                 else
                     pbc = i
                 end if
             case (z)
                 if (i==0) then
-                    pbc = lz
-                else if (i==lz+1) then
+                    pbc = supercell%geometry%dimensions%indiceMax(z)
+                else if (i==supercell%geometry%dimensions%indiceMax(z)+1) then
                     pbc = 1
                 else
                     pbc = i

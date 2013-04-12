@@ -1,40 +1,45 @@
-MODULE GEOMETRY
+module geometry
     use precision_kinds ! all precision kinds defined in the dedicated module
-    use system, only: lx, ly, lz, fluid, solid, supercell
+    use system, only: fluid, solid, supercell
+    use constants, only: x, y, z
     implicit none
     !  private
     !  public construct_slit, construct_cylinder, construct_cc, construct_disc_benichou
     contains
-SUBROUTINE CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
-  real(dp), dimension(1:2, 1:4) :: r ! there are 7 cylinders in the supercell, whose only x and y (1:2) coordinates are important
-  ! lx is the half of the big size of the hexagon == length/2
-  ! ly is the small size of the hexagone = length*sqrt(3)/2
-  integer(i2b) :: i, j, k
-  real(dp) :: midx, midy, quartx, quarty, cylrad, dist_to_cylcenter
-  logical :: is_incyl
-  midx = real(lx+1,dp)/2._dp
-  midy = real(ly+1,dp)/2._dp
-  r(:,1) = [ 1._dp, midy ]
-  r(:,2) = [ real(lx,dp), midy ]
-  r(:,3) = [ midx, 1._dp ]
-  r(:,4) = [ midx, real(ly,dp) ]
-  cylrad = 0.2_dp * real(lx,dp)
-  do i = 1, lx
-    do j = 1, ly
-      is_incyl = .false.
-      checkincyl: do k = lbound(r,2), ubound(r,2)
-                    dist_to_cylcenter = norm2(  [i,j] - r(1:2,k) )
-                    if ( dist_to_cylcenter <= cylrad ) then
-                      is_incyl = .true.
-                      exit checkincyl
-                    end if
-                  end do checkincyl
-      if( is_incyl ) supercell%node(i,j,:)%nature = solid
-    end do
-  end do
-  supercell%node(:,:,1)%nature = solid
-  supercell%node(:,:,lz)%nature = solid
-END SUBROUTINE CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
+        subroutine CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
+            real(dp), dimension(1:2, 1:4) :: r ! there are 7 cylinders in the supercell, whose only x and y (1:2) coordinates are important
+            ! lx is the half of the big size of the hexagon == length/2
+            ! ly is the small size of the hexagone = length*sqrt(3)/2
+            integer(i2b) :: i, j, k
+            real(dp) :: midx, midy, cylinderRadius, radialDistanceToCylinderCenter
+            logical :: isInCylinders
+            integer(i2b) :: lx, ly, lz
+            lx = supercell%geometry%dimensions%indiceMax(x)
+            ly = supercell%geometry%dimensions%indiceMax(y)
+            lz = supercell%geometry%dimensions%indiceMax(z)
+            midx = real(lx+1,dp)/2._dp
+            midy = real(ly+1,dp)/2._dp
+            r(:,1) = [ 1._dp, midy ]
+            r(:,2) = [ real(lx,dp), midy ]
+            r(:,3) = [ midx, 1._dp ]
+            r(:,4) = [ midx, real(ly,dp) ]
+            cylinderRadius = 0.2_dp * real(lx,dp)
+            do i = 1, lx
+                do j = 1, ly
+                    isInCylinders = .false.
+        checkincyl: do k = lbound(r,2), ubound(r,2)
+                        radialDistanceToCylinderCenter = norm2(  [i,j] - r(1:2,k) )
+                        if ( radialDistanceToCylinderCenter <= cylinderRadius ) then
+                            isInCylinders = .true.
+                            exit checkincyl
+                        end if
+                    end do checkincyl
+                if( isInCylinders ) supercell%node(i,j,:)%nature = solid
+                end do
+            end do
+            supercell%node(:,:,1)%nature = solid
+            supercell%node(:,:,lz)%nature = solid
+        end subroutine CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
 
 SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
 ! construct the system described in Makhnovskii et al., Chem. Phys. 367, 110 (2010)
@@ -44,6 +49,10 @@ SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
   real(dp), dimension(2) :: r0, rjk
   integer(i2b) :: i, j, k
   logical :: is_here
+            integer(i2b) :: lx, ly, lz
+            lx = supercell%geometry%dimensions%indiceMax(x)
+            ly = supercell%geometry%dimensions%indiceMax(y)
+            lz = supercell%geometry%dimensions%indiceMax(z)
   if(ly/=lz) stop 'ly should be equal to lz cause it is a tube'
   supercell%node%nature = solid
   inquire(file='tube.in',exist=is_here)
@@ -82,6 +91,10 @@ SUBROUTINE CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D
 ! the tube is along x, with infinity sym along z (ie lz = 1 ok)
   real(dp) :: R, a, ln, lw
   integer(i2b) :: i
+            integer(i2b) :: lx, ly, lz
+            lx = supercell%geometry%dimensions%indiceMax(x)
+            ly = supercell%geometry%dimensions%indiceMax(y)
+            lz = supercell%geometry%dimensions%indiceMax(z)
 !  R = real(ly-2,dp)/2._dp
 !  a = R/2._dp
 !  lw = real(lx,dp)/2._dp
@@ -100,10 +113,14 @@ END SUBROUTINE CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D
 
 SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
   ! tunnel along lx, ly is the width of the tunnel
-  real(dp) :: x, y
+  real(dp) :: xi, yi
   real(dp) :: a, b
   real(dp), parameter :: pi = acos(-1.0_dp)
   integer(i2b) :: i, j, ninty, mirror, midly
+              integer(i2b) :: lx, ly, lz
+            lx = supercell%geometry%dimensions%indiceMax(x)
+            ly = supercell%geometry%dimensions%indiceMax(y)
+            lz = supercell%geometry%dimensions%indiceMax(z)
   ! ly should be odd, so that the middle of ly is on a node (w(x)=0)
   if( mod(ly,2)==0 ) stop 'ly should be odd'
   midly = (ly+1)/2
@@ -111,9 +128,9 @@ SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
   a = midly - b - 1
   if( a<=0 .or. b<=0 ) stop 'pb in def geometry function'
   do i = 1, lx
-    x = real(i-1,dp)
-    y = a*sin(2._dp*pi*x/Lx) + b + midly
-    ninty = nint(y)
+    xi = real(i-1,dp)
+    yi = a*sin(2._dp*pi*xi/Lx) + b + midly
+    ninty = nint(yi)
     mirror = midly
     do j = midly, ly
       if( j < ninty ) then
@@ -149,6 +166,10 @@ SUBROUTINE CONSTRUCT_SPHERICAL_CAVITY
   real(dp) :: radius ! radius of cylinder
   real(dp), dimension(3) :: rnode, rorigin ! coordinates of each node and center of cylinder in x,y coordinates
   integer(i2b) :: i, j, k ! dummy
+              integer(i2b) :: lx, ly, lz
+            lx = supercell%geometry%dimensions%indiceMax(x)
+            ly = supercell%geometry%dimensions%indiceMax(y)
+            lz = supercell%geometry%dimensions%indiceMax(z)
   if( lx /= ly .or. lx/=lz) stop 'wall=8 for a spherical cavity so lx=ly=lz. check input file.'
   if( lx<3 ) stop 'the diameter of the cylinder (lx) should be greater than 3'
   rorigin = [ real(lx+1,dp)/2.0_dp, real(ly+1,dp)/2.0_dp, real(lz+1,dp)/2.0_dp ]
@@ -176,6 +197,10 @@ END SUBROUTINE CONSTRUCT_SPHERICAL_CAVITY
 SUBROUTINE CONSTRUCT_CC
   implicit none
   integer(i2b) :: i,j,k ! dummy
+              integer(i2b) :: lx, ly, lz
+            lx = supercell%geometry%dimensions%indiceMax(x)
+            ly = supercell%geometry%dimensions%indiceMax(y)
+            lz = supercell%geometry%dimensions%indiceMax(z)
   if( lx /= ly .or. lx /= lz ) stop 'with wall = 3, i.e. cfc cell, the supercell should be cubic with lx=ly=lz'
   supercell%node%nature = fluid
   do concurrent( i=1:lx, j=1:ly, k=1:lz )
@@ -221,7 +246,10 @@ SUBROUTINE CONSTRUCT_CYLINDER
   real(dp) :: radius ! radius of cylinder
   real(dp), dimension(2) :: rnode, rorigin ! coordinates of each node and center of cylinder in x,y coordinates
   integer(i2b) :: i, j ! dummy
-
+            integer(i2b) :: lx, ly, lz
+            lx = supercell%geometry%dimensions%indiceMax(x)
+            ly = supercell%geometry%dimensions%indiceMax(y)
+            lz = supercell%geometry%dimensions%indiceMax(z)
   if( lx /= ly) stop 'wall=2 is for cylinders, which should have same lx and ly'
   if( lx<3 ) stop 'the diameter of the cylinder (lx) should be greater than 3'
   rorigin = [ real(lx+1,dp)/2.0_dp, real(ly+1,dp)/2.0_dp ]
@@ -271,7 +299,10 @@ SUBROUTINE CONSTRUCT_SPHERE_BENICHOU
   real(dp) :: radius ! radius of cylinder
   real(dp), dimension(3) :: rnode, rorigin ! coordinates of each node and center of cylinder in x,y coordinates
   integer(i2b) :: i, j, k ! dummy
-
+            integer(i2b) :: lx, ly, lz
+            lx = supercell%geometry%dimensions%indiceMax(x)
+            ly = supercell%geometry%dimensions%indiceMax(y)
+            lz = supercell%geometry%dimensions%indiceMax(z)
   if( lx /= ly .or. lx/=lz) stop 'wall=9 should have same lx, ly and lz'
   if( mod(lx,2) == 0 ) stop 'lx should be odd'
   rorigin = [ real(lx+1,dp)/2.0_dp, real(ly+1,dp)/2.0_dp, real(lz+1,dp)/2.0_dp ]
@@ -317,7 +348,10 @@ SUBROUTINE CONSTRUCT_DISC_BENICHOU
   real(dp) :: radius ! radius of cylinder
   real(dp), dimension(2) :: rnode, rorigin ! coordinates of each node and center of cylinder in x,y coordinates
   integer(i2b) :: i, j ! dummy
-
+            integer(i2b) :: lx, ly, lz
+            lx = supercell%geometry%dimensions%indiceMax(x)
+            ly = supercell%geometry%dimensions%indiceMax(y)
+            lz = supercell%geometry%dimensions%indiceMax(z)
   if( lx /= ly) stop 'wall=4 should have same lx and ly'
   if( mod(lx,2) == 0 ) stop 'lx should be odd'
   rorigin = [ real(lx+1,dp)/2.0_dp, real(ly+1,dp)/2.0_dp ]

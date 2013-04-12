@@ -6,19 +6,22 @@
 subroutine just_eq_smolu
     use precision_kinds
     use system, only: D_plus, D_minus, &
-        D_equil, time, lx, ly, lz, fluid, phi, c_plus, c_minus,&
+        D_equil, time, fluid, phi, c_plus, c_minus,&
         rho_0=>rho_ch, sigma, pbc, supercell
     use constants, only: x, y, z
     use mod_lbmodel, only: lbm
+    use myAllocations
     implicit none
     integer(i2b) :: iter, max_iter
-    real(dp), dimension(lx,ly,lz) :: flux_site_plus, flux_site_minus
+    real(dp), dimension(:,:,:), allocatable :: flux_site_plus, flux_site_minus
     integer(i2b) :: i, j, k, ip, jp, kp, l ! dummy
     real(dp) :: exp_dphi, exp_min_dphi ! Exp[phi site1 - phi site 2] and 1/Exp
     real(dp) :: flux_link_plus, flux_link_minus
     real(dp) :: tot_diff_plus, tot_diff_minus ! total flux of + and - solutes init at high values
     real(dp) :: eD_plus, eD_minus ! effective D_plus and D_minus
     real(dp), parameter :: convergence_criteria = 5.e-6
+    call allocateReal3D( flux_site_plus)
+    call allocateReal3D( flux_site_minus)
     ! init
     tot_diff_plus = huge(1.0_dp)
     tot_diff_minus = huge(1.0_dp)
@@ -62,9 +65,9 @@ subroutine just_eq_smolu
     flux_site_minus = 0.0_dp
 
     ! for all sites
-    do i= 1, lx
-      do j= 1, ly
-        do k= 1, lz
+    do i= supercell%geometry%dimensions%indiceMin(x), supercell%geometry%dimensions%indiceMax(x)
+      do j= supercell%geometry%dimensions%indiceMax(y), supercell%geometry%dimensions%indiceMax(y)
+        do k= supercell%geometry%dimensions%indiceMax(z), supercell%geometry%dimensions%indiceMax(z)
 
           ! here one could add a if(supercell%node(i,j,k)%nature==solid)cycle ! but things get hard to read
 
@@ -129,5 +132,4 @@ subroutine just_eq_smolu
     iter = iter +1
 
   end do ! while loop about convergence on tot_diff_minus+tot_diff_plus
-
 end subroutine just_eq_smolu

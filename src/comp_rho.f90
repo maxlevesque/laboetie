@@ -3,11 +3,12 @@
 
 subroutine comp_rho
 
-  use system, only: rho, n!, lx, ly, lz
+  use system, only:  n, supercell
   implicit none
 
   ! new density is the sum over all velocities of the population at each node
-  rho = sum( n, 4)
+!  rho = sum( n, 4)
+  supercell%node%solventDensity = sum(n,4)
   !  print*,'Total density calculated in comp_rho.f90 = ', sum(rho)/(lx*ly*lz)
 
 end subroutine comp_rho

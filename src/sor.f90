@@ -7,9 +7,10 @@
 subroutine sor
 
   use precision_kinds, only: dp, i2b ! dp machine specific double precision, i2b simple precision int
-  use system, only: bjl, sigma, pbc, anormf0, phi, kbt, lx, ly, lz, c_plus, c_minus
+  use system, only: bjl, sigma, pbc, anormf0, phi, kbt, c_plus, c_minus, supercell
   use constants, only: pi, x, y, z
   use mod_lbmodel, only: lbm
+  use myallocations
   implicit none
 
   integer(kind=i2b), parameter :: maxiterations = 500000
@@ -20,12 +21,12 @@ subroutine sor
   integer(kind=i2b) :: iter ! number of iterations to achieve the tolerance
   integer(kind=i2b) :: i, j, k, l, imin, jmin, kmin
   real(kind=dp) :: phistar, phiold
-  real(kind=dp), dimension(lx,ly,lz) :: phitmp
-  
+  real(kind=dp), dimension(:,:,:), allocatable :: phitmp
+  call allocateReal3D( phitmp )
 
   ! if the system wear no charge, the potential is zero.
   if( sigma==0 ) then
-    if(.not.allocated(phi)) allocate(phi(lx,ly,lz))
+    if(.not.allocated(phi)) call allocateReal3D(phi)
     phi = 0.0_dp
     return ! phi has been computed, go on !
   end if
@@ -37,9 +38,9 @@ subroutine sor
 
     anorm = 0.0_dp ! cumulative diff between new and old phi
 
-    do i=1, lx
-      do j=1, ly
-        do k=1, lz
+    do i = supercell%geometry%dimensions%indiceMin(x), supercell%geometry%dimensions%indiceMax(x)
+      do j = supercell%geometry%dimensions%indiceMin(y), supercell%geometry%dimensions%indiceMax(y)
+        do k = supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
 
           phistar = 0.0_dp
           do l= lbm%lmin, lbm%lmax
@@ -80,5 +81,4 @@ subroutine sor
   print*,'with anormf0 = ',anormf0
 
   anormf0 = sum(abs(phi))
-
 end subroutine sor

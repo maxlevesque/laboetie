@@ -1,10 +1,7 @@
 subroutine put_input_in_character_array
-
   use precision_kinds , only : i2b
   use input , only : input_line
-
   implicit none
-
   integer ( kind = i2b ) :: i , j , k , n ! dummy
   integer ( kind = i2b ) :: ios ! input output status of readen file
   character ( len = 100 ) :: text ! temporary input line

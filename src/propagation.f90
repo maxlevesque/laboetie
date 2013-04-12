@@ -1,18 +1,18 @@
 ! Here we evolve (propagate) the population n accordingly to the velocities l
-
-SUBROUTINE PROPAGATION
-
+subroutine propagation
   use precision_kinds, only: i2b, dp
-  use system, only: n, lx, ly, lz, pbc
+  use system, only: n, pbc, supercell
   use constants, only: x, y, z
   use mod_lbmodel, only: lbm
-
   implicit none
   integer(i2b) :: i, j, k, l, ip, jp, kp
-  real(dp), dimension(lx,ly,lz) :: old_n
-
+  real(dp), allocatable, dimension(:,:,:) :: old_n
+  integer(i2b) :: lx, ly, lz
+  lx = supercell%geometry%dimensions%indiceMax(x)
+  ly = supercell%geometry%dimensions%indiceMax(y)
+  lz = supercell%geometry%dimensions%indiceMax(z)
+  allocate(old_n(lx,ly,lz))
   call boundPM
-
   ! for each velocity, find the futur node and put it population at current time
   do l= lbm%lmin, lbm%lmax
     old_n = n(:,:,:,l) ! backup population before propagation
@@ -28,8 +28,7 @@ SUBROUTINE PROPAGATION
       end do
     end do
   end do
-
-END SUBROUTINE PROPAGATION
+end subroutine propagation
 
 
 
@@ -55,15 +54,15 @@ END SUBROUTINE PROPAGATION
 
 SUBROUTINE BOUNDPM
   use precision_kinds
-  use system, only: lx, ly, lz, pbc, supercell, n,solid,fluid
+  use system, only: pbc, supercell, n,solid,fluid
   use constants, only: x, y, z
   use mod_lbmodel, only: lbm
   implicit none
   integer(i2b) :: i, j, k, l, w, ip, jp, kp
   real(dp) :: tmp
-  do i= 1, lx
-    do j= 1, ly
-      do k= 1, lz
+  do i= 1, supercell%geometry%dimensions%indiceMax(x)
+    do j= 1, supercell%geometry%dimensions%indiceMax(y)
+      do k= 1, supercell%geometry%dimensions%indiceMax(z)
         do l= lbm%lmin, lbm%lmax, 2
           ip= pbc( i+ lbm%vel(l)%coo(x) ,x)
           jp= pbc( j+ lbm%vel(l)%coo(y) ,y)

@@ -3,24 +3,23 @@
 subroutine charges_init
 
   use precision_kinds, only: i2b, dp
-  use system, only: lambda_D, lx, ly, lz, c_plus, c_minus, phi, charge_distrib, sigma, &
-                     fluid, solid, anormf0, bjl, kBT, rho_ch, D_plus, D_minus, supercell, normal
-  use constants, only: pi
+  use system, only: lambda_D, c_plus, c_minus, phi, charge_distrib, sigma, &
+                     fluid, solid, anormf0, bjl, kBT, rho_ch, D_plus, D_minus, supercell
+  use constants, only: pi, x, y, z
   use input
-
+  use myallocations
   implicit none
   integer(kind=i2b) :: count_solid, count_fluid, count_solid_int
   real(kind=dp) :: sigma_solid, sigma_fluid
   real(kind=dp) :: in_c_plus_solid, in_c_plus_fluid, in_c_minus_solid, in_c_minus_fluid
   real(kind=dp) :: rho_0 ! don't understand why here it is different from the value read in input file.
-
   ! init ion (solute) concentrations
-  if (.not. allocated(c_plus)) allocate( c_plus(lx,ly,lz), source=0.0_dp )
-  if (.not. allocated(c_minus)) allocate( c_minus(lx,ly,lz), source=0.0_dp )
+  if (.not. allocated(c_plus)) call allocateReal3D(c_plus)
+  if (.not. allocated(c_minus)) call allocateReal3D( c_minus)
 
   ! init potential
-  allocate( phi(lx,ly,lz), source=0.0_dp )
-
+  call allocateReal3D( phi) !allocate( phi(lx,ly,lz), source=0.0_dp )
+  phi = 0._dp
   ! read
   bjl = input_dp('bjl')
   sigma = input_dp('sigma')
@@ -37,9 +36,8 @@ subroutine charges_init
 print*,'rho_ch=',rho_ch
 
   ! count of solid, fluid and interfacial nodes
-!  count_solid = count( supercell%node%nature == solid )
-  count_solid = count(supercell%node%nature==solid) ! TODO DELETE LINE NOW THAT SUPERCELL%NODE%NATURE IS DEFINED
-  count_solid_int = count( (norm2(normal,4)/=0.0_dp) .and. (supercell%node%nature==solid) )
+  count_solid = count(supercell%node%nature==solid)
+  count_solid_int = count( supercell%node%nature == solid .and. supercell%node%isInterfacial )
   print*,'nb of solid interfacial nodes ',count_solid_int
   count_fluid = count(supercell%node%nature==fluid)
   print*,'nb of fluid nodes ',count_fluid
@@ -91,10 +89,10 @@ print*,'rho_ch=',rho_ch
 
   print*,'ATTENTION ONLY SURFACE CHARGE IS OK FOR NOW'
 
-  where(supercell%node%nature==solid .and. norm2(normal,dim=4)/=0)
+  where(supercell%node%nature==solid .and. supercell%node%isInterfacial )
     c_plus = in_c_plus_solid
     c_minus = in_c_minus_solid
-  else where(supercell%node%nature==solid .and. norm2(normal,dim=4)==0)
+  else where(supercell%node%nature==solid .and. .not. supercell%node%isInterfacial )
     c_plus = 0.0_dp
     c_minus = 0.0_dp
   else where(supercell%node%nature==fluid)
@@ -111,5 +109,4 @@ print*,'rho_ch=',rho_ch
   if( D_plus < 0.0_dp ) stop 'D_plus <0. critical.'
   d_minus = input_dp('D_minus')
   if( D_minus < 0.0_dp ) stop 'D_minus <0. critical.'
-
 end subroutine charges_init
