@@ -1,0 +1,175 @@
+module io
+    use precision_kinds
+    use system, only: supercell
+    use constants, only: x, y, z
+    implicit none
+    contains
+    
+        ! this subroutine prints a file name 'filename' using x, y, z, array(x,y,z)
+        subroutine print4darray(lx,ly,lz,array,filename )
+            integer(i2b), intent(in) :: lx, ly, lz ! number of points in each direction
+            character(*), intent(in) :: filename ! filename of .cube file. For example : "density.cube"
+            real(dp), intent(in), dimension ( lx, ly, lz ) :: array ! array printed in .cube file
+            integer(i2b) :: i, j, k ! dummy
+            open(99,file=filename)
+            do k=1,lz
+                do j=1,ly
+                    do i=1,lx
+                        write(99,*) i,j,k,array(i,j,k)
+                    end do
+                end do
+            end do
+            close(99)
+        end subroutine
+
+        subroutine print_everything_related_to_charge_equil
+            use system, only: phi
+            call print4darray(ubound(phi,1),ubound(phi,2),ubound(phi,3),phi,'output/phi_of_x_y_z.dat') ! print internal potential
+        end subroutine
+
+        ! In this subroutine, one prints the first lines of codes to stdout.
+        subroutine print_header
+            character(8)  :: date
+            character(10) :: time
+            call date_and_time ( DATE=date,TIME=time)
+            print*,
+            print*,
+            print*,date(1:4),'/',date(5:6),'/',date(7:8),', ',time(1:2),'h',time(3:4),'m',time(5:6)
+            print*,'===================='
+            print*,'Laboetie, the Lattice Boltzmann Electrokinetics '
+            print*,'================================================'
+            print*,
+            print*,
+        end subroutine
+
+        ! this subroutine prints all the input parameters in output/input.out
+        ! so that all files needed to understand the outputs are in the output folder.
+        ! written by Maximilien Levesque, 2011, @ Ecole Normale Superieure
+        subroutine print_input_in_output_folder
+            use input, only: input_line
+            integer(i2b) :: i ! dummy for loop
+            open( unit = 99 , file='output/lb.in' ) ! open file to write in
+            ! print each line of input_line()
+            do i = 1 , size( input_line )
+                write(99,*) input_line (i)
+            end do
+        end subroutine
+        
+        ! Print an XSF file of the supercell for visualisation in VMD for instance.
+        ! Type vmd --xsf output/supercell.xsf to visualise it.
+        subroutine print_supercell_xsf
+            use system, only: fluid, solid, supercell
+            ! Lx size of box in angstroms
+            ! nb_solute_sites nombre de sites (pareil que le nombre de lignes dans format xyz)
+            ! xmol is an array which contains les x de tous les sites, il a donc la taille de x_mol(nb_solute_sites)
+            ! tu peux remplacer integer(kind=i2b) par integer tout court.
+            integer(kind=i2b) :: i, j, k, lx, ly, lz
+            lx = supercell%geometry%dimensions%indiceMax(x)
+            ly = supercell%geometry%dimensions%indiceMax(y)
+            lz = supercell%geometry%dimensions%indiceMax(z)
+            open(5,file='output/supercell.xsf')
+            100 format (xA)
+            101 format (3(xF10.5))
+            102 format (xI5,xI1)
+            103 format (xI3,3(xxF10.5))
+            write(5,100)'# this is the specification file of the supercell'
+            write(5,100)'# lines beginning with # are commented. There cannot be comment lines within the sections'
+            write(5,100)'# XSF format specifications can be found on the XCrySDen website http://www.xcrysden.org/doc/XSF.html'
+            write(5,100)'# I strongly recommends to read this documentation.'
+            write(5,*)
+            write(5,100)'# for periodic structures one has to begin with word CRYSTAL'
+            write(5,100)'CRYSTAL'
+            write(5,100)
+            write(5,100)'# Then one needs to specify the lattice vectors'
+            write(5,100)'# specification of PRIMVEC (in ANGSTROMS) like:'
+            write(5,100)'#         ax, ay, az    (first lattice vector)'
+            write(5,100)'#         bx, by, bz    (second lattice vector)'
+            write(5,100)'#         cx, cy, cz    (third lattice vector)'
+            write(5,100)'# pay attention to vectors as they are written in horizontal way which is quite unusual'
+            write(5,100)'# for now only orthorhombic structures allowed (free norms of lattice vectors, all angles are 90 degrees)'
+            write(5,100)'PRIMVEC'
+            write(5,101) real(Lx), 0., 0.
+            write(5,101) 0., real(Ly), 0.
+            write(5,101) 0., 0., real(Lz)
+            write(5,*)
+            write(5,100)'# Then one needs to specify the atoms belonging to the unit cell. '
+            write(5,100)'# First number stands for number of atoms in the primitive cell (2 in this case).'
+            write(5,100)'# The second number is always 1 for PRIMCOORD coordinates.'
+            write(5,100)'# in angstroms and cartesian coordinates'
+            write(5,100)'PRIMCOORD'
+            write(5,*) lx*ly*lz, 1
+            do i = 1, lx
+                do j = 1, ly
+                    do k = 1, lz
+                        if( supercell%node( i, j, k)%nature == solid ) then
+                            write(5,103)4, real(i-1,dp), real(j-1,dp), real(k-1,dp)
+                        else if( supercell%node( i, j, k)%nature == fluid ) then
+                            write(5,103)1, real(i-1,dp), real(j-1,dp), real(k-1,dp)
+                        else
+                            stop 'STOP supercell%node%nature should be solid or fluid only in print_supercell_xsf.f90'
+                        end if
+                    end do
+                end do
+            end do
+            close(5)
+        end subroutine
+        
+!subroutine print_vacf
+!  use system, only: dp, i2b, vacf, tmax, tmom
+!  use constants, only: x, y, z
+!  implicit none
+!  integer(kind=i2b) :: t
+!  open(unit=99,file='output/vacf.dat')
+!  
+!  if( ubound(vacf,2) > tmax-tmom+1) stop 'ubound vacfx too low !?'
+!  do t= 0, tmax-tmom
+!    write(99,*) t, vacf(x,t), vacf(y,t), vacf(z,t)
+!  end do
+!  print*,'wrote output/vacf.dat'
+!  close(99)
+!end subroutine print_vacf
+
+        ! This subroutine writes an intent(in) array called 'array' to 'filename' in the file format .cube that handles 3-dimensional data.
+        ! The standard .cube file can be read by vmd for instance. It is meant to vizualize periodic supercells.
+        ! see for instance http://www.ks.uiuc.edu/Research/vmd/plugins/molfile/cubeplugin.html
+        ! or http://paulbourke.net/dataformats/cube/
+        ! It is a very easy format to deal with because it's very natural to write and read.
+        ! Inputs needed : array to write, filename, number of points in each direction, length of each supercell vector, atomic number of the
+        ! atoms and their coordinates. The total number of atoms is determined as the number of different coordinates ie as size(x_mol)
+        ! output : a file called 'filename' containing 3dimensional data in .cube format
+        ! written by Maximilien Levesque, while in post doc at Ecole Normale Superieure, Paris in Daniel Borgis's theoretical chemistry group
+        ! 20110919  Maximilien Levesque, clean version for Virginie M.
+
+        subroutine write_to_cube_file ( Lx, Ly, Lz, array, filename )
+            integer(kind=i2b) :: i, j, k!, n ! dummy variables
+            integer(kind=i2b), intent(in) :: lx, ly, lz
+            character(*), intent(in) :: filename ! filename of .cube file. For example : "density.cube"
+            real(kind=dp), intent(in), dimension ( lx, ly, lz ) :: array ! array printed in .cube file
+            real(kind=dp), parameter :: angtobohr = 1.889725989_dp ! 1 Bohr = 1.889725989 Ang. Necessary because of VMD understanding of lengths
+            ! define formats for writing to file
+            ! 104 format ( xI3 , xA , 3(xxF10.5) )
+            102 format ( 1(xF10.5) )
+            ! first open the file you want to print array in. It's a formatted file.
+            open(10, file = filename , form = 'formatted' )
+            write(10,*) ' CPMD CUBE FILE.' ! default text
+            write(10,*) ' OUTER LOOP: X, MIDDLE LOOP: Y, INNER LOOP: Z' ! default text, for remembering
+            ! write the total number of sites and a default text nobody knows it meaning
+            write( 10 , * ) 1 ,' 0.0 0.0 0.0 ' ! 0 0 0 ou Lx/2 Ly/2 Lz/2 ?  Size(x_mol) is the total number of atoms
+            ! write primary vectors
+            write( 10 , * ) lx, lx*angtobohr, ' 0.0 0.0'
+            write( 10 , * ) ly, ' 0.0 ' , ly* angtobohr , ' 0.0'
+            write( 10 , * ) lz, ' 0.0 0.0 ' , lz* angtobohr
+            ! write the atoms and their coordinates in Bohr
+            write(10,*) '1 0.0 0.0 0.0 0.0'
+            ! write .cube file. One value per line. As said earlier, run over x then y then z. The one varying the most rapidly is z.
+            do i = 1 , lx
+                do j = 1 , ly
+                    do k = 1 , lz
+                        write ( 10 , 102 ) array ( i , j , k )
+                    end do
+                end do
+            end do
+            close(10) ! close the .cube file called filename
+            print*, filename,' written' ! warn user
+        end subroutine write_to_cube_file
+end module io
