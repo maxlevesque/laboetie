@@ -2,8 +2,14 @@ module io
     use precision_kinds
     use system, only: supercell
     use constants, only: x, y, z
+    use input , only : input_line
     implicit none
     contains
+    
+        subroutine manage
+            call put_input_in_character_array
+            call print_input_in_output_folder ! Print input parameters found to output folder
+        end subroutine
     
         ! this subroutine prints a file name 'filename' using x, y, z, array(x,y,z)
         subroutine print4darray(lx,ly,lz,array,filename )
@@ -171,5 +177,79 @@ module io
             end do
             close(10) ! close the .cube file called filename
             print*, filename,' written' ! warn user
-        end subroutine write_to_cube_file
-end module io
+        end subroutine
+        
+        subroutine inquireNecessaryFilesExistence
+            logical :: file_exists
+            inquire(file="./output/.", exist=file_exists)
+            if( .not. file_exists) then
+                call system('mkdir -p output') ! -p do not print error if exist and create parent directory if needed
+            end if
+            inquire(file="./lb.in", exist=file_exists)
+            if( .not. file_exists) stop "./lb.in, i.e. the input file, does not exist. STOP."
+        end subroutine
+        
+        subroutine put_input_in_character_array
+            integer(i2b) :: i, j, k, n ! dummy
+            integer(i2b) :: ios ! input output status of readen file
+            character(len=100) :: text ! temporary input line
+            character(len=100), allocatable, dimension(:) :: arraytemp  ! Temporary array to stock data for resizing input_line
+            character(len=len('lb.in')), parameter :: inputFilename = "lb.in"
+            integer(i2b) :: totalnumberofinputlines
+            ! open the file in which you have all inputs
+            open ( unit = 11 , file = inputFilename )
+            ! count the total number of lines (n) in input.in
+            ! a blank line counts for 0 if it is only a return to next line (\n)
+            ! a line with only blanks counts for 1
+            totalnumberofinputlines = 0
+            do while (.true.)
+                read ( 11 , '(a)' , iostat = ios ) text
+                if ( ios > 0 ) then
+                    write (*,*) 'error in input. critical'
+                    stop
+                else if ( ios < 0 ) then
+                    exit ! exit do loop and stop reading file
+                else
+                    if ( text /= '\n' ) totalnumberofinputlines = totalnumberofinputlines + 1
+                end if
+            end do
+            ! close file in order to open it properly from start
+            close ( unit = 11 )
+            ! allocate input_line so that it has the right number of lines
+            allocate ( input_line (totalnumberofinputlines) )
+            input_line = ' ' ! init
+            ! open again the input file
+            open ( unit = 11 , file = inputfilename )
+            !read it and put each line in input_line
+            do i = 1 , totalnumberofinputlines
+                read ( 11 , '(a)'  ) text
+                input_line (i) = trim ( adjustl (text) ) ! trim () removes trailing blanks while adjustl removes left blanks and put white blanks at the end
+            end do 
+            ! clean up comments in the lines (expl: option = 3 # blabla)
+            do i = 1 , totalnumberofinputlines
+                do j = 1 , len(text)
+                    if ( input_line (i) (j:j) == '#' ) then
+                        forall ( k = j : len(text) )
+                            input_line (i) (k:k) = ' '
+                        end forall
+                        exit
+                    end if
+                end do
+                input_line (i) = trim ( adjustl (input_line (i) ) )
+            end do
+            !Delete blank lines and count the size of the smallest array containing initial data  
+            n=0 !init
+            do i = 1 , totalnumberofinputlines
+                if ( input_line (i) (1:1) /= ' ' )  then
+                    input_line (n+1) = input_line(i)
+                    n = n + 1   
+                endif
+            end do
+            !Resize input_line to the smallest size by using a temporary array
+            arraytemp = input_line
+            deallocate ( input_line )
+            allocate ( input_line ( n ) )
+            input_line = arraytemp ( 1 : n  )
+        end subroutine put_input_in_character_array
+   
+end module
