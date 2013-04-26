@@ -9,7 +9,7 @@ module geometry
         subroutine CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
             real(dp), dimension(1:2, 1:4) :: r ! there are 7 cylinders in the supercell, whose only x and y (1:2) coordinates are important
             ! lx is the half of the big size of the hexagon == length/2
-            ! ly is the small size of the hexagone = length*sqrt(3)/2
+            ! ly is the small size of the hexagone = length*sqrt(3)/2 = lx*sqrt(3)
             integer(i2b) :: i, j, k
             real(dp) :: midx, midy, cylinderRadius, radialDistanceToCylinderCenter
             logical :: isInCylinders
@@ -17,6 +17,11 @@ module geometry
             lx = supercell%geometry%dimensions%indiceMax(x)
             ly = supercell%geometry%dimensions%indiceMax(y)
             lz = supercell%geometry%dimensions%indiceMax(z)
+            if( abs(real(ly)/real(lx)-sqrt(3.))/sqrt(3.) >= 0.05 ) then
+                print*, 'STOP. ly shoud be lx *sqrt(3). Ly should be',lx*sqrt(3.)
+                stop
+            end if
+            if( lz < 3 ) stop 'Lz should be greater than 2 because there are two walls. STOP'
             midx = real(lx+1,dp)/2._dp
             midy = real(ly+1,dp)/2._dp
             r(:,1) = [ 1._dp, midy ]
@@ -27,7 +32,7 @@ module geometry
             do i = 1, lx
                 do j = 1, ly
                     isInCylinders = .false.
-        checkincyl: do k = lbound(r,2), ubound(r,2)
+                    checkincyl: do k = lbound(r,2), ubound(r,2)
                         radialDistanceToCylinderCenter = norm2(  [i,j] - r(1:2,k) )
                         if ( radialDistanceToCylinderCenter <= cylinderRadius ) then
                             isInCylinders = .true.

@@ -1,35 +1,31 @@
 subroutine velocity_profiles (time)
-    use precision_kinds, only : i2b, dp
+
+    use precision_kinds
     use system, only: supercell
     use constants, only : x, y, z
+
     implicit none
+
     integer(i2b), intent(in) :: time
-    open(11, file= 'output/velocity_profile')
-    write(11,*)
-    write(11,*)'# timestep = ',time
-    call twoWallsNormalToZFluxAlongX
-    close(11)
+    call VectorField
+
     contains
-        ! velocity profile v_x(z) for
-        !   z
-        !   | 
-        !   |
-        !   |======================= infinite wall along x
-        !   |
-        !   |       flux along x only
-        !   |
-        !   |---------------------------> x
-        !   |
-        !   |       velocity profile v_y=v_z=0, v_x function of z
-        !   |
-        !   |======================= infinite wall along x
-        !   |
-        subroutine twoWallsNormalToZFluxAlongX
-            integer(i2b) :: imin, jmin, k
-            imin = supercell%geometry%dimensions%indiceMin(x)
-            jmin = supercell%geometry%dimensions%indiceMin(y)
-            do k = supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
-                write(11,*) k, supercell%node(imin,jmin,k)%solventFlux(x)/supercell%node(imin,jmin,k)%solventDensity
+        
+        subroutine VectorField
+            integer(i2b) :: i, j, k
+            real(dp) :: vx, vy, vz
+            open(10,file="output/velocityField.dat")
+            do i= supercell%geometry%dimensions%indiceMin(x), supercell%geometry%dimensions%indiceMax(x)
+                do j= supercell%geometry%dimensions%indiceMin(y), supercell%geometry%dimensions%indiceMax(y)
+                    do k= supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
+                        vx = supercell%node(i,j,k)%solventFlux(x)!/supercell%node(i,j,k)%solventDensity
+                        vy = supercell%node(i,j,k)%solventFlux(y)!/supercell%node(i,j,k)%solventDensity
+                        vz = supercell%node(i,j,k)%solventFlux(z)!/supercell%node(i,j,k)%solventDensity
+                        write(10,*) i, j, k, vx, vy, vz
+                    end do
+                end do
             end do
+            close(10)
         end subroutine
+        
 end subroutine

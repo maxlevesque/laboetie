@@ -1,7 +1,7 @@
 subroutine equilibration_with_constraints
 
   use precision_kinds, only: i2b, dp
-  use system, only: tmom, D_iter, t_equil, time, fluid, sigma, f_ext, supercell
+  use system, only: tmom, D_iter, t_equil, time, fluid, sigma, supercell, f_ext
   use populations, only: calc_n
   use input
   use constants, only: x, y, z
@@ -22,12 +22,13 @@ subroutine equilibration_with_constraints
   ! continue time
   timeloop: do time = t_equil, tmom
 
-    if( modulo(time, 10000) == 0) &
-      print*,time,&
+    if( modulo(time, 10000) == 0) then
+        print*,time,&
              sum(supercell%node%solventFlux(x)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
              sum(supercell%node%solventFlux(y)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
              sum(supercell%node%solventFlux(z)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
              sum(supercell%node%solventDensity) / real(product(supercell%geometry%dimensions%indiceMax(:)))
+    end if
 
     ! populations
     call calc_n
