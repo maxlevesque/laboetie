@@ -17,4 +17,3 @@ module precision_kinds
     integer, parameter, public :: dp = REAL64 ! 64 bits real number (often called double precision)
     integer, parameter, public :: qp = REAL128 ! 128 bits real number (often called quad precision)
 end module precision_kinds
-
