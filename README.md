@@ -4,7 +4,7 @@ laboetie is an elektrokinetic lattice boltzmann code with moment propagation and
 
 ## Authors
 
-Maximilien Levesque
+Maximilien Levesque  
 Benjamin Rotenberg
 
 ## Acknowledgments
@@ -30,7 +30,5 @@ Github repo originaly created on 2013/02/01.
 You need to have scons installed. SCons is a modern GNU make with much easier syntax and above all very good dependence tracking.
 Check your linux distribution tutorials to install SCons. A simple `sudo make install scons` is sufficient in Ubuntu, or `sudo yum install scons` in Fedora derivatives.
 
-Once installed, just type:
-$ scons
-in your installation folder.
+Once installed, just type `scons` in the folder you extracted laboetie in.
 
