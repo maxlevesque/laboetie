@@ -1,24 +1,36 @@
-laboetie is an elektrokinetic lattice boltzmann code with lots of things to work on.
-------------------------------------------------------------------------------------
+# laboetie
 
-Written by Maximilien Levesque while in postdoc at Université Pierre et Marie Curie, Paris, France, under the supervision of Benjamin Rotenberg.
+laboetie is an elektrokinetic lattice boltzmann code with moment propagation and electrokinetics.
 
-It is written on the basis of a Lattice Boltzmann (LB) code by Capuani, Frenkel, Rottenberg et al.(?).
+## Authors
 
-laboetie is written in modern fortran (2003+), with allocatable arrays. It is object oriented (OO), with modules, in order to be as easy to modify as possible.
+Maximilien Levesque
+Benjamin Rotenberg
+
+## Acknowledgments
+
+laboetie is written on the basis of a code by Capuani, Frenkel, Rotenberg et al.(?).
+
+## Strategy
+
+laboetie is written in modern fortran (2003+).  
+You are expected to find allocatable arrays, modules, object oriented programming, do concurrent, among others.  
+It should be coded with test-driven development in mind.  
+
+## License
 
 There is a license associated to this program. Read the LICENSE file.
 
+## Github
 
-Github originaly created on 2013/02/01.
+Github repo originaly created on 2013/02/01.
 
+## Installation instructions
 
+You need to have scons installed. SCons is a modern GNU make with much easier syntax and above all very good dependence tracking.
+Check your linux distribution tutorials to install SCons. A simple `sudo make install scons` is sufficient in Ubuntu, or `sudo yum install scons` in Fedora derivatives.
 
-HOW TO BUILD
-------------
-
-You need to have scons installed. It is a modern "make" with much easier syntax and above all a very good dependence tracking.
 Once installed, just type:
 $ scons
+in your installation folder.
 
-That's all.
