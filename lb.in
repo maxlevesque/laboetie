@@ -2,18 +2,19 @@
 # LaBo INPUT FILE
 ################################################################################
 
-lx = 20
-ly = 36
-lz = 3
+lx = 3
+ly = 3
+lz = 30
 
 lbmodel = D3Q19 # D3Q19, D3Q15 or whatever. pay attention to caps
 
 D_equil = 10 # number of steps for equilibrating charges (finding PB solution). 1 if charge (salt) free fluid.
 t_equil = 20 # number of steps for equilibrating the flux without constraints
-tmom = 10000 # between t_equil and tmom, constraints are applieds (pression, electric field,...)
+tmom = 200 # between t_equil and tmom, constraints are applieds (pression, electric field,...)
 tmax = 200000 # between tmom and tmax, moment propagation is done
 
-geometryLabel = 10 # 1 for a slit, i.e. two walls at z=zmin and z=zmax
+geometryLabel = 0 # 0 for a custom cell (written in geom.in)
+		  # 1 for a slit, i.e. two walls at z=zmin and z=zmax
                   # 2 for a cylinder along Z. lx have to be equal to ly.
                   # 3 for a body centered cubic cell with solid spheres in contact
                   # 4 for disc benichou with exists at 0, 3, 6 and 9 oclock
@@ -26,7 +27,7 @@ geometryLabel = 10 # 1 for a slit, i.e. two walls at z=zmin and z=zmax
 
 stripes = 0.0 0.0 0.0
 initialSolventDensity = 1.0 # fluid density in LB units
-f_ext = 0.01 0.0 0.0 # external force
+f_ext = 0.0 0.0 0.0 # external force
 
 ################################################################################
 # charge of the solid

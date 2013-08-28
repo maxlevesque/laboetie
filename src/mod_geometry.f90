@@ -373,4 +373,14 @@ SUBROUTINE CONSTRUCT_DISC_BENICHOU
   end do
 END SUBROUTINE CONSTRUCT_DISC_BENICHOU
 
+    subroutine construct_custom
+    ! reads each point from input. Solid nodes only are indicated
+        logical :: file_exists
+        inquire(file="geom.in", exist=file_exists)
+        if( .not. file_exists) then
+            stop "STOP. Cant find file containing custom geometry: geom.in. Check lb.in if you really wanted custom geometry"
+        end if
+        STOP "EVERYTHING OK STOPSTPO"
+    end subroutine
+
 end module geometry

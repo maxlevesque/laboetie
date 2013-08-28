@@ -10,7 +10,8 @@ subroutine supercell_definition
                       construct_sinusoidal_walls_2d, CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D,&
                       CONSTRUCT_TUBE_WITH_VARYING_DIAMETER, CONSTRUCT_SPHERICAL_CAVITY,&
                       CONSTRUCT_SPHERE_BENICHOU,&
-                      CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
+                      CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS,&
+                      construct_custom
   use io, only: print_supercell_xsf
   use mod_lbmodel, only: lbm
   implicit none
@@ -35,6 +36,8 @@ subroutine supercell_definition
 
   ! construct medium geometry
   select case (supercell%geometry%label)
+  case (0) ! custom geometry
+    call construct_custom
   case (1) ! supercell%geometry%label = 1 is two solid walls normal to Z axis.
     call construct_slit
   case (2) ! supercell%geometry%label = 2 => cylinder around Z axis.
