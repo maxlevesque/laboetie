@@ -1,6 +1,7 @@
 import os
 #env = Environment(F90='gfortran', LINK='gfortran', F90FLAGS='-Ofast -funroll-loops -march=native -Jobj')
-env = Environment(F90='gfortran', LINK='gfortran', F90FLAGS='-O3 -march=native -Jobj')
-#env = Environment(F90='gfortran', LINK='gfortran', F90FLAGS='-Wall')
+#env = Environment(F90='gfortran', LINK='gfortran', F90FLAGS='-O3 -march=native -Jobj')
+env = Environment(F90='gfortran', LINK='gfortran', F90FLAGS='-march=native -O1 -pg')
+#env = Environment(F90='gfortran', LINK='gfortran', F90FLAGS='-march=native -Wall -pg')
 sources = Glob('*.f90')
 env.Object(sources)
