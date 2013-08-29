@@ -392,6 +392,30 @@ END SUBROUTINE CONSTRUCT_DISC_BENICHOU
         stat= 0
         do while (.not. is_iostat_end(stat) )
             read(u,*,iostat=stat)i,j,k
+            if(i<=0) then
+                print*,"Index ",i," in 1st column (x column) of geom.in is negative or null. It must be between 1 and lx"
+                stop
+            end if
+            if(j<=0) then
+                print*,"Index ",j," in 2nd column (y column) of geom.in is negative or null. It must be between 1 and ly"
+                stop
+            end if
+            if(k<=0) then
+                print*,"Index ",k," in 3rd column (z column) of geom.in is negative or null. It must be between 1 and lz"
+                stop
+            end if
+            if(i>lx) then
+                print*,"Index ",i," in 1st column (x column) of geom.in is sup to nb of nodes. It must be between 1 and lx"
+                stop
+            end if
+            if(j>ly) then
+                print*,"Index ",j," in 2nd column (y column) of geom.in is sup to nb of nodes. It must be between 1 and ly"
+                stop
+            end if
+            if(k>lz) then
+                print*,"Index ",k," in 3rd column (z column) of geom.in is sup to nb of nodes. It must be between 1 and lz"
+                stop
+            end if
             supercell%node(i,j,k)%nature = solid
         end do
         close(u)
