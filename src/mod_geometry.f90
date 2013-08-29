@@ -375,12 +375,26 @@ END SUBROUTINE CONSTRUCT_DISC_BENICHOU
 
     subroutine construct_custom
     ! reads each point from input. Solid nodes only are indicated
+        character(len=len("geom.in")), parameter :: filename="geom.in"
+        integer(i1b), parameter :: u=77
+        integer(i2b) :: i,j,k,lx,ly,lz,stat
         logical :: file_exists
+        lx = supercell%geometry%dimensions%indiceMax(x)
+        ly = supercell%geometry%dimensions%indiceMax(y)
+        lz = supercell%geometry%dimensions%indiceMax(z)
         inquire(file="geom.in", exist=file_exists)
         if( .not. file_exists) then
-            stop "STOP. Cant find file containing custom geometry: geom.in. Check lb.in if you really wanted custom geometry"
+            print*,"Cant find file containing custom geometry: "//filename//". Check lb.in if you really wanted custom geometry"
+            stop "stop"
         end if
-        STOP "EVERYTHING OK STOPSTPO"
+        supercell%node%nature = fluid ! everything but what is precised in geom.in is fluid
+        open(unit=u,file=filename)
+        stat= 0
+        do while (.not. is_iostat_end(stat) )
+            read(u,*,iostat=stat)i,j,k
+            supercell%node(i,j,k)%nature = solid
+        end do
+        close(u)
     end subroutine
 
 end module geometry
