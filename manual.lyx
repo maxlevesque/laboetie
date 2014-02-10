@@ -83,8 +83,8 @@ Major source (copy paste sometimes): Keijo Mattila, PhD, Implementation
  for parallel computing.
  McNamara and Zanetti proposed to replace the boolean variables with real
  numbers (1988).
- Their pro- posal in 1988 has been considered as the introduction of the
- lattice Boltzmann method (LBM).
+ Their proposal in 1988 has been considered as the introduction of the lattice
+ Boltzmann method (LBM).
 \end_layout
 
 \begin_layout Section
@@ -96,16 +96,13 @@ LBM comes from a modified version of the Lattice-Gas Automaton (LGA) for
  the Navier-Stokes equation by Frisch, Hasslacher, and Pomeau (1986).
 \begin_inset Formula 
 \begin{equation}
-f_{i}\left(\mathbf{r}+\mathbf{c}_{i}\Delta t,t+\Delta t\right)=f_{i}\left(\mathbf{r},t\right)+\Omega_{i}\left(f_{i}\right)
+f_{i}\left(\mathbf{r}+\mathbf{c}_{i}\Delta t,t+\Delta t\right)=f_{i}\left(\mathbf{r},t\right)+\Omega_{i}\left(f_{i}\right),
 \end{equation}
 
 \end_inset
 
-
-\end_layout
-
-\begin_layout Standard
-Particles move (advect, stream, whatever name you want to give), then collide.
+where one sees in the right hand side that particles move (advect, stream,
+ whatever the name you want to give it), then collide.
 \end_layout
 
 \begin_layout Section
@@ -690,6 +687,52 @@ Bounce forward, i.e.
  slip
 \end_layout
 
+\begin_layout Section
+Equilibration of charges
+\end_layout
+
+\begin_layout Standard
+The first step here is to solve the Poisson-Nernst-Planck equation to find
+ the space repartition of charges.
+\end_layout
+
+\begin_layout Section
+Equilibration without constraints
+\end_layout
+
+\begin_layout Standard
+Once the charges have been equilibrated, they're made to move with the solvent.
+ In this step, no external field is applied, i.e., no electric field, pressure
+ gradient, etc.
+\end_layout
+
+\begin_layout Section
+Equilibration with constraints
+\end_layout
+
+\begin_layout Standard
+Finaly, we apply the constraints to the solutes, i.e., some force fields like
+ pressure gradient, electric fields, magnetic fields ...
+\end_layout
+
+\begin_layout Section
+Follow tracers dropped into flux of solvent and solutes to get observables
+\end_layout
+
+\begin_layout Standard
+Here tracers are droped in the fluid.
+ They may be charged or not.
+ They evoluate in the equilibrated fluid and its solutes.
+ They do not change the potential even if they have a charge, i.e., there
+ concentration tends toward zero.
+ The idea is to follow them in order to extract velocity auto-correlation
+ function, while making them not to change the equilibrium properties of
+ the system.
+ Imagine a very small droplet of radioactive particles, so few they do not
+ change anything to the system, but numerous enough to be followed and make
+ statistics.
+\end_layout
+
 \begin_layout Chapter
 The code
 \end_layout
@@ -750,8 +793,8 @@ Code
 \end_layout
 
 \begin_layout Standard
-Laboetie is written in Fortran 2008 and thus needs gfortran version 7 or
- later.
+Laboetie is written in Fortran 2008.
+ It requires gfortran version 7 or later.
 \end_layout
 
 \begin_layout Subsection
