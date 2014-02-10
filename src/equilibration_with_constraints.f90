@@ -1,63 +1,49 @@
-subroutine equilibration_with_constraints
+SUBROUTINE equilibration_with_constraints
 
-  use precision_kinds, only: i2b, dp
-  use system, only: tmom, D_iter, t_equil, time, fluid, sigma, supercell, f_ext
-  use populations, only: calc_n
-  use input
-  use constants, only: x, y, z
-  implicit none
-  integer(i2b) :: i
-  integer(i2b) :: fluid_nodes
+    USE precision_kinds, ONLY: i2b, dp
+    USE system, ONLY: tmom, D_iter, t_equil, time, fluid, sigma, supercell, f_ext
+    USE populations, ONLY: calc_n
+    USE input
+    USE constants, ONLY: x, y, z
+    
+    IMPLICIT NONE
+    INTEGER(i2b) :: i
+    INTEGER(i2b) :: fluid_nodes
 
-  fluid_nodes = count(supercell%node%nature==fluid)
+    fluid_nodes = COUNT( supercell%node%nature==fluid )
 
+    PRINT*,'       step       current(x)                current(y)                 current(z)          density(debug purp.)'
+    PRINT*,'       --------------------------------------------------------------------------------------------------------'
 
+    f_ext = input_dp3("f_ext") ! read external forces
 
-  print*,'       step       current(x)                current(y)                 current(z)          density(debug purp.)'
-  print*,'       --------------------------------------------------------------------------------------------------------'
+    timeloop: DO time = t_equil, tmom
 
-  ! read external forces
-  f_ext = input_dp3("f_ext")
+        IF( MODULO(time, 10000) == 0) THEN
+            PRINT*,time,&
+                sum(supercell%node%solventFlux(x)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
+                sum(supercell%node%solventFlux(y)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
+                sum(supercell%node%solventFlux(z)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
+                sum(supercell%node%solventDensity) / real(product(supercell%geometry%dimensions%indiceMax(:)))
+        END IF
+    
+        CALL calc_n ! populations
+        IF( MODULO(time, 10000) == 0) CALL velocity_profiles( time) ! print velocity profiles
+        CALL propagation    ! fluid motion
+        CALL comp_rho    ! fluid density
+        CALL comp_j    ! momenta
+        CALL advect    ! solute motion: advection step
+    
+        ! solute motion: diffusion step
+        IF( sigma /= 0.0_dp ) THEN
+            DO i= 1, D_iter
+                CALL sor                ! compute phi with sucessive overrelaxation method     
+                CALL electrostatic_pot  ! sum the electrostatic potential due to internal charges to the external field imposed by elec_slope(x:z))
+                CALL smolu              ! Smoluchowski
+                CALL charge_test        ! make sure charge is kept constant during simulation
+            END DO
+        END IF
+    
+    END DO timeloop
 
-  ! continue time
-  timeloop: do time = t_equil, tmom
-
-    if( modulo(time, 10000) == 0) then
-        print*,time,&
-             sum(supercell%node%solventFlux(x)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
-             sum(supercell%node%solventFlux(y)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
-             sum(supercell%node%solventFlux(z)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
-             sum(supercell%node%solventDensity) / real(product(supercell%geometry%dimensions%indiceMax(:)))
-    end if
-
-    ! populations
-    call calc_n
-
-    ! print velocity profiles
-    if( modulo(time, 10000) == 0) call velocity_profiles( time)
-
-    ! fluid motion
-    call propagation
-
-    ! fluid density
-    call comp_rho
-
-    ! momenta
-    call comp_j
-
-    ! solute motion: advection step
-    call advect
-
-    ! solute motion: diffusion step
-    if( sigma /= 0.0_dp ) then
-      do i= 1, D_iter
-        call sor ! TODO ! compute phi with sucessive overrelaxation method     
-        call electrostatic_pot ! sum the electrostatic potential due to internal charges to the external field imposed by elec_slope(x:z))
-        call smolu ! Smoluchowski
-        call charge_test ! make sure charge is kept constant during simulation
-      end do
-    end if
-
-  end do timeloop
-
-end subroutine equilibration_with_constraints
+END SUBROUTINE equilibration_with_constraints
