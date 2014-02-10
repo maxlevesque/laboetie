@@ -4,5 +4,6 @@ env = Environment(F90='gfortran', LINK='gfortran', F90FLAGS='-Jobj -march=native
 #env = Environment(F90='gfortran', LINK='gfortran', F90FLAGS='-Jobj -march=native -O3')
 #env = Environment(F90='gfortran', LINK='gfortran', F90FLAGS='-Jobj -march=native -O1 -pg')
 #env = Environment(F90='gfortran', LINK='gfortran', F90FLAGS='-Jobj -march=native -Wall -pg')
+#env = Environment(F90='gfortran', LINK='gfortran', F90FLAGS='')
 sources = Glob('*.f90')
 env.Object(sources)
