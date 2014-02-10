@@ -1,8 +1,2 @@
-The purpose of this license is to make you aware of the following point.
-
-This program is written from almost scratch because the original grogram in C by Capuani had transformed in such a mess, due to a pilling of postdocs, phd etc working on the code on their side, that it was more time to learn the code than rewritting (for me).
-
-I propose:
-# Every person that download the source and modify it should use git to get versioning of the src and that one can later do a diff. PLEASE. It was an effort for me to write the fortran src, it is a question of respect not to throw my efforts away.
-# You should cite some of my work if you use this program. Later, I will propose some typical references to be cited.
-# To be extended
+You canno't do anything with this code without asking before to Benjamin Rotenberg and Maximilien Levesque.
+By anything, we mean anything, i.e., not distributing, modifying, executing, etc, etc ...
