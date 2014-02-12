@@ -33,7 +33,7 @@ SUBROUTINE drop_tracers
     !  it=0
     !  do while (not_yet_converged(it))
     !   call elec_pot
-        call propagate (it,is_converged) ! propagate the propagated quantity
+        CALL propagate (it,is_converged) ! propagate the propagated quantity
     !    if( modulo(it,50000)==0 ) print_vacf
     !    it = it + 1
         IF( is_converged ) EXIT momproploop
