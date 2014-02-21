@@ -2,7 +2,8 @@
 \lyxformat 413
 \begin_document
 \begin_header
-\textclass book
+\textclass revtex4
+\options aps,prl
 \use_default_options false
 \maintain_unincluded_children false
 \language english
@@ -65,11 +66,405 @@ Manual for LABOETIE
 \end_layout
 
 \begin_layout Date
-2012
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+today
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Author
 Maximilien Levesque
+\end_layout
+
+\begin_layout Part
+Theory
+\end_layout
+
+\begin_layout Section
+Lattice Gas Cellular Automata
+\end_layout
+
+\begin_layout Standard
+Lattice Gas Cellular Automata (LGCA) is the ancestor of the lattice boltzmann
+ theory and is a good starting point.
+ In LGGA models, time and space are considered discrete.
+ At every timestep, particles are only allowed to be situated at lattice
+ nodes, with possible velocities 
+\begin_inset Formula $\mathbf{c}_{i}$
+\end_inset
+
+, 
+\begin_inset Formula $i\in\left\{ 1,2,\ldots,b\right\} $
+\end_inset
+
+.
+ The set 
+\begin_inset Formula $\mathbf{c}_{i}$
+\end_inset
+
+ can be chosen in many ways, although they are restricted by the constraint
+\begin_inset Formula 
+\begin{equation}
+\mathbf{r}^{\prime}+\mathbf{c}_{i}\Delta t=\mathbf{r}^{\prime\prime},
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathbf{r}^{\prime}$
+\end_inset
+
+ and 
+\begin_inset Formula $\mathbf{r}^{\prime\prime}$
+\end_inset
+
+ are neighboring lattice nodes.
+ No two particles can be at the same lattice node with the same velocity.
+ Time evolution of the LGGA consists of two steps: 
+\end_layout
+
+\begin_layout Enumerate
+
+\emph on
+Propagation
+\emph default
+: All particles move in one timestep 
+\begin_inset Formula $\Delta t$
+\end_inset
+
+ from their initial lattice position 
+\begin_inset Formula $\mathbf{r}$
+\end_inset
+
+ to a new position 
+\begin_inset Formula $\mathbf{r}^{\prime}=\mathbf{r}+\mathbf{c}_{i}\Delta t$
+\end_inset
+
+.
+ For convenience we chose 
+\begin_inset Formula $\Delta t=1$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Enumerate
+
+\emph on
+Collision
+\emph default
+: The particles at all lattice nodes undergo a collision that conserves
+ the total number of particles and the total momentum at each node.
+ The collision rules may or may not be deterministic.
+\end_layout
+
+\begin_layout Standard
+The state of the automaton at time 
+\begin_inset Formula $t$
+\end_inset
+
+ is completely given by 
+\begin_inset Formula $s_{i}\left(\mathbf{r},t\right)$
+\end_inset
+
+, which is equal to 1 (0) if a particle is present (absent) on node 
+\begin_inset Formula $\mathbf{r}$
+\end_inset
+
+ with velocity 
+\begin_inset Formula $\mathbf{c}_{i}$
+\end_inset
+
+.
+ We also define 
+\begin_inset Formula $n_{i}\left(\mathbf{r},t\right)$
+\end_inset
+
+, which is the occupation number of a tagged particle.
+ The VACF is then given by
+\begin_inset Formula 
+\begin{equation}
+\left\langle v_{x}\left(0\right)v_{x}\left(t\right)\right\rangle =\sum_{\mathbf{r}_{0}}\sum_{i_{0}}\sum_{\mathbf{r}}\sum_{i}c_{i_{0}x}c_{ix}\left\langle n_{i_{0}}\left(\mathbf{r}_{0},0\right)n_{i}\left(\mathbf{r},t\right)\right\rangle .
+\end{equation}
+
+\end_inset
+
+The initial value of the VACF is
+\begin_inset Formula 
+\begin{equation}
+\left\langle v_{x}^{2}\left(0\right)\right\rangle =\frac{1}{bV}\sum_{\mathbf{r}}\sum_{i}c_{ix}^{2},
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $V$
+\end_inset
+
+ is the number of lattice nodes.
+ With 
+\begin_inset Formula $\rho$
+\end_inset
+
+ the average number of particles per site, some average values that will
+ be usefull are
+\begin_inset Formula 
+\begin{equation}
+\left\langle s_{i}\left(\mathbf{r},t\right)\right\rangle =\frac{\rho}{b},
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left\langle n_{i}\left(\mathbf{r},t\right)\right\rangle =\frac{1}{bV},
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left\langle n_{i0}\left(\mathbf{r}\right)\right\rangle 
+\end{equation}
+
+\end_inset
+
+...
+\end_layout
+
+\begin_layout Section
+The moment propagation method, as introduced for LGCA
+\end_layout
+
+\begin_layout Standard
+The moment propagation method was first introduced by Frenkel et al.
+ for an efficient estimation of the velocity autocorrelation function (VACF)
+ within the Lattice Gas Cellular Automata simulation method 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "MP-PRA,MP-PRL,MP-book"
+
+\end_inset
+
+.
+ In conventional techniques, a single particle is followed along its classical
+ trajectory.
+ An estimate of the VACF, 
+\begin_inset Formula $\left\langle v_{x}\left(0\right)v_{x}\left(t\right)\right\rangle $
+\end_inset
+
+, is then obtained as an average of 
+\begin_inset Formula $v_{x}\left(0\right)v_{x}\left(t\right)$
+\end_inset
+
+ over different time origins in this trajectory, different particles and
+ different initial conditions.
+ To obtain reasonable statistics with these 
+\begin_inset Quotes eld
+\end_inset
+
+brute force
+\begin_inset Quotes erd
+\end_inset
+
+ methods, one needs lengthy simulations on large systems.
+ We will now present the method called moment propagation (MP), that is
+ about 1 million times more efficient.
+ The reason for this efficiency is that we are willing to sacrifice the
+ complete history of all particles, that is usually irrelevant information.
+ Instead, we compute directly certain averages of the 
+\begin_inset Formula $n$
+\end_inset
+
+-body distribution function, without attempting to compute the function
+ itself.
+\end_layout
+
+\begin_layout Enumerate
+First, let us consider one tagged particle, say a "blue" particle, in a
+ lattice with other, but identical "red" particles.
+ We now make use of the fact that in LGCA a particle loses its identity
+ in a collision.
+ So in a collision with a blue particle involved, it is not possible to
+ tell which one of the postcollisional outgoing particles was the incoming
+ blue particle.
+ We now choose our stochastic collision rules such that any outgoing particle
+ is equally likely to be the blue particle.
+ So instead of one defined path of the particle, there are now a lot of
+ possible paths, each associated with a certain probability.
+ We can compute this probability as the product of the scattering probabilities.
+ The average of 
+\begin_inset Formula $v_{x}\left(0\right)v_{x}\left(t\right)$
+\end_inset
+
+ of the blue particle is the sum over all paths of 
+\begin_inset Formula $v_{x}\left(0\right)v_{x}\left(t\right)$
+\end_inset
+
+, each path contribution weighted with the appropriate probability factor.
+ Note that only 
+\begin_inset Formula $v_{x}\left(t\right)$
+\end_inset
+
+ is 
+\begin_inset Quotes eld
+\end_inset
+
+path dependent
+\begin_inset Quotes erd
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Enumerate
+Second, we do not need to know which specific path a particle has followed;
+ as a matter of fact, we are only interested in the probability that the
+ blue particle arrives at time 
+\begin_inset Formula $t$
+\end_inset
+
+ on site 
+\begin_inset Formula $\mathbf{r}$
+\end_inset
+
+, because all the paths going to 
+\begin_inset Formula $\left(\mathbf{r},t\right)$
+\end_inset
+
+ will result in the same 
+\begin_inset Formula $v_{x}\left(t\right)$
+\end_inset
+
+.
+ This site probability is clearly constructed as the sum of the probabilities
+ of all paths ending at this site.
+ This makes things much easier, for now we can just transport at every time
+ step this proba- bility to the neighbor sites multiplied by the probability
+ that the tagged particle would go that way.
+ Note that at 
+\begin_inset Formula $t=0$
+\end_inset
+
+ the site probability for the 
+\begin_inset Quotes eld
+\end_inset
+
+starting
+\begin_inset Quotes erd
+\end_inset
+
+ site is equal to one, and for all the other sites equal to zero.
+\end_layout
+
+\begin_layout Enumerate
+Finally, we now think of every particle in the lattice as a starting particle.
+ We can just add the contribution of all particles to the site probability,
+ under the condition that the initial site probability of the starting particles
+ is weighted with their initial velocity 
+\begin_inset Formula $v_{x}\left(0\right)$
+\end_inset
+
+.
+ Note that this procedure corresponds to propagating the 
+\begin_inset Formula $v_{x}$
+\end_inset
+
+ velocity of the particles.
+ The correlation function 
+\begin_inset Formula $\left\langle v_{x}\left(0\right)v_{x}\left(t\right)\right\rangle $
+\end_inset
+
+ is now equal to the sum over all sites of this site probability at time
+ 
+\begin_inset Formula $t$
+\end_inset
+
+, multiplied by the average site velocity at that time, i.e., we propagated
+ the first moment of the single particle velocity distribution function.
+ More generally, we can propagate any moment of the single-particle distribution
+ function.
+\end_layout
+
+\begin_layout Standard
+The method is conveniently summarized by the following equations: Let us
+ define the number of particles 
+\begin_inset Formula $N$
+\end_inset
+
+ as
+\begin_inset Formula 
+\begin{equation}
+N=\sum_{\mathbf{r}}\sum_{i}s_{i}\left(\mathbf{r},0\right)
+\end{equation}
+
+\end_inset
+
+and the average velocity,
+\begin_inset Formula 
+\begin{equation}
+\bar{v}_{x}\left(\mathbf{r},t\right)=\sum_{i}\left(\frac{s_{i}\left(\mathbf{r},t\right)}{\sum_{j}s_{j}\left(\mathbf{r},t\right)}c_{ix}\right).
+\end{equation}
+
+\end_inset
+
+The sum over all tagged particles of the probability to find one individual
+ tagged particle at site 
+\begin_inset Formula $\mathbf{r}$
+\end_inset
+
+ weighted with its initial velocity is denoted by 
+\begin_inset Formula $W\left(\boldsymbol{r},t\right)$
+\end_inset
+
+.
+ It evoles in time as
+\begin_inset Formula 
+\begin{equation}
+W\left(\boldsymbol{r},t+1\right)=\sum_{i}\left(W\left(\boldsymbol{r}-\boldsymbol{c}_{i},t\right)\frac{s_{i}\left(\boldsymbol{r}-\boldsymbol{c}_{i},t\right)}{\sum_{j}s_{j}\left(\boldsymbol{r}-\boldsymbol{c}_{i},t\right)}\right),\;\forall\boldsymbol{r}
+\end{equation}
+
+\end_inset
+
+where the initial value 
+\begin_inset Formula $W\left(\boldsymbol{r},1\right)$
+\end_inset
+
+ is given by 
+\begin_inset Formula 
+\begin{equation}
+W\left(\boldsymbol{r},1\right)=\sum_{i}s_{i}\left(\boldsymbol{r}-\boldsymbol{c}_{i},0\right)c_{ix}.
+\end{equation}
+
+\end_inset
+
+The VACF at time 
+\begin_inset Formula $t$
+\end_inset
+
+ is now simply given by
+\begin_inset Formula 
+\begin{equation}
+\left\langle v_{x}\left(0\right)v_{x}\left(t\right)\right\rangle =\frac{1}{N}\sum_{\boldsymbol{r}}W\left(\boldsymbol{r},t\right)\bar{v}_{x}\left(\boldsymbol{r},t\right).
+\end{equation}
+
+\end_inset
+
+Note that the averaging is all possible paths of one tagged particle and
+ in turn over all possible particles.
+ Compared to conventional techniques, we have a gain in simulation time
+ by six orders of magnitude.
 \end_layout
 
 \begin_layout Chapter
@@ -92,6 +487,319 @@ The Lattice Boltzmann Method (LBM)
 \end_layout
 
 \begin_layout Standard
+The lattice Boltzmann model is a pre-averaged version of a lattice gas.
+ The state of the fluid is specified by the average number of particles
+ at each link, 
+\begin_inset Formula $\left\langle s_{i}\left(\boldsymbol{r},t\right)\right\rangle $
+\end_inset
+
+, which we denote 
+\begin_inset Formula $n_{i}\left(\boldsymbol{r},t\right)$
+\end_inset
+
+.
+ The hydrodynamic fields, mass density 
+\begin_inset Formula $\rho$
+\end_inset
+
+, momentum density 
+\begin_inset Formula $\boldsymbol{j}$
+\end_inset
+
+ and momentum flux density 
+\begin_inset Formula $\boldsymbol{\Pi}$
+\end_inset
+
+ are simple moments of the velocity distribution, 
+\begin_inset Formula 
+\begin{equation}
+\rho=\sum_{i}n_{i},\;\boldsymbol{j}=\sum_{i}n_{i}\boldsymbol{c}_{i},\;\boldsymbol{\Pi}=\sum_{i}n_{i}\boldsymbol{c}_{i}\boldsymbol{c}_{i}.
+\end{equation}
+
+\end_inset
+
+Like a lattice gas, the system evolves subject to propagation and collision.
+ In going to the LB equation we make use of Boltzmann's 'molecular chaos'
+ hypothesis, i.e., the assumption that there is no correlation between the
+ velocity of a particle at time 
+\begin_inset Formula $t$
+\end_inset
+
+ and the velocity of its subsequent collision partners (although, as we
+ shall see later, these correlations can be recovered by introducing fluctuation
+s into the system).
+\end_layout
+
+\begin_layout Standard
+The time evolution of the distribution functions 
+\begin_inset Formula $n_{i}$
+\end_inset
+
+ is described by the discretized analogue of the Boltzmann equation,
+\begin_inset Formula 
+\begin{equation}
+n_{i}\left(\boldsymbol{r}+\boldsymbol{c}_{i},t+1\right)=n_{i}\left(\boldsymbol{r},t\right)+\Delta_{i}\left(\boldsymbol{r},t\right),
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\Delta_{i}$
+\end_inset
+
+ is the change in 
+\begin_inset Formula $n_{i}$
+\end_inset
+
+ due to instantaneous molecular collisions at the lattice nodes.
+ The collision operator 
+\begin_inset Formula $\Delta_{i}$
+\end_inset
+
+ is subject to similar restrictions as those imposed for a lattice gas.
+ A complete description is given by Ladd 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Ladd"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Moment-propagation in LB
+\end_layout
+
+\begin_layout Standard
+The analogy between lattice gases and the lattice Boltzmann equation extends
+ to the moment propagation method.
+ In a lattice gas, the probability that a particle moves with a velocity
+ 
+\begin_inset Formula $\boldsymbol{c}_{i}$
+\end_inset
+
+ after a collision is given by 
+\begin_inset Formula $s_{i}\left(\boldsymbol{r},t\right)/\rho\left(\boldsymbol{r},t\right)$
+\end_inset
+
+.
+ For the Boltzmann equation it is 
+\begin_inset Formula $n_{i}\left(\boldsymbol{r},t\right)/\rho\left(\boldsymbol{r},t\right)$
+\end_inset
+
+.
+ The idea is to make use of this fact and to propagate a quantity 
+\begin_inset Formula $P\left(\boldsymbol{r},t\right)$
+\end_inset
+
+, defined as the sum of the probabilities of all trajectories which end
+ at node 
+\begin_inset Formula $\boldsymbol{r}$
+\end_inset
+
+ at time 
+\begin_inset Formula $t$
+\end_inset
+
+, weighted by the 
+\begin_inset Formula $\alpha$
+\end_inset
+
+ component of their initial velocities.
+ After one timestep we have 
+\begin_inset Formula 
+\begin{equation}
+P\left(\boldsymbol{r},1\right)=\sum_{i}n_{i}\left(\boldsymbol{r}-\boldsymbol{c}_{i},0\right)c_{i\alpha}.
+\end{equation}
+
+\end_inset
+
+The time evolution of 
+\begin_inset Formula $P\left(\boldsymbol{r},t\right)$
+\end_inset
+
+ is as follows:
+\begin_inset Formula 
+\begin{equation}
+P\left(\boldsymbol{r},t+1\right)=\sum_{i}\frac{n_{i}\left(\boldsymbol{r}-\boldsymbol{c}_{i},t\right)P\left(\boldsymbol{r}-\boldsymbol{c}_{i},t\right)}{\rho\left(\boldsymbol{r}-\boldsymbol{c}_{i},t\right)}
+\end{equation}
+
+\end_inset
+
+ and the VACF is obtained by multiplying 
+\begin_inset Formula $P\left(\boldsymbol{r},t\right)$
+\end_inset
+
+ by the probability that a particle at node 
+\begin_inset Formula $\boldsymbol{r}$
+\end_inset
+
+ is currently moving with a velocity component 
+\begin_inset Formula $c_{i\alpha}$
+\end_inset
+
+.
+ Averaging over all sites this gives 
+\begin_inset Formula 
+\begin{equation}
+\left\langle c_{i\alpha}\left(0\right)c_{i\alpha}\left(t\right)\right\rangle =\frac{1}{N}\sum_{\boldsymbol{r}}P\left(\boldsymbol{r},t\right)u_{\alpha}\left(\boldsymbol{r},t\right),
+\end{equation}
+
+\end_inset
+
+ where 
+\begin_inset Formula $N$
+\end_inset
+
+ is the total number of particles in the system and 
+\begin_inset Formula $u_{\alpha}\left(\boldsymbol{r},t\right)$
+\end_inset
+
+ is the local fluid velocity (
+\begin_inset Formula $=j_{\alpha}\left(\boldsymbol{r},t\right)/\rho\left(\boldsymbol{r},t\right)$
+\end_inset
+
+).
+ 
+\end_layout
+
+\begin_layout Standard
+For the 'pure' lattice Boltzmann model, as described above, this is not
+ very interesting because for a fluid at rest, 
+\begin_inset Formula $u_{\alpha}$
+\end_inset
+
+ is zero at every lattice site and all the terms which we can calculate
+ from the moment propagation term are also zero.
+ This expresses the fact that, having made the molecular chaos assumption,
+ the motions of the particles become uncorrelated as soon as they have collided.
+ The Boltzmann collision time for the system, 
+\begin_inset Formula $\tau_{B}$
+\end_inset
+
+, is therefore just one time step.
+ The VACF is non-zero before any collision occur, i.e., for 
+\begin_inset Formula $t<1$
+\end_inset
+
+.
+ The value at 
+\begin_inset Formula $t=0$
+\end_inset
+
+ is given by 
+\begin_inset Formula 
+\begin{equation}
+\left\langle c_{i\alpha}\left(0\right)c_{i\alpha}\left(0\right)\right\rangle =\frac{1}{N}\sum_{\boldsymbol{r}}\sum_{i}n_{i}\left(\boldsymbol{r},0\right)c_{i\alpha}c_{i\alpha}=\frac{1}{\rho_{0}}\left\langle \boldsymbol{\Pi}_{\alpha\alpha}\left(\boldsymbol{r},0\right)\right\rangle ,
+\end{equation}
+
+\end_inset
+
+ where 
+\begin_inset Formula $\rho_{0}$
+\end_inset
+
+ is the average density.
+ 
+\end_layout
+
+\begin_layout Standard
+If, instead of the pure lattice Botzmann, we consider the 'fluctuating'
+ Boltzmann equation 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Ladd-fluctuatingLB"
+
+\end_inset
+
+, as opposed to the 'pure' Boltzmann equation, then things are different.
+ In the Boltzmann equation the spontaneous fluctuations present in a real
+ fluid are killed off by the pre-averaging.
+ In the fluctuating Boltzmann equation they are reintroduced in the form
+ of imposed random fluctuations in the stress tensor.
+ These stress fluctuations set up microscopic velocity fields in the fluid,
+ so 
+\begin_inset Formula $u_{\alpha}\left(\boldsymbol{r},t\right)$
+\end_inset
+
+ will no longer be zero and the VACF for times greater than zero will also
+ be non-zero.
+ This 'non-Boltzmann' contribution to the VACF should decay in the correct
+ hydrodynamic manor, i.e., 
+\begin_inset Formula $\phi\left(t\right)\sim t^{-1}$
+\end_inset
+
+, and in turn give rise to the theoretically predicted renormalization of
+ the VACF.
+ The remaining problem concerns the relative magnitudes of the Boltzmann
+ contribution and non-Boltzmann (diverging) contribution to the VACF.
+ For the lattice model which we have used, 
+\begin_inset Formula 
+\begin{equation}
+\left\langle \boldsymbol{\Pi}\left(\boldsymbol{r}\right)\right\rangle =c_{s}^{2}\left\langle \rho\left(\boldsymbol{r}\right)\right\rangle +\left\langle \rho\left(\boldsymbol{r},t\right)u_{\alpha}\left(\boldsymbol{r},t\right)^{2}\right\rangle ,
+\end{equation}
+
+\end_inset
+
+ with the speed of sound, 
+\begin_inset Formula $c_{s}$
+\end_inset
+
+, equal to 
+\begin_inset Formula $1/\sqrt{2}$
+\end_inset
+
+ (all quantities are given in lattice units where the particle mass, time
+ step and latice spacing are equal to unity).
+ If we assume that 
+\begin_inset Formula $\rho\left(\boldsymbol{r},t\right)\approx\rho_{0}$
+\end_inset
+
+ (a good approximation at low Mach numbers) this implies that
+\begin_inset Formula 
+\begin{equation}
+\left\langle c_{i\alpha}\left(0\right)_{i\alpha}\left(0\right)\right\rangle =\frac{1}{2}+\left\langle u_{\alpha}^{2}\right\rangle .
+\end{equation}
+
+\end_inset
+
+ Since the local velocity, 
+\begin_inset Formula $u\left(\boldsymbol{r},t\right)$
+\end_inset
+
+, is constrained to be significantly less than the speed of sound, the first
+ non-Boltzmann term is much small than the Boltzmann term - we would have
+ to wait a very long time to reach the fully renormalized region of the
+ VACF (the same problem occurs if one attemps the calculation in a lattice
+ gas).
+ To circumvent this problem we calculated the VACF of a passive tracer which
+ we introduced into the system.
+ The tracer particles are identical to the lattice Boltzmann fluid except
+ they have a probability 
+\begin_inset Formula $\Delta/\rho\left(\boldsymbol{r},t\right)$
+\end_inset
+
+ of remaining at the same lattice site.
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset line
+LatexCommand rule
+offset "0.5ex"
+width "100col%"
+height "1pt"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+The collision term
+\end_layout
+
+\begin_layout Standard
 LBM comes from a modified version of the Lattice-Gas Automaton (LGA) for
  the Navier-Stokes equation by Frisch, Hasslacher, and Pomeau (1986).
 \begin_inset Formula 
@@ -103,10 +811,6 @@ f_{i}\left(\mathbf{r}+\mathbf{c}_{i}\Delta t,t+\Delta t\right)=f_{i}\left(\mathb
 
 where one sees in the right hand side that particles move (advect, stream,
  whatever the name you want to give it), then collide.
-\end_layout
-
-\begin_layout Section
-The collision term
 \end_layout
 
 \begin_layout Subsection
@@ -733,8 +1437,8 @@ Here tracers are droped in the fluid.
  statistics.
 \end_layout
 
-\begin_layout Chapter
-The code
+\begin_layout Part
+Laboetie
 \end_layout
 
 \begin_layout Section
@@ -874,6 +1578,120 @@ dp = REAL64 ! 64 bits real number (often called double precision)
 
 \begin_layout Itemize
 qp = REAL128 ! 128 bits real number (often called quad precision)
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "MP-PRA"
+
+\end_inset
+
+M.
+ A.
+ van der Hoef and D.
+ Frenkel, 
+\emph on
+Long-time tails of the velocity autocorrelation function in two- and three-dimen
+sional lattice-gas cellular automata: A test of mode-coupling theory
+\emph default
+, Phys.
+ Rev.
+ A 
+\series bold
+41
+\series default
+, 4277 (1990).
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "MP-book"
+
+\end_inset
+
+D.
+ Frenkel in: 
+\emph on
+Cellular Automata and Modeling of Complex Physical Systems
+\emph default
+, P.
+ Manneville, N.
+ Boccara, G.
+ Y.
+ Vichniac and R.
+ Bidaux (editors), Springer, Berlin, 1989, p.
+ 144.
+ (@Max: PAS LU ENCORE)
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "MP-PRL"
+
+\end_inset
+
+D.
+ Frenkel and M.
+ H.
+ Ernst, 
+\emph on
+Simulation of diffusion in a Two-Dimensional Lattice-Gas Cellular Automaton:
+ A Test of Mode-Coupling Theory
+\emph default
+, Phys.
+ Rev.
+ Lett.
+ 
+\series bold
+63
+\series default
+, 2165 (1989).
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "Ladd"
+
+\end_inset
+
+A.
+ J.
+ C.
+ Ladd, 
+\emph on
+Numerical Simulations of Particulate Suspensions via a Discretized Boltzmann
+ Equation Part I.
+ Theoretical Foundation
+\emph default
+, J.
+ Fluid.
+ Mech.
+ 271, 285 (1994).
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "Ladd-fluctuatingLB"
+
+\end_inset
+
+A.
+ J.
+ C.
+ Ladd, 
+\emph on
+Short-time motion of colloidal particles: Numerical simulation via a fluctuating
+ lattice-Boltzmann equation
+\emph default
+, Phys.
+ Rev.
+ Lett.
+ 70, 1339 (1993).
 \end_layout
 
 \end_body
