@@ -192,16 +192,16 @@ SUBROUTINE PROPAGATE(it, is_converged)
     OPEN(99, FILE='output/vacf.dat', ACCESS='append')
         WRITE(99,*) it, vacf(x,now), vacf(y,now), vacf(z,now)
     
-    OPEN(100, FILE='output/adsorbed_density.dat', ACCESS='append')
-        WRITE(100,*)
-        WRITE(100,*)"# time ",it
-        DO i=1,lx; DO j=1,ly; DO k=1,lz;
-            IF ( supercell%node(i,j,k)%isInterfacial .and. supercell%node(i,j,k)%nature==fluid ) THEN
-                WRITE(100,*)i,j,k,SUM(Propagated_Quantity_Adsorbed(:,i,j,k,now))
-            END IF
-        END DO; END DO; END DO;
-    CLOSE(100)
-    
+!~     OPEN(100, FILE='output/adsorbed_density.dat', ACCESS='append')
+!~         WRITE(100,*)
+!~         WRITE(100,*)"# time ",it
+!~         DO i=1,lx; DO j=1,ly; DO k=1,lz;
+!~             IF ( supercell%node(i,j,k)%isInterfacial .and. supercell%node(i,j,k)%nature==fluid ) THEN
+!~                 WRITE(100,*)i,j,k,SUM(Propagated_Quantity_Adsorbed(:,i,j,k,now))
+!~             END IF
+!~         END DO; END DO; END DO;
+!~     CLOSE(100)
+
     vacf(:,past) = vacf(:,now)
     vacf(:,now) = 0.0_dp
     
