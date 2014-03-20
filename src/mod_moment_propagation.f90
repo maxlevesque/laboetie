@@ -181,7 +181,7 @@ SUBROUTINE PROPAGATE(it, is_converged)
     
     if(error) stop 'somewhere restpart is negative' ! TODO one should find a better function for ads and des, as did Benjamin for pi
     
-    if(modulo(it,(tmax-tmom)/10)==0) print*,it,vacf(x,now),vacf(y,now),vacf(z,now) ! print to user every 1/100 steps. X should be read in input file. To be implemented.
+    if(modulo(it,1000)==0) print*,it,vacf(x,now),vacf(y,now),vacf(z,now) ! print to user every 1/100 steps. X should be read in input file. To be implemented.
     
     ! back to the futur: the futur is now, and reinit futur
     Propagated_Quantity(:,:,:,:,now) = Propagated_Quantity(:,:,:,:,next)
