@@ -205,7 +205,7 @@ SUBROUTINE PROPAGATE(it, is_converged)
     vacf(:,past) = vacf(:,now)
     vacf(:,now) = 0.0_dp
     
-    IF( it>2 .and. all(abs(vacf)<1._dp/(2._dp*lx*ly*lz/tracer%Db)) .and. all(abs(vacf)<1.e-11) ) then ! TODO MAGIC NUMBER REMOVE THAT SOON
+    IF( it>2 .and. all(abs(vacf)<1._dp/(2._dp*lx*ly*lz/tracer%Db)) .and. all(abs(vacf)<1.e-12) ) then ! TODO MAGIC NUMBER REMOVE THAT SOON
         is_converged = .true.
     ELSE
         is_converged = .false.
