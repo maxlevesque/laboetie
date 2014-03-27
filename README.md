@@ -38,3 +38,9 @@ Once installed, just type `scons` in the folder you extracted laboetie in.
 * `lz` Number of nodes in z direction
 * `lbmodel` Lattice Boltzmann geometric model for velocities, e.g., D3Q19
 * `timestepmax_for_PoissonNernstPlanck` Maximum number of timesteps in trying to find the equilibrium distribution of charged solutes. Should be 1 salt-free systems.
+
+## Outputs
+
+All outputs files are found in `output`.
+
+* `supercell.xsf` Geometry of the supercell. To be opened with VMD: `vmd -xsf output/supercell.xsf`. Solid nodes are pink, interfacial fluid nodes are green, non-interfacial fluid nodes are white.
