@@ -41,6 +41,13 @@ Once installed, just type `scons` in the folder you extracted laboetie in.
 
 ## Outputs
 
-All outputs files are found in `output`.
+All outputs files are found in `output/`.
 
-* `supercell.xsf` Geometry of the supercell. To be opened with VMD: `vmd -xsf output/supercell.xsf`. Solid nodes are pink, interfacial fluid nodes are green, non-interfacial fluid nodes are white.
+### supercell.xsf
+
+A 3-dimensional representation of the supercell in [xsf format](http://www.xcrysden.org/doc/XSF.html). 
+*supercelf.xsf* can be opened with [VMD](http://www.ks.uiuc.edu/Research/vmd/): ```vmd -xsf output/supercell.xsf```. 
+The color code is:
+* `pink` Solid nodes
+* `green` Interfacial fluid nodes, i.e., fluid nodes close to a solid node
+* `white` Non-interfacial fluid nodes
