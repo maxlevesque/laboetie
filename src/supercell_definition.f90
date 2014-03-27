@@ -62,9 +62,9 @@ subroutine supercell_definition
     stop 'supercell%geometry%label tag in input file is invalid'
   end select
 
-  call print_supercell_xsf
-
   call detectInterfacialNodes
+  
+  call print_supercell_xsf
 
 !  call defineNormalToSurface
 

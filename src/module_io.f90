@@ -61,65 +61,94 @@ module io
                 write(99,*) input_line (i)
             end do
         end subroutine
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         
         ! Print an XSF file of the supercell for visualisation in VMD for instance.
         ! Type vmd --xsf output/supercell.xsf to visualise it.
-        subroutine print_supercell_xsf
-            use system, only: fluid, solid, supercell
+        SUBROUTINE print_supercell_xsf
+        
+            USE system ,ONLY: fluid, solid, supercell
             ! Lx size of box in angstroms
             ! nb_solute_sites nombre de sites (pareil que le nombre de lignes dans format xyz)
             ! xmol is an array which contains les x de tous les sites, il a donc la taille de x_mol(nb_solute_sites)
             ! tu peux remplacer integer(kind=i2b) par integer tout court.
-            integer(kind=i2b) :: i, j, k, lx, ly, lz
+            INTEGER :: i, j, k, lx, ly, lz
+            INTEGER, PARAMETER :: xsfUnit=5
+
             lx = supercell%geometry%dimensions%indiceMax(x)
             ly = supercell%geometry%dimensions%indiceMax(y)
             lz = supercell%geometry%dimensions%indiceMax(z)
-            open(5,file='output/supercell.xsf')
+
+            open(xsfUnit,file='output/supercell.xsf')
+
             100 format (xA)
             101 format (3(xF10.5))
             102 format (xI5,xI1)
             103 format (xI3,3(xxF10.5))
-            write(5,100)'# this is the specification file of the supercell'
-            write(5,100)'# lines beginning with # are commented. There cannot be comment lines within the sections'
-            write(5,100)'# XSF format specifications can be found on the XCrySDen website http://www.xcrysden.org/doc/XSF.html'
-            write(5,100)'# I strongly recommends to read this documentation.'
-            write(5,*)
-            write(5,100)'# for periodic structures one has to begin with word CRYSTAL'
-            write(5,100)'CRYSTAL'
-            write(5,100)
-            write(5,100)'# Then one needs to specify the lattice vectors'
-            write(5,100)'# specification of PRIMVEC (in ANGSTROMS) like:'
-            write(5,100)'#         ax, ay, az    (first lattice vector)'
-            write(5,100)'#         bx, by, bz    (second lattice vector)'
-            write(5,100)'#         cx, cy, cz    (third lattice vector)'
-            write(5,100)'# pay attention to vectors as they are written in horizontal way which is quite unusual'
-            write(5,100)'# for now only orthorhombic structures allowed (free norms of lattice vectors, all angles are 90 degrees)'
-            write(5,100)'PRIMVEC'
-            write(5,101) real(Lx), 0., 0.
-            write(5,101) 0., real(Ly), 0.
-            write(5,101) 0., 0., real(Lz)
-            write(5,*)
-            write(5,100)'# Then one needs to specify the atoms belonging to the unit cell. '
-            write(5,100)'# First number stands for number of atoms in the primitive cell (2 in this case).'
-            write(5,100)'# The second number is always 1 for PRIMCOORD coordinates.'
-            write(5,100)'# in angstroms and cartesian coordinates'
-            write(5,100)'PRIMCOORD'
-            write(5,*) lx*ly*lz, 1
-            do i = 1, lx
-                do j = 1, ly
-                    do k = 1, lz
-                        if( supercell%node( i, j, k)%nature == solid ) then
-                            write(5,103)4, real(i-1,dp), real(j-1,dp), real(k-1,dp)
-                        else if( supercell%node( i, j, k)%nature == fluid ) then
-                            write(5,103)1, real(i-1,dp), real(j-1,dp), real(k-1,dp)
-                        else
-                            stop 'STOP supercell%node%nature should be solid or fluid only in print_supercell_xsf.f90'
-                        end if
-                    end do
-                end do
-            end do
-            close(5)
-        end subroutine
+
+            write(xsfUnit,100)'# this is the specification file of the supercell'
+            write(xsfUnit,100)'# lines beginning with # are commented. There cannot be comment lines within the sections'
+            write(xsfUnit,100)'# XSF format specifications can be found at http://www.xcrysden.org/doc/XSF.html'
+            write(xsfUnit,100)'# I strongly recommends to read this documentation.'
+            write(xsfUnit,*)
+            write(xsfUnit,100)'# for periodic structures one has to begin with word CRYSTAL'
+            write(xsfUnit,100)'CRYSTAL'
+            write(xsfUnit,100)
+            write(xsfUnit,100)'# Then one needs to specify the lattice vectors'
+            write(xsfUnit,100)'# specification of PRIMVEC (in ANGSTROMS) like:'
+            write(xsfUnit,100)'#         ax, ay, az    (first lattice vector)'
+            write(xsfUnit,100)'#         bx, by, bz    (second lattice vector)'
+            write(xsfUnit,100)'#         cx, cy, cz    (third lattice vector)'
+            write(xsfUnit,100)'# pay attention to vectors as they are written in horizontal way which is quite unusual'
+            write(xsfUnit,100)'# for now only orthorhombic structures allowed (a/=b/=c, all angles are 90 degrees)'
+            write(xsfUnit,100)'PRIMVEC'
+            write(xsfUnit,101) real( [lx,0,0] ,sp)
+            write(xsfUnit,101) real( [0,ly,0] ,sp)
+            write(xsfUnit,101) real( [0,0,lz] ,sp)
+            write(xsfUnit,*)
+            write(xsfUnit,100)'# Then one needs to specify the atoms belonging to the unit cell. '
+            write(xsfUnit,100)'# First number stands for number of atoms in the primitive cell (2 in this case).'
+            write(xsfUnit,100)'# The second number is always 1 for PRIMCOORD coordinates.'
+            write(xsfUnit,100)'# in angstroms and cartesian coordinates'
+            write(xsfUnit,100)'PRIMCOORD'
+            write(xsfUnit,*) lx*ly*lz, 1
+
+            BLOCK
+                REAL(sp) :: coo(3)
+                INTEGER :: nature
+                LOGICAL :: isInterfacial
+                INTEGER, PARAMETER :: VMDpink=4, VMDgreen=45, VMDwhite=1
+
+                DO i=1,lx
+                    DO j=1,ly
+                        DO k=1,lz
+
+                            nature        = supercell%node(i,j,k)%nature
+                            isInterfacial = supercell%node(i,j,k)%isInterfacial
+                            coo = REAL([i-1,j-1,k-1],sp)
+
+                            IF      ( nature == solid )                            THEN
+                                WRITE(5,*) VMDpink,coo
+                                PRINT*,coo,"solid"
+                            ELSE IF ( nature == fluid .AND. isInterfacial )        THEN
+                                WRITE(5,*) VMDgreen,coo
+                                PRINT*,coo,"fluid interfacial"
+                            ELSE IF ( nature == fluid .AND. (.NOT.isInterfacial) ) THEN
+                                WRITE(5,*) VMDwhite,coo
+                                PRINT*,coo,"fluid NOT interfacial"
+                            ELSE
+                                STOP 'While writing supercell.xsf, I found a node that has undocumented nature'
+                            END IF
+                        
+                        END DO
+                    END DO
+                END DO
+
+            END BLOCK
+
+            CLOSE(5)
+        END SUBROUTINE
         
 !subroutine print_vacf
 !  use system, only: dp, i2b, vacf, tmax, tmom
