@@ -17,10 +17,16 @@ SUBROUTINE equilibration_with_constraints
 
     f_ext = input_dp3("f_ext") ! read external forces
 
+    open(111, file="output/vmoy_evolution.dat")
     timeloop: DO time = t_equil, tmom
 
-        IF( MODULO(time, 10000) == 0) THEN
+        IF( MODULO(time, tmom/10) == 0) THEN
             PRINT*,time,&
+                sum(supercell%node%solventFlux(x)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
+                sum(supercell%node%solventFlux(y)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
+                sum(supercell%node%solventFlux(z)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
+                sum(supercell%node%solventDensity) / real(product(supercell%geometry%dimensions%indiceMax(:)))
+            write(111,*) time,&
                 sum(supercell%node%solventFlux(x)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
                 sum(supercell%node%solventFlux(y)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
                 sum(supercell%node%solventFlux(z)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
@@ -28,7 +34,7 @@ SUBROUTINE equilibration_with_constraints
         END IF
     
         CALL calc_n ! populations
-        IF( MODULO(time, 10000) == 0) CALL velocity_profiles( time) ! print velocity profiles
+        IF( MODULO(time, tmom/10) == 0) CALL velocity_profiles( time) ! print velocity profiles
         CALL propagation    ! fluid motion
         CALL comp_rho    ! fluid density
         CALL comp_j    ! momenta
@@ -45,5 +51,7 @@ SUBROUTINE equilibration_with_constraints
         END IF
     
     END DO timeloop
+
+    close(111)
 
 END SUBROUTINE equilibration_with_constraints
