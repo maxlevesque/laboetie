@@ -1437,6 +1437,20 @@ Here tracers are droped in the fluid.
  statistics.
 \end_layout
 
+\begin_layout Section
+Electrokinetics
+\end_layout
+
+\begin_layout Standard
+The first step in laboetie simulations is to find the Poisson-Boltzmann
+ (equilibrium) distribution of charged solutes, i.e., of the salt.
+ This means that we have to find the solution of the coupled Poisson and
+ Nernst-Planck equations without solvant flux nor external forces.
+ For now, Poisson is solved using Successive Over Relaxation method, and
+ Nernst-Planck by Link-Flux without advection.
+ The 
+\end_layout
+
 \begin_layout Part
 Laboetie
 \end_layout
