@@ -22,6 +22,7 @@ module mod_lbmodel
 
         subroutine initialize
             use input
+            implicit none
             lbm%name = input_ch("lbmodel")
             if (lbm%name(1:1)/="D") then
                 stop "critical error. LB model name should begin by D"
