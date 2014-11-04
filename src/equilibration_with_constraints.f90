@@ -3,7 +3,7 @@ SUBROUTINE equilibration_with_constraints
     USE precision_kinds, ONLY: i2b, dp
     USE system, ONLY: tmom, D_iter, t_equil, time, fluid, sigma, supercell, f_ext
     USE populations, ONLY: calc_n
-    USE input
+    USE input, only: input_dp3
     USE constants, ONLY: x, y, z
     
     IMPLICIT NONE

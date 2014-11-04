@@ -44,7 +44,7 @@ print*,'rho_ch=',rho_ch
 
   ! read where are distributed the charges
 !  call read_charge_distrib
-  charge_distrib = input_ch("charge_distrib")
+  charge_distrib = input_char("charge_distrib")
   if( charge_distrib(1:3) /= 'int' .and. charge_distrib(1:3)/='sol') stop 'charge_distrib can only be int or sol for now'
 
   ! distribute charge, depending on where user asked

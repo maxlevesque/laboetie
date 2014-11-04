@@ -22,7 +22,7 @@ SUBROUTINE CALC_N
                   + lbm%vel(l)%coo(y)*(supercell%node%solventFlux(y) + f_ext(y)) &
                   + lbm%vel(l)%coo(z)*(supercell%node%solventFlux(z) + f_ext(z)) )
     elsewhere
-      n(:,:,:,l) =     lbm%vel(l)%a0*supercell%node%solventDensity + &
+      n(:,:,:,l) =     lbm%vel(l)%a0*supercell%node%solventDensity  &
                      + lbm%vel(l)%a1*( lbm%vel(l)%coo(x)*supercell%node%solventFlux(x)&
                      + lbm%vel(l)%coo(y)*supercell%node%solventFlux(y) &
                      + lbm%vel(l)%coo(z)*supercell%node%solventFlux(z) )
