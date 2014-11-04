@@ -1,6 +1,7 @@
 resultat*
 manual.lyx*
-obj
+obj/*
+mod/*
 src/*.mod
 *.mod
 .sconsign.dblite
