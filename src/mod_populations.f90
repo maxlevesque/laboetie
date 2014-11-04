@@ -17,13 +17,13 @@ SUBROUTINE CALC_N
   ! apply force on all fluid nodes and update populations
   do l= lbm%lmin, lbm%lmax
     where (supercell%node%nature == fluid)
-      n(:,:,:,l) = lbm%vel(l)%a0*supercell%node%solventDensity &
-          + lbm%vel(l)%a1*( lbm%vel(l)%coo(x)*(supercell%node%solventFlux(x) + f_ext(x)) &
+      n(:,:,:,l) =  lbm%vel(l)%a0*supercell%node%solventDensity &
+                  + lbm%vel(l)%a1*( lbm%vel(l)%coo(x)*(supercell%node%solventFlux(x) + f_ext(x)) &
                   + lbm%vel(l)%coo(y)*(supercell%node%solventFlux(y) + f_ext(y)) &
                   + lbm%vel(l)%coo(z)*(supercell%node%solventFlux(z) + f_ext(z)) )
     elsewhere
-      n(:,:,:,l) = lbm%vel(l)%a0*supercell%node%solventDensity + &
-            lbm%vel(l)%a1*( lbm%vel(l)%coo(x)*supercell%node%solventFlux(x)&
+      n(:,:,:,l) =     lbm%vel(l)%a0*supercell%node%solventDensity + &
+                     + lbm%vel(l)%a1*( lbm%vel(l)%coo(x)*supercell%node%solventFlux(x)&
                      + lbm%vel(l)%coo(y)*supercell%node%solventFlux(y) &
                      + lbm%vel(l)%coo(z)*supercell%node%solventFlux(z) )
     end where
