@@ -4,14 +4,14 @@
 subroutine check_charge_distribution_equilibrium( time, is_converged)
 
   use precision_kinds, only: dp, i2b
-  use system, only: phi, phi_old, c_minus, c_minus_old, c_plus, c_plus_old
+  use system, only: phi, phi_old, c_minus, c_minus_old, c_plus, c_plus_old, node
   implicit none
   integer(kind=i2b), intent(in) :: time
   logical, intent(out) :: is_converged
   real(kind=dp) :: dphi, dcp, dcm ! diff_phi, diff_c_plus and diff_c_minus
   integer(kind=i2b) :: n, p, q
   real(kind=dp), parameter :: eps=1.0d-12
-  logical, save :: is_firsttimehere = .true. ! first time 
+  logical, save :: is_firsttimehere = .true. ! first time
 
   ! in this file is printed the convergence of phi due to the Sucessive OverRelaxation method
   if(is_firsttimehere) then

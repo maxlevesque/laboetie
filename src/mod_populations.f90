@@ -2,7 +2,7 @@ MODULE POPULATIONS
 
   use precision_kinds
   use constants, only: x, y, z
-  use system, only: supercell
+  use system, only: supercell, node
   use mod_lbmodel, only: lbm
   implicit none
 
@@ -17,16 +17,16 @@ contains
     integer(i2b) :: l
     ! apply force on all fluid nodes and update populations
     do concurrent (l= lbm%lmin: lbm%lmax)
-      where (supercell%node%nature == fluid)
-        n(:,:,:,l) =  lbm%vel(l)%a0*supercell%node%solventDensity &
-        + lbm%vel(l)%a1*( lbm%vel(l)%coo(x)*(supercell%node%solventFlux(x) + f_ext(x)) &
-        + lbm%vel(l)%coo(y)*(supercell%node%solventFlux(y) + f_ext(y)) &
-        + lbm%vel(l)%coo(z)*(supercell%node%solventFlux(z) + f_ext(z)) )
+      where (node%nature == fluid)
+        n(:,:,:,l) =  lbm%vel(l)%a0*node%solventDensity &
+        + lbm%vel(l)%a1*( lbm%vel(l)%coo(x)*(node%solventFlux(x) + f_ext(x)) &
+        + lbm%vel(l)%coo(y)*(node%solventFlux(y) + f_ext(y)) &
+        + lbm%vel(l)%coo(z)*(node%solventFlux(z) + f_ext(z)) )
         elsewhere
-        n(:,:,:,l) =     lbm%vel(l)%a0*supercell%node%solventDensity  &
-        + lbm%vel(l)%a1*(  lbm%vel(l)%coo(x)*supercell%node%solventFlux(x) &
-        + lbm%vel(l)%coo(y)*supercell%node%solventFlux(y) &
-        + lbm%vel(l)%coo(z)*supercell%node%solventFlux(z) )
+        n(:,:,:,l) =     lbm%vel(l)%a0*node%solventDensity  &
+        + lbm%vel(l)%a1*(  lbm%vel(l)%coo(x)*node%solventFlux(x) &
+        + lbm%vel(l)%coo(y)*node%solventFlux(y) &
+        + lbm%vel(l)%coo(z)*node%solventFlux(z) )
       end where
     end do
 

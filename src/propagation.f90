@@ -1,7 +1,7 @@
 ! Here we evolve (propagate) the population n accordingly to the velocities l
 subroutine propagation
   use precision_kinds, only: i2b, dp
-  use system, only: n, pbc, supercell
+  use system, only: n, pbc, supercell, node
   use constants, only: x, y, z
   use mod_lbmodel, only: lbm
   implicit none
@@ -54,7 +54,7 @@ end subroutine propagation
 
 SUBROUTINE BOUNDPM
   use precision_kinds
-  use system, only: pbc, supercell, n,solid,fluid
+  use system, only: pbc, supercell, n,solid,fluid, node
   use constants, only: x, y, z
   use mod_lbmodel, only: lbm
   implicit none
@@ -67,7 +67,7 @@ SUBROUTINE BOUNDPM
           ip= pbc( i+ lbm%vel(l)%coo(x) ,x)
           jp= pbc( j+ lbm%vel(l)%coo(y) ,y)
           kp= pbc( k+ lbm%vel(l)%coo(z) ,z)
-          if( supercell%node(i,j,k)%nature /= supercell%node(ip,jp,kp)%nature ) then
+          if( node(i,j,k)%nature /= node(ip,jp,kp)%nature ) then
             w = lbm%vel(l)%inv
             tmp = n(i,j,k,l)
             n(i,j,k,l) = n(ip,jp,kp,w)

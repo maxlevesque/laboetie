@@ -3,7 +3,7 @@ subroutine advect
     use precision_kinds
     use constants, only: x, y, z
     use system, only: c_plus, c_minus, flux_site_minus, flux_site_plus, el_curr_x, el_curr_y, el_curr_z, &
-                    ion_curr_x, ion_curr_y, ion_curr_z, fluid, pbc, supercell
+                    ion_curr_x, ion_curr_y, ion_curr_z, fluid, pbc, supercell, node
     use myallocations
     implicit none
     real(dp) :: c_minus_total_old, c_plus_total_old, c_minus_total_new, c_plus_total_new
@@ -28,12 +28,12 @@ subroutine advect
 !  Forget this explanation. It works!!!!
 
     ! convective contribution to the electric current
-    el_curr_x  = -sum( supercell%node%solventFlux(x)*( c_plus - c_minus ) , mask=supercell%node%nature==fluid)
-    el_curr_y  = -sum( supercell%node%solventFlux(y)*( c_plus - c_minus ) , mask=supercell%node%nature==fluid)
-    el_curr_z  = -sum( supercell%node%solventFlux(z)*( c_plus - c_minus ) , mask=supercell%node%nature==fluid)
-    ion_curr_x = -sum( supercell%node%solventFlux(x)*( c_plus + c_minus ) , mask=supercell%node%nature==fluid)
-    ion_curr_y = -sum( supercell%node%solventFlux(y)*( c_plus + c_minus ) , mask=supercell%node%nature==fluid)
-    ion_curr_z = -sum( supercell%node%solventFlux(z)*( c_plus + c_minus ) , mask=supercell%node%nature==fluid)
+    el_curr_x  = -sum( node%solventFlux(x)*( c_plus - c_minus ) , mask=node%nature==fluid)
+    el_curr_y  = -sum( node%solventFlux(y)*( c_plus - c_minus ) , mask=node%nature==fluid)
+    el_curr_z  = -sum( node%solventFlux(z)*( c_plus - c_minus ) , mask=node%nature==fluid)
+    ion_curr_x = -sum( node%solventFlux(x)*( c_plus + c_minus ) , mask=node%nature==fluid)
+    ion_curr_y = -sum( node%solventFlux(y)*( c_plus + c_minus ) , mask=node%nature==fluid)
+    ion_curr_z = -sum( node%solventFlux(z)*( c_plus + c_minus ) , mask=node%nature==fluid)
     ! compute concentration before advection step
     c_plus_total_old = sum( c_plus)
     c_minus_total_old = sum( c_minus)
@@ -41,9 +41,9 @@ subroutine advect
         do j= supercell%geometry%dimensions%indiceMin(y), supercell%geometry%dimensions%indiceMax(y)
             do k= supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
                 ! velocities
-                vx = supercell%node(i, j, k)%solventFlux(x)
-                vy = supercell%node(i, j, k)%solventFlux(y)
-                vz = supercell%node(i, j, k)%solventFlux(z)
+                vx = node(i, j, k)%solventFlux(x)
+                vy = node(i, j, k)%solventFlux(y)
+                vz = node(i, j, k)%solventFlux(z)
                 do ix= -1, 1 ! TODO improve here by getting things out of useless loops
                     do iy= -1, 1
                         do iz= -1, 1
@@ -55,7 +55,7 @@ subroutine advect
                             az = vz * real(iz,dp)
                             ! check if link is accessible
                             if( ax >= 0.0_dp .and. ay >= 0.0_dp .and. az >= 0.0_dp .and. &
-                                 supercell%node(i,j,k)%nature == supercell%node(ip,jp,kp)%nature ) then ! link is accessible
+                                 node(i,j,k)%nature == node(ip,jp,kp)%nature ) then ! link is accessible
                                 if( ix == 0 ) ax = 1.0_dp - abs(vx)
                                 if( iy == 0 ) ay = 1.0_dp - abs(vy)
                                 if( iz == 0 ) az = 1.0_dp - abs(vz)
@@ -78,7 +78,7 @@ subroutine advect
     end do
 
   ! update concentrations accordingly to flux calculated previously
-  where( supercell%node%nature == fluid )
+  where( node%nature == fluid )
     c_minus = c_minus + flux_site_minus
     c_plus  = c_plus  + flux_site_plus
   end where
@@ -91,6 +91,6 @@ subroutine advect
     if( abs( c_minus_total_new - c_minus_total_old ) > 1.e-8 .or. &
         abs( c_plus_total_new - c_plus_total_old ) > 1.e-8 ) then ! TODO magic number
         print*, 'Total concentration has changed in advect.f90. STOP but unsure STOP is needed'
-        stop ! not sure it should stop every time it changes. 
+        stop ! not sure it should stop every time it changes.
     end if
 end subroutine advect

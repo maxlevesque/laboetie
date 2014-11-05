@@ -2,7 +2,7 @@
 subroutine supercell_definition
   use precision_kinds!, only: i2b, dp
   use constants, only: x, y, z
-  use system, only: fluid, solid, pbc, supercell
+  use system, only: fluid, solid, pbc, supercell, node
   use look_at_supercell, only: check_that_at_least_one_node_is_fluid,&
                        check_that_all_nodes_are_wether_fluid_or_solid
   use input, only: input_int
@@ -31,8 +31,8 @@ subroutine supercell_definition
 
   ! define which nodes are fluid and solid
   ! begins with fluid everywhere. Remember one defined fluid=0 and solid=1 as parameters.
-  allocate( supercell%node(lx,ly,lz) )
-  supercell%node%nature = fluid
+  allocate( node(lx,ly,lz) )
+  node%nature = fluid
 
   ! construct medium geometry
   select case (supercell%geometry%label)
@@ -63,7 +63,7 @@ subroutine supercell_definition
   end select
 
   call detectInterfacialNodes
-  
+
   call print_supercell_xsf
 
 !  call defineNormalToSurface
@@ -76,36 +76,36 @@ subroutine supercell_definition
 
   ! give a table that tells if you're interfacial or not
 !  call where_is_it_fluid_and_interfacial
- 
+
     contains
     ! here we define the normal to the surface. It is not obvious to me (Maximilien Levesque) what it is useful for. I even suspect it to be tricky if you're a single node vacancy, for instance, where normal will be zero but you're still in an interfacial node.
 !        subroutine defineNormalToSurface
 !            integer(i2b) :: i, j, k, l, iNext, jNext, kNext
-!            supercell%node%normal(x) = 0._dp ! initialize to zero
-!            supercell%node%normal(y) = 0._dp
-!            supercell%node%normal(z) = 0._dp
+!            node%normal(x) = 0._dp ! initialize to zero
+!            node%normal(y) = 0._dp
+!            node%normal(z) = 0._dp
 !            do concurrent( i=1:lx, j=1:ly, k=1:lz, l=lbm%lmin:lbm%lmax )
 !                iNext = pbc( i + lbm%vel(l)%coo(x), x)
 !                jNext = pbc( j + lbm%vel(l)%coo(y), y)
 !                kNext = pbc( k + lbm%vel(l)%coo(z), z)
-!                supercell%node(i,j,k)%normal(:) = supercell%node(i,j,k)%normal(:)  &
-!                   - lbm%vel(l)%a1 * lbm%vel(l)%coo(:) * (supercell%node(iNext,jNext,kNext)%nature - supercell%node(i,j,k)%nature)
-!                if (any(supercell%node(i,j,k)%normal(:)/=0.0_dp)) then
-!                    supercell%node(i,j,k)%normal(:) = supercell%node(i,j,k)%normal(:)/norm2(supercell%node(i,j,k)%normal(:))
+!                node(i,j,k)%normal(:) = node(i,j,k)%normal(:)  &
+!                   - lbm%vel(l)%a1 * lbm%vel(l)%coo(:) * (node(iNext,jNext,kNext)%nature - node(i,j,k)%nature)
+!                if (any(node(i,j,k)%normal(:)/=0.0_dp)) then
+!                    node(i,j,k)%normal(:) = node(i,j,k)%normal(:)/norm2(node(i,j,k)%normal(:))
 !                end if
 !            end do
 !        end subroutine
         subroutine detectInterfacialNodes
         ! interfaces are here defined when one of two neighboring nodes is fluid when the other is solid
             integer(i2b) :: i, j, k, l, iNext, jNext, kNext
-            supercell%node%isInterfacial = .false. ! init
+            node%isInterfacial = .false. ! init
             do concurrent( i=1:lx, j=1:ly, k=1:lz )
                 velocityloop: do l = lbm%lmin+1, lbm%lmax ! lbm%lmin is zero velocity. arrival and departure cannot be different in nature
                     iNext = pbc( i + lbm%vel(l)%coo(x), x)
                     jNext = pbc( j + lbm%vel(l)%coo(y), y)
                     kNext = pbc( k + lbm%vel(l)%coo(z), z)
-                    if( supercell%node(i,j,k)%nature /= supercell%node(iNext,jNext,kNext)%nature ) then
-                        supercell%node(i,j,k)%isInterfacial = .true.
+                    if( node(i,j,k)%nature /= node(iNext,jNext,kNext)%nature ) then
+                        node(i,j,k)%isInterfacial = .true.
                         exit velocityloop
                     end if
                 end do velocityloop

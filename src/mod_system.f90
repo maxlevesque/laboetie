@@ -32,17 +32,18 @@ module system
         integer(kind(fluid)) :: nature ! solid liquid
 !        real(dp), dimension(x:z) :: normal ! vector normal to interface if interfacial site
         logical :: isInterfacial
-        real(dp) :: solventDensity ! old rho
-        real(dp), dimension(x:z) :: solventFlux
+        real(dp) :: solventDensity ! mass rho
+        real(dp), dimension(x:z) :: solventFlux ! flux j
     end type
 
     type type_supercell
         integer(i2b), dimension(x:z) :: length, lengthMin, lengthMax
-        type (type_latticenode), public, allocatable, dimension(:,:,:) :: node
+        ! type (type_latticenode), public, allocatable, dimension(:,:,:) :: node
         type(type_geometry), public :: geometry
     end type
 
     type (type_supercell), public :: supercell ! supercell%node(i,j,k)%nature  supercell%node(i,j,k)%normal(x)   supercell%length   supercell%lengthmin:supercell%lengthmax
+    type (type_latticenode), allocatable, public :: node(:,:,:) ! should replace supercell%node
 
 !    real(dp) :: rho_0 ! solvent density in the bulk
     real(dp), allocatable, dimension(:,:,:,:) :: n ! population :(lx,ly,lz,velocities)

@@ -3,7 +3,7 @@
 subroutine comp_j
 
   use precision_kinds, only: i2b, dp
-  use system, only: n, supercell !, f_ext, solid
+  use system, only: n, supercell, node !, f_ext, solid
   ! n is the population in direction 1, 2 and 3 of velocity discrete value l (1:19)
   ! c is the quadrature in l mathematica direction
   ! j is the momentum density in direction x, ie jx, is   jx(i,j,k) = sum_l c_x(l) * n(i,j,k,l)    where c_x(l) = c(1,l)
@@ -18,14 +18,14 @@ subroutine comp_j
 
 ! Conventional definition :
 !        jx(i,j,k) = sum( n(i,j,k,:) * lbm%vel(:)%coo(x) )
-!        jy(i,j,k) = sum( n(i,j,k,:) * lbm%vel(:)%coo(y) ) 
-!        jz(i,j,k) = sum( n(i,j,k,:) * lbm%vel(:)%coo(z) ) 
+!        jy(i,j,k) = sum( n(i,j,k,:) * lbm%vel(:)%coo(y) )
+!        jz(i,j,k) = sum( n(i,j,k,:) * lbm%vel(:)%coo(z) )
 
 ! The historical definition (Capuani & Frenkel's code).
 ! Much better than the naive conventional definition in terms of numerical stability.
-        supercell%node(i,j,k)%solventFlux(x) = 0.5_dp*(supercell%node(i,j,k)%solventFlux(x) + sum(n(i,j,k,:)*lbm%vel(:)%coo(x)))
-        supercell%node(i,j,k)%solventFlux(y) = 0.5_dp*(supercell%node(i,j,k)%solventFlux(y) + sum(n(i,j,k,:)*lbm%vel(:)%coo(y)))
-        supercell%node(i,j,k)%solventFlux(z) = 0.5_dp*(supercell%node(i,j,k)%solventFlux(z) + sum(n(i,j,k,:)*lbm%vel(:)%coo(z)))
+        node(i,j,k)%solventFlux(x) = 0.5_dp*(node(i,j,k)%solventFlux(x) + sum(n(i,j,k,:)*lbm%vel(:)%coo(x)))
+        node(i,j,k)%solventFlux(y) = 0.5_dp*(node(i,j,k)%solventFlux(y) + sum(n(i,j,k,:)*lbm%vel(:)%coo(y)))
+        node(i,j,k)%solventFlux(z) = 0.5_dp*(node(i,j,k)%solventFlux(z) + sum(n(i,j,k,:)*lbm%vel(:)%coo(z)))
 
 ! see Ladd and Verberg, J. Stat. Phys. 104, 1191 (2001) at page 1211 Eq. 29 :
 ! The forcing term is expanded in a power series in the particle velocity. The zeroth
@@ -40,7 +40,7 @@ subroutine comp_j
   end do
 
 ! USELESS FOR NOW THAT BOUNDPM HAS BEEN CHECKED CAREFULLY
-!  where( supercell%node%nature == solid )
+!  where( node%nature == solid )
 !    jx = 0.0_dp
 !    jy = 0.0_dp
 !    jz = 0.0_dp

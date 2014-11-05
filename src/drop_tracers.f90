@@ -49,7 +49,7 @@ contains
 
   subroutine update_tracer_population
     use precision_kinds, only: dp, i2b
-    use system, only: n, f_ext, fluid, elec_slope, supercell, lbm, x, y, z
+    use system, only: n, f_ext, fluid, elec_slope, supercell, lbm, x, y, z, node
     use populations, only: check_population
     use input, only: input_dp
     implicit none
@@ -67,20 +67,20 @@ contains
 
     ! apply force on all fluid nodes and update populations
     do concurrent( l= lbm%lmin: lbm%lmax )
-      where( supercell%node%nature ==fluid )
-        n(:,:,:,l) = lbm%vel(l)%a0*supercell%node%solventDensity &
+      where( node%nature ==fluid )
+        n(:,:,:,l) = lbm%vel(l)%a0*node%solventDensity &
                    + lbm%vel(l)%a1*(&
-           lbm%vel(l)%coo(x)*(supercell%node%solventFlux(x) + f_ext(x) &
-                              - supercell%node%solventDensity*tr%q *tr%D *elec_slope(x)) &
-         + lbm%vel(l)%coo(y)*(supercell%node%solventFlux(y) + f_ext(y) &
-                              - supercell%node%solventDensity*tr%q *tr%D *elec_slope(y)) &
-         + lbm%vel(l)%coo(z)*(supercell%node%solventFlux(z) + f_ext(z) &
-                              - supercell%node%solventDensity*tr%q *tr%D *elec_slope(z)) )
+           lbm%vel(l)%coo(x)*(node%solventFlux(x) + f_ext(x) &
+                              - node%solventDensity*tr%q *tr%D *elec_slope(x)) &
+         + lbm%vel(l)%coo(y)*(node%solventFlux(y) + f_ext(y) &
+                              - node%solventDensity*tr%q *tr%D *elec_slope(y)) &
+         + lbm%vel(l)%coo(z)*(node%solventFlux(z) + f_ext(z) &
+                              - node%solventDensity*tr%q *tr%D *elec_slope(z)) )
       elsewhere
-        n(:,:,:,l) = lbm%vel(l)%a0*supercell%node%solventDensity + lbm%vel(l)%a1*( &
-                          lbm%vel(l)%coo(x)*supercell%node%solventFlux(x) + &
-                          lbm%vel(l)%coo(y)*supercell%node%solventFlux(y) + &
-                          lbm%vel(l)%coo(z)*supercell%node%solventFlux(z) )
+        n(:,:,:,l) = lbm%vel(l)%a0*node%solventDensity + lbm%vel(l)%a1*( &
+                          lbm%vel(l)%coo(x)*node%solventFlux(x) + &
+                          lbm%vel(l)%coo(y)*node%solventFlux(y) + &
+                          lbm%vel(l)%coo(z)*node%solventFlux(z) )
       end where
     end do
 

@@ -18,12 +18,12 @@ subroutine init_simu
 
         subroutine init_moments_for_LB
             use precision_kinds, only: dp
-            use system, only: n, supercell
+            use system, only: n, supercell, node
             use input, only: input_dp
             use mod_lbmodel, only: lbm
             real(dp) :: initialSolventDensity
             initialSolventDensity = input_dp('initialSolventDensity') ! read the initial, homogeneous, solvent density in input file
-            supercell%node%solventDensity = initialSolventDensity
+            node%solventDensity = initialSolventDensity
             if (.not. allocated(n)) call allocateReal4D(n)  ! zeroth order moment == population(r,v) == mass density
         end subroutine init_moments_for_LB
 
@@ -45,7 +45,7 @@ subroutine init_simu
             if( tmax <= 0 .or. tmom <= 0 .or. t_equil <= 0 ) then
                 stop 'in scheduler. no time should be negative or zero'
             end if
-            ! check tmax is last 
+            ! check tmax is last
             if( tmom > tmax .or. t_equil > tmax ) then
                 stop 'equilibration and moment propagation cannot start after simulation end. check input.'
             end if

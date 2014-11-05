@@ -3,7 +3,7 @@ subroutine smolu
   use system, only: time, D_iter, D_plus, D_minus, solute_force,&
                      elec_slope, lncb_slope, phi_tot, &
                      kbt, fluid, solid, c_plus, c_minus, el_curr_x, el_curr_y, el_curr_z,&
-                     ion_curr_x, ion_curr_y, ion_curr_z, pbc, supercell
+                     ion_curr_x, ion_curr_y, ion_curr_z, pbc, supercell, node
   use constants, only: x, y, z
   use mod_lbmodel, only: lbm
   use myallocations
@@ -39,7 +39,7 @@ subroutine smolu
           kp= pbc( k+ lbm%vel(l)%coo(z) ,z)
 
           ! if both nodes are in fluid
-          if( supercell%node(i,j,k)%nature == fluid .and. supercell%node(ip,jp,kp)%nature == fluid ) then
+          if( node(i,j,k)%nature == fluid .and. node(ip,jp,kp)%nature == fluid ) then
 
             ! compute potential difference between sites
             exp_dphi = exp( phi_tot(ip,jp,kp) - phi_tot(i,j,k) ) ! arrival minus departure
@@ -80,7 +80,7 @@ subroutine smolu
             flux_site_plus(i,j,k) = flux_site_plus(i,j,k) + flux_link_plus
             flux_site_minus(i,j,k) = flux_site_minus(i,j,k) + flux_link_minus
 
-            ! flux. real flux is arriving at node. Real flux and el_curr are opposite. 
+            ! flux. real flux is arriving at node. Real flux and el_curr are opposite.
             el_curr_x  = el_curr_x + lbm%vel(l)%a1 *lbm%vel(l)%coo(x) *el_curr / D_iter
             el_curr_y  = el_curr_y + lbm%vel(l)%a1 *lbm%vel(l)%coo(y) *el_curr / D_iter
             el_curr_z  = el_curr_z + lbm%vel(l)%a1 *lbm%vel(l)%coo(z) *el_curr / D_iter
@@ -91,11 +91,11 @@ subroutine smolu
             ! force exerted on fluid
             solute_force(i,j,k,:) = solute_force(i,j,k,:) + lbm%vel(l)%a1 *lbm%vel(l)%coo(:) *f_microions/D_iter
 
-          else if( supercell%node(i,j,k)%nature ==fluid .and. supercell%node(ip,jp,kp)%nature == solid) then
-            
+          else if( node(i,j,k)%nature ==fluid .and. node(ip,jp,kp)%nature == solid) then
+
 !            dphi = phi(ip,jp,kp)-phi(i,j,k)
 
-!            ! If needed correct for the jump in the external potential (slope) 
+!            ! If needed correct for the jump in the external potential (slope)
 !            if(i==lx .and. ip==1) dphi = dphi+elec_slope(x)*lx
 !            if(i==1 .and. ip==lx) dphi = dphi-elec_slope(x)*lx
 !            if(j==ly .and. jp==1) dphi = dphi+elec_slope(y)*ly
@@ -120,14 +120,14 @@ subroutine smolu
   end do
 
   ! update concentrations. Smoluchowski part.
-  where(supercell%node%nature==fluid)
+  where(node%nature==fluid)
     c_plus = c_plus + flux_site_plus
     c_minus = c_minus + flux_site_minus
   end where
 
   ! normalize by volume of fluid phase
   if( time > 0 ) then
-    n_fluidsites = sum(supercell%node%nature, mask=supercell%node%nature==fluid)
+    n_fluidsites = sum(node%nature, mask=node%nature==fluid)
     el_curr_x = el_curr_x / n_fluidsites
     el_curr_y = el_curr_y / n_fluidsites
     el_curr_z = el_curr_z / n_fluidsites
@@ -137,8 +137,8 @@ subroutine smolu
   end if
 
   ! check that the sum of all fluxes is zero
-  if( abs(sum( flux_site_plus,mask=supercell%node%nature==fluid)) > 1.0e-12 .or. &
-      abs(sum( flux_site_minus,mask=supercell%node%nature==fluid)) > 1.0e-12 ) then
+  if( abs(sum( flux_site_plus,mask=node%nature==fluid)) > 1.0e-12 .or. &
+      abs(sum( flux_site_minus,mask=node%nature==fluid)) > 1.0e-12 ) then
       stop 'in smolu.f90 the sum of all fluxes does not add up to zero! stop.'
   end if
 end subroutine smolu

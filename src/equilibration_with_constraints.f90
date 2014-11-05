@@ -1,7 +1,7 @@
 SUBROUTINE equilibration_with_constraints
 
     USE precision_kinds, ONLY: i2b, dp
-    USE system, ONLY: tmom, D_iter, t_equil, time, fluid, sigma, supercell, f_ext
+    USE system, ONLY: tmom, D_iter, t_equil, time, fluid, sigma, supercell, f_ext, node
     USE populations, ONLY: update_populations
     USE input, only: input_dp3
     USE constants, ONLY: x, y, z
@@ -10,7 +10,7 @@ SUBROUTINE equilibration_with_constraints
     INTEGER(i2b) :: i
     INTEGER(i2b) :: fluid_nodes
 
-    fluid_nodes = COUNT( supercell%node%nature==fluid )
+    fluid_nodes = COUNT( node%nature==fluid )
 
     PRINT*,'       step       current(x)                current(y)                 current(z)          density(debug purp.)'
     PRINT*,'       --------------------------------------------------------------------------------------------------------'
@@ -21,10 +21,10 @@ SUBROUTINE equilibration_with_constraints
 
         IF( MODULO(time, 10000) == 0) THEN
             PRINT*,time,&
-                sum(supercell%node%solventFlux(x)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
-                sum(supercell%node%solventFlux(y)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
-                sum(supercell%node%solventFlux(z)/supercell%node%solventDensity, mask=supercell%node%nature==fluid)/fluid_nodes, &
-                sum(supercell%node%solventDensity) / real(product(supercell%geometry%dimensions%indiceMax(:)))
+                sum(node%solventFlux(x)/node%solventDensity, mask=node%nature==fluid)/fluid_nodes, &
+                sum(node%solventFlux(y)/node%solventDensity, mask=node%nature==fluid)/fluid_nodes, &
+                sum(node%solventFlux(z)/node%solventDensity, mask=node%nature==fluid)/fluid_nodes, &
+                sum(node%solventDensity) / real(product(supercell%geometry%dimensions%indiceMax(:)))
         END IF
 
         CALL update_populations ! populations

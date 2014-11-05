@@ -4,7 +4,7 @@
 subroutine charge_test
 
   use precision_kinds, only: dp
-  use system, only: c_plus, c_minus, sigma, fluid, solid, supercell
+  use system, only: c_plus, c_minus, sigma, fluid, solid, supercell, node
   implicit none
   real(kind=dp), parameter :: tolerance = 1.0e-10 ! how much change due to numeric in charge is allowed TODO magic number
   real(kind=dp) :: solid_charge, fluid_charge ! should be equal to sigma (asked by user)
@@ -12,9 +12,9 @@ subroutine charge_test
 
   ! the total charge is c_plus - c_minus
   ! the total charge in solid is
-  solid_charge = sum(c_plus-c_minus,mask=(supercell%node%nature==solid)) ! I love Fortran
+  solid_charge = sum(c_plus-c_minus,mask=(node%nature==solid)) ! I love Fortran
   ! the total charge in fluid is
-  fluid_charge = sum(c_plus-c_minus,mask=(supercell%node%nature==fluid))
+  fluid_charge = sum(c_plus-c_minus,mask=(node%nature==fluid))
 
   ! check conservation
   if( abs(solid_charge-sigma) > tolerance .or. abs(fluid_charge+sigma) > tolerance ) then
