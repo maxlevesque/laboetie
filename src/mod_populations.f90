@@ -7,13 +7,13 @@ MODULE POPULATIONS
   implicit none
 
   private
-  public :: calc_n, calc_n_momprop
+  public :: update_populations, calc_n_momprop
 
 contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-SUBROUTINE CALC_N
+subroutine update_populations
   use system, only: fluid, f_ext, n, solid
   implicit none
   integer(i2b) :: l
@@ -34,7 +34,7 @@ SUBROUTINE CALC_N
 
   ! check that no population n < 0
   call check_population (n)
-END SUBROUTINE CALC_N
+end subroutine update_populations
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

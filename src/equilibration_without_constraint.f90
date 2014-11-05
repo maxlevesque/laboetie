@@ -1,40 +1,40 @@
-! Now that the charges (if present) are equilibrated, one makes things move here.
-! Here we make things move but without any constraints, ie without external
+! now that the charges (if present) are equilibrated, one makes things move here.
+! here we make things move but without any constraints, ie without external
 ! forces applied
 
-SUBROUTINE equilibration_without_constraint
+subroutine equilibration_without_constraint
 
-    USE precision_kinds, ONLY: i2b, dp
-    USE system, ONLY: t_equil, f_ext, D_iter, time, elec_slope, lncb_slope
-    USE populations, ONLY: calc_n
-    USE myallocations
-    USE constants, ONLY: x, y, z
-    
-    IMPLICIT NONE
-    INTEGER(i2b) :: iteration
-    
-    PRINT*,'       step       current(x)                current(y)                 current(z)'
-    PRINT*,'       ----------------------------------------------------------------------------------'
+  use precision_kinds, only: i2b, dp
+  use system, only: t_equil, f_ext, d_iter, time, elec_slope, lncb_slope
+  use populations, only: update_populations
+  use myallocations
+  use constants, only: x, y, z
 
-    f_ext = 0.0_dp
-    elec_slope = 0.0_dp
-    lncb_slope = 0.0_dp
+  implicit none
+  integer(i2b) :: iteration
 
-    timeloop: DO time = 1, t_equil
-    
-        CALL calc_n      ! get populations
-        CALL propagation ! propagation of the distribution functions according to their direction to the next nodes
-        CALL comp_rho    ! compute density
-        CALL comp_j      ! compute momenta
-        CALL advect      ! solute motion: advection step
+  print*,'       step       current(x)                current(y)                 current(z)'
+  print*,'       ----------------------------------------------------------------------------------'
 
-        DO iteration= 1, D_iter     ! solute motion: diffusion step
-            CALL sor                ! compute phi with sucessive overrelaxation method
-            CALL electrostatic_pot  ! compute phi + phi_external (due to electrostatic field elec_slope(x:z))
-            CALL smolu              ! this time full smolu, not just_equ_smolu
-            CALL charge_test        ! check charge conservation
-        END DO
-    
-    END DO timeloop
+  f_ext = 0.0_dp
+  elec_slope = 0.0_dp
+  lncb_slope = 0.0_dp
 
-END SUBROUTINE equilibration_without_constraint
+  timeloop: do time = 1, t_equil
+
+  call update_populations      ! get populations
+  call propagation ! propagation of the distribution functions according to their direction to the next nodes
+  call comp_rho    ! compute density
+  call comp_j      ! compute momenta
+  call advect      ! solute motion: advection step
+
+  do iteration= 1, d_iter     ! solute motion: diffusion step
+    call sor                ! compute phi with sucessive overrelaxation method
+    call electrostatic_pot  ! compute phi + phi_external (due to electrostatic field elec_slope(x:z))
+    call smolu              ! this time full smolu, not just_equ_smolu
+    call charge_test        ! check charge conservation
+  end do
+
+end do timeloop
+
+end subroutine equilibration_without_constraint

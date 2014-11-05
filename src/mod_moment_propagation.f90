@@ -18,7 +18,7 @@ MODULE MOMENT_PROPAGATION
     REAL(dp) :: ka, kd, K, z, Db, Ds !K=ka/kd, z=tracer charge
   END TYPE
   TYPE(type_tracer) :: tracer
-    INTEGER(i2b), PRIVATE :: lx,ly,lz
+  INTEGER(i2b), PRIVATE :: lx,ly,lz
 
   CONTAINS
 
@@ -48,8 +48,8 @@ MODULE MOMENT_PROPAGATION
       IF (tracer%Db <= 0.0_dp ) STOP 'tracer_Db as readen in input is invalid'
       IF (tracer%Ds /= 0.0_dp ) STOP "I've found a non-zero Ds (surface diffusion coefficient) in input file. Not implemented yet"
 
-      lambda = calc_lambda()
-      lambda_s = calc_lambda_s()
+      lambda = calc_lambda()     ! diffusion
+      lambda_s = calc_lambda_s() ! surface diffusion
 
       vacf = 0.0_dp
 
@@ -119,8 +119,8 @@ MODULE MOMENT_PROPAGATION
       logical :: error
       logical, intent(out) :: is_converged
 
-      lambda = calc_lambda()
-      lambda_s = calc_lambda_s()
+      lambda = calc_lambda()      ! bulk diffusion
+      lambda_s = calc_lambda_s()  ! surface diffusion. is 0 for Ds=0
 
       error=.false.
 
@@ -137,7 +137,7 @@ MODULE MOMENT_PROPAGATION
         scattprop = calc_scattprop( n(i,j,k,l), supercell%node(i,j,k)%solventDensity, lbm%vel(l)%a0, lambda, fermi)
         restpart = restpart - scattprop
         scattprop_p = calc_scattprop( n(ip,jp,kp,lbm%vel(l)%inv), supercell%node(ip,jp,kp)%solventDensity,&
-        lbm%vel((lbm%vel(l)%inv))%a0, lambda, 1.0_dp-fermi)
+          lbm%vel((lbm%vel(l)%inv))%a0, lambda, 1.0_dp-fermi)
         Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity(:,i,j,k,next) + Propagated_Quantity(:,ip,jp,kp,now)*scattprop_p
         u_star = u_star + scattprop * lbm%vel(l)%coo(:)
       end do
@@ -153,8 +153,8 @@ MODULE MOMENT_PROPAGATION
         + Propagated_Quantity_Adsorbed (:,i,j,k,now) * tracer%kd
 
         Propagated_Quantity_Adsorbed(:,i,j,k,next) = &
-        Propagated_Quantity_Adsorbed(:,i,j,k,now) * (1.0_dp - tracer%kd) &
-        + Propagated_Quantity(:,i,j,k,now)*tracer%ka
+          Propagated_Quantity_Adsorbed(:,i,j,k,now) * (1.0_dp - tracer%kd) &
+          + Propagated_Quantity(:,i,j,k,now)*tracer%ka
 
         do concurrent (l=lbm%lmin+1:lbm%lmax)
           ip = pbc(i+lbm%vel(l)%coo(x) ,x)
@@ -166,10 +166,9 @@ MODULE MOMENT_PROPAGATION
           restpart = restpart - scattprop
           l_inv = lbm%vel(l)%inv
           scattprop_p = calc_scattprop( n(ip,jp,kp,l_inv), supercell%node(ip,jp,kp)%solventDensity, lbm%vel(l_inv)%a0,&
-          lambda_s, 1.0_dp-fermi)
+            lambda_s, 1.0_dp-fermi)
           Propagated_Quantity_adsorbed (:,i,j,k,next) = &
-          Propagated_Quantity_adsorbed (:,i,j,k,next) &
-          + Propagated_Quantity_adsorbed (:,ip,jp,kp,now)*scattprop_p
+            Propagated_Quantity_adsorbed (:,i,j,k,next) + Propagated_Quantity_adsorbed (:,ip,jp,kp,now)*scattprop_p
           u_star = u_star + scattprop* lbm%vel(l)%coo(:)
         end do
 
@@ -230,24 +229,24 @@ MODULE MOMENT_PROPAGATION
   ! ==============================================================================
 
   PURE FUNCTION DPHI(i,j,k,ip,jp,kp)
-  use system, only: phi, elec_slope
-  REAL(DP) :: dphi
-  integer(i2b), intent(in) :: i, j, k, ip, jp, kp
-  dphi = phi(ip,jp,kp) - phi(i,j,k)
-  if      (i==lx .and. ip==1) then
-    dphi = dphi + elec_slope(x)*(lx+1)
+    use system, only: phi, elec_slope
+    REAL(DP) :: dphi
+    integer(i2b), intent(in) :: i, j, k, ip, jp, kp
+    dphi = phi(ip,jp,kp) - phi(i,j,k)
+    if      (i==lx .and. ip==1) then
+      dphi = dphi + elec_slope(x)*(lx+1)
     else if(i==1 .and. ip==lx) then
       dphi = dphi - elec_slope(x)*(lx+1)
-      else if(j==ly .and. jp==1) then
-        dphi = dphi + elec_slope(y)*(ly+1)
-        else if(j==1 .and. jp==ly) then
-          dphi = dphi - elec_slope(y)*(ly+1)
-          else if(k==lz .and. kp==1) then
-            dphi = dphi + elec_slope(z)*(lz+1)
-            else if(k==1 .and. kp==lz) then
-              dphi = dphi - elec_slope(z)*(lz+1)
-            end if
-          END FUNCTION DPHI
+    else if(j==ly .and. jp==1) then
+      dphi = dphi + elec_slope(y)*(ly+1)
+    else if(j==1 .and. jp==ly) then
+      dphi = dphi - elec_slope(y)*(ly+1)
+    else if(k==lz .and. kp==1) then
+      dphi = dphi + elec_slope(z)*(lz+1)
+    else if(k==1 .and. kp==lz) then
+      dphi = dphi - elec_slope(z)*(lz+1)
+    end if
+  END FUNCTION DPHI
 
           ! ==============================================================================
 
@@ -271,7 +270,7 @@ MODULE MOMENT_PROPAGATION
       real(DP) :: calc_scattprop
       real(dp), intent(in) :: n, rho, w, lambda, fermi
       calc_scattprop = n/rho - w + lambda*w*fermi
-    END FUNCTION CALC_SCATTPROP
+      END FUNCTION CALC_SCATTPROP
 
     ! ==============================================================================
 
