@@ -1,9 +1,11 @@
 MODULE POPULATIONS
+
   use precision_kinds
   use constants, only: x, y, z
   use system, only: supercell
   use mod_lbmodel, only: lbm
   implicit none
+
   private
   public :: calc_n, calc_n_momprop
 
@@ -31,8 +33,7 @@ SUBROUTINE CALC_N
   end do
 
   ! check that no population n < 0
-  call check_population(n)
-
+  call check_population (n)
 END SUBROUTINE CALC_N
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -40,7 +41,8 @@ END SUBROUTINE CALC_N
 SUBROUTINE CALC_N_MOMPROP
   use system, only: n, f_ext, fluid, elec_slope
   use input, only: input_dp
-  integer(kind=i2b) :: l
+  implicit none
+  integer(i2b) :: l
   real(dp) :: D_tracer, tracer_z
   D_tracer = input_dp('tracer_Db')
   if (D_tracer<=0.0_dp) stop 'D_tracer, ie tracer_Db in input is invalid'
@@ -70,11 +72,12 @@ END SUBROUTINE CALC_N_MOMPROP
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    SUBROUTINE CHECK_POPULATION (arrayin)
-        real(dp), dimension(:,:,:,:), intent(in) :: arrayin
-        real(dp), parameter :: permitted_minimum_value_numerical_noise = epsilon(1.0_dp)
-        if (any(arrayin > 1.0_dp + permitted_minimum_value_numerical_noise)) stop 'STOP population n > 1 somewhere'
-        if (any(arrayin < permitted_minimum_value_numerical_noise)) stop 'STOP some population n < 0 somewhere.'
-    END SUBROUTINE CHECK_POPULATION
+subroutine check_population (arrayin)
+  implicit none
+  real(dp), dimension(:,:,:,:), intent(in) :: arrayin
+  real(dp), parameter :: eps=epsilon(1.0_dp)
+  if (any(abs(arrayin) > 1+eps)) stop "Critical. Population n_i(r) > 1 somewhere"
+  if (any(arrayin < -eps)) stop 'Critical. Population n_i(r) < 0 somewhere.'
+end subroutine check_population
 
 END MODULE POPULATIONS
