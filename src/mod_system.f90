@@ -6,7 +6,7 @@ module system
     use precision_kinds
     use constants, only: x, y, z
     use mod_lbmodel, only: lbm
-    implicit none  
+    implicit none
     ! time
     integer(i2b) :: time ! time in simu, from 0 to tmax
     integer(i2b) :: t_equil, tmom, tmax ! 0->t_equil; t_equil->tmom; t_mom->tmax
@@ -27,7 +27,7 @@ module system
         integer(i2b) :: label
         type(type_dimensions), public :: dimensions
     end type
-    
+
     type type_latticenode
         integer(kind(fluid)) :: nature ! solid liquid
 !        real(dp), dimension(x:z) :: normal ! vector normal to interface if interfacial site
@@ -74,36 +74,21 @@ module system
     real(dp), parameter :: kBT = 1.0_dp/3.0_dp ! boltzmann constant * temperature
     real(dp), parameter :: beta = 1.0_dp/kBT
 
-    contains
-    ! periodic boundary conditions
-    pure function pbc (i,direction)
-        integer(i2b) :: pbc
-        integer(i2b), intent(in) :: i, direction
-        select case (direction)
-            case (x)
-                if (i==0) then
-                    pbc = supercell%geometry%dimensions%indiceMax(x)
-                else if (i==supercell%geometry%dimensions%indiceMax(x)+1) then
-                    pbc = 1
-                else
-                    pbc = i
-                end if
-            case (y)
-                if (i==0) then
-                    pbc = supercell%geometry%dimensions%indiceMax(y)
-                else if (i==supercell%geometry%dimensions%indiceMax(y)+1) then
-                    pbc = 1
-                else
-                    pbc = i
-                end if
-            case (z)
-                if (i==0) then
-                    pbc = supercell%geometry%dimensions%indiceMax(z)
-                else if (i==supercell%geometry%dimensions%indiceMax(z)+1) then
-                    pbc = 1
-                else
-                    pbc = i
-                end if
-        end select
-    end function
+contains
+
+  pure function pbc (i,direction) ! Apply periodic boundary conditions to node indices
+    implicit none
+    integer :: pbc
+    integer, intent(in) :: i, direction
+    integer :: imax
+    imax = supercell%geometry%dimensions%indiceMax(direction)
+    if (i==0) then
+      pbc = imax
+    else if (i==imax+1) then
+      pbc = 1
+    else
+      pbc = i
+    end if
+  end function
+
 end module system
