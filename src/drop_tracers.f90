@@ -54,17 +54,16 @@ contains
     use input, only: input_dp
     implicit none
     integer(i2b) :: l
-    ! type tracer
-    !   real(dp) :: D ! diffusion coefficient
-    !   real(dp) :: q ! charge
-    ! end type
-    ! type(tracer) :: tracer
-    real(dp) :: D_tracer, tracer_z
+    type tracer
+      real(dp) :: D ! diffusion coefficient
+      real(dp) :: q ! charge
+    end type
+    type(tracer) :: tr
 
-    D_tracer = input_dp('tracer_Db')
-    if (D_tracer<=epsilon(1._dp)) stop 'D_tracer, ie tracer_Db in input is invalid'
+    tr%D = input_dp('tracer_Db')
+    if (tr%D<=epsilon(1._dp)) stop 'D_tracer, ie tracer_Db in input is invalid'
 
-    tracer_z = input_dp('tracer_z')
+    tr%q = input_dp('tracer_z')
 
     ! apply force on all fluid nodes and update populations
     do concurrent( l= lbm%lmin: lbm%lmax )
@@ -72,11 +71,11 @@ contains
         n(:,:,:,l) = lbm%vel(l)%a0*supercell%node%solventDensity &
                    + lbm%vel(l)%a1*(&
            lbm%vel(l)%coo(x)*(supercell%node%solventFlux(x) + f_ext(x) &
-                              - supercell%node%solventDensity*tracer_z *D_tracer *elec_slope(x)) &
+                              - supercell%node%solventDensity*tr%q *tr%D *elec_slope(x)) &
          + lbm%vel(l)%coo(y)*(supercell%node%solventFlux(y) + f_ext(y) &
-                              - supercell%node%solventDensity*tracer_z *D_tracer *elec_slope(y)) &
+                              - supercell%node%solventDensity*tr%q *tr%D *elec_slope(y)) &
          + lbm%vel(l)%coo(z)*(supercell%node%solventFlux(z) + f_ext(z) &
-                              - supercell%node%solventDensity*tracer_z *D_tracer *elec_slope(z)) )
+                              - supercell%node%solventDensity*tr%q *tr%D *elec_slope(z)) )
       elsewhere
         n(:,:,:,l) = lbm%vel(l)%a0*supercell%node%solventDensity + lbm%vel(l)%a1*( &
                           lbm%vel(l)%coo(x)*supercell%node%solventFlux(x) + &
