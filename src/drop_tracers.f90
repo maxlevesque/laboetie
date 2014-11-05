@@ -70,12 +70,9 @@ contains
       where( node%nature ==fluid )
         n(:,:,:,l) = lbm%vel(l)%a0*node%solventDensity &
                    + lbm%vel(l)%a1*(&
-           lbm%vel(l)%coo(x)*(node%solventFlux(x) + f_ext(x) &
-                              - node%solventDensity*tr%q *tr%D *elec_slope(x)) &
-         + lbm%vel(l)%coo(y)*(node%solventFlux(y) + f_ext(y) &
-                              - node%solventDensity*tr%q *tr%D *elec_slope(y)) &
-         + lbm%vel(l)%coo(z)*(node%solventFlux(z) + f_ext(z) &
-                              - node%solventDensity*tr%q *tr%D *elec_slope(z)) )
+           lbm%vel(l)%coo(x)*(node%solventFlux(x) + f_ext(x) - node%solventDensity*tr%q *tr%D *elec_slope(x)) &
+         + lbm%vel(l)%coo(y)*(node%solventFlux(y) + f_ext(y) - node%solventDensity*tr%q *tr%D *elec_slope(y)) &
+         + lbm%vel(l)%coo(z)*(node%solventFlux(z) + f_ext(z) - node%solventDensity*tr%q *tr%D *elec_slope(z)) )
       elsewhere
         n(:,:,:,l) = lbm%vel(l)%a0*node%solventDensity + lbm%vel(l)%a1*( &
                           lbm%vel(l)%coo(x)*node%solventFlux(x) + &
