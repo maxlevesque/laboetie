@@ -11,7 +11,7 @@ MODULE MOMENT_PROPAGATION
   PUBLIC :: init, propagate, deallocate_propagated_quantity
 
   REAL(dp), ALLOCATABLE, DIMENSION(:,:,:,:,:) :: Propagated_Quantity, Propagated_Quantity_Adsorbed
-  INTEGER(i2b), PARAMETER :: now=0, next=1, past=-1
+  INTEGER(i2b), PARAMETER :: now=0, next=1, past=-1, tini=past
   REAL(dp), DIMENSION(x:z, past:next) :: vacf
   REAL(dp) :: lambda, lambda_s ! lambda bulk and surface
   TYPE type_tracer
@@ -56,16 +56,16 @@ MODULE MOMENT_PROPAGATION
       lx = supercell%geometry%dimensions%indiceMax(x)
       ly = supercell%geometry%dimensions%indiceMax(y)
       lz = supercell%geometry%dimensions%indiceMax(z)
-      CALL test_and_allocate_what_is_needed_for_moment_propagation
+      call test_and_allocate_what_is_needed_for_moment_propagation
 
       ! the sum of all boltzman weights is the sum over all exp(-z*phi) where node%nature == fluid. Note that is_interfacial == fluid + at interface
       Pstat = sum(exp(-tracer%z*phi), mask=(node%nature==fluid))&
              +sum(exp(-tracer%z*phi)*tracer%K, mask=node%nature==fluid .and. node%isInterfacial)
 
-      DO concurrent (i=1:lx, j=1:ly, k=1:lz, node(i,j,k)%nature==fluid )
+      do concurrent (i=1:lx, j=1:ly, k=1:lz, node(i,j,k)%nature==fluid )
         boltz_weight = exp(-tracer%z*phi(i,j,k))/Pstat
 
-        DO concurrent (l=lbm%lmin+1:lbm%lmax)
+        do concurrent (l=lbm%lmin+1:lbm%lmax)
           ip = pbc (i+lbm%vel(l)%coo(x) ,x)
           jp = pbc (j+lbm%vel(l)%coo(y) ,y)
           kp = pbc (k+lbm%vel(l)%coo(z) ,z)
@@ -74,24 +74,22 @@ MODULE MOMENT_PROPAGATION
           exp_min_dphi = 1.0_dp/exp_dphi ! =1 if tracer%z=0
           fermi = 1.0_dp/(1.0_dp + exp_dphi) ! =0.5 if tracer%z=0
           scattprop = calc_scattprop( n(i,j,k,l), node(i,j,k)%solventDensity, lbm%vel(l)%a0, lambda, fermi)
-          vacf(:,past) = vacf(:,past) + boltz_weight * scattprop * lbm%vel(l)%coo(:)**2
+          vacf(:,tini) = vacf(:,tini) + boltz_weight * scattprop * lbm%vel(l)%coo(:)**2
           l_inv = lbm%vel(l)%inv
           scattprop_p = calc_scattprop( &
           n(ip,jp,kp,l_inv), node(ip,jp,kp)%solventDensity, lbm%vel(l_inv)%a0, lambda, 1.0_dp-fermi)
           Propagated_Quantity(:,i,j,k,now) = Propagated_Quantity(:,i,j,k,now) &
           + exp_min_dphi * scattprop_p * lbm%vel(l_inv)%coo(:) * boltz_weight
-        END DO
+        end do
 
-        IF(node(i,j,k)%isInterfacial .and. node(i,j,k)%nature==fluid) THEN
-          Propagated_Quantity_Adsorbed(:,i,j,k,now) = 0.0_dp
-        END IF
+        if (node(i,j,k)%isInterfacial .and. node(i,j,k)%nature==fluid) Propagated_Quantity_Adsorbed(:,i,j,k,now) = 0.0_dp
       end do
 
-      PRINT*, 0, REAL(vacf(:,past),sp)
+      PRINT*, 0, REAL(vacf(:,tini),sp)
 
       OPEN(99, file='output/vacf.dat')
       WRITE(99,*)'# time t, VACF_x(t), VACF_y(t), VACF_z(t)'
-      WRITE(99,*) 0, vacf(x,past), vacf(y,past), vacf(z,past)
+      WRITE(99,*) 0, vacf(x,tini), vacf(y,tini), vacf(z,tini)
       CLOSE(99)
 
       OPEN(100, FILE='output/adsorbed_density.dat')
