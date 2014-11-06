@@ -51,7 +51,7 @@ MODULE MOMENT_PROPAGATION
       lambda = calc_lambda()     ! diffusion
       lambda_s = calc_lambda_s() ! surface diffusion
 
-      vacf = 0.0_dp
+      vacf = 0.0_dp ! vacf(x:z, past:next)
 
       lx = supercell%geometry%dimensions%indiceMax(x)
       ly = supercell%geometry%dimensions%indiceMax(y)
@@ -60,10 +60,10 @@ MODULE MOMENT_PROPAGATION
 
       ! the sum of all boltzman weights is the sum over all exp(-z*phi) where node%nature == fluid. Note that is_interfacial == fluid + at interface
       Pstat = sum(exp(-tracer%z*phi), mask=(node%nature==fluid))&
-      +sum(exp(-tracer%z*phi)*tracer%K, mask=node%nature==fluid .and. node%isInterfacial)
+             +sum(exp(-tracer%z*phi)*tracer%K, mask=node%nature==fluid .and. node%isInterfacial)
 
       DO concurrent (i=1:lx, j=1:ly, k=1:lz, node(i,j,k)%nature==fluid )
-        boltz_weight = exp(-tracer%z*phi(i,j,k))/Pstat ! boltz_weight=1/Pstat if tracer%z=0
+        boltz_weight = exp(-tracer%z*phi(i,j,k))/Pstat
 
         DO concurrent (l=lbm%lmin+1:lbm%lmax)
           ip = pbc (i+lbm%vel(l)%coo(x) ,x)
