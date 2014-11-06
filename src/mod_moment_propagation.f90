@@ -75,11 +75,11 @@ MODULE MOMENT_PROPAGATION
           fermi = 1.0_dp/(1.0_dp + exp_dphi) ! =0.5 if tracer%z=0
           scattprop = calc_scattprop( n(i,j,k,l), node(i,j,k)%solventDensity, lbm%vel(l)%a0, lambda, fermi)
           vacf(:,tini) = vacf(:,tini) + boltz_weight * scattprop * lbm%vel(l)%coo(:)**2
-          l_inv = lbm%vel(l)%inv
+          l_inv = lbm%vel(l)%inv ! comes to r
           scattprop_p = calc_scattprop( &
-          n(ip,jp,kp,l_inv), node(ip,jp,kp)%solventDensity, lbm%vel(l_inv)%a0, lambda, 1.0_dp-fermi)
+            n(ip,jp,kp,l_inv), node(ip,jp,kp)%solventDensity, lbm%vel(l_inv)%a0, lambda, 1.0_dp-fermi)
           Propagated_Quantity(:,i,j,k,now) = Propagated_Quantity(:,i,j,k,now) &
-          + exp_min_dphi * scattprop_p * lbm%vel(l_inv)%coo(:) * boltz_weight
+            + exp_min_dphi * scattprop_p * lbm%vel(l_inv)%coo(:) * boltz_weight
         end do
 
         if (node(i,j,k)%isInterfacial .and. node(i,j,k)%nature==fluid) Propagated_Quantity_Adsorbed(:,i,j,k,now) = 0.0_dp
@@ -274,6 +274,7 @@ MODULE MOMENT_PROPAGATION
     ! ==============================================================================
 
     SUBROUTINE test_and_allocate_what_is_needed_for_moment_propagation
+      implicit none
       ! Propagated_Quantity is the probability vector of arriving at r at time t
       IF(ALLOCATED(Propagated_Quantity)) STOP 'Propagated quantity should not be allocated in init_moment_propagation'
       ALLOCATE(Propagated_Quantity(x:z,lx,ly,lz,now:next), source=0.0_dp)
