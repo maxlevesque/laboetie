@@ -48,8 +48,8 @@ MODULE MOMENT_PROPAGATION
       IF (tracer%Db <= 0.0_dp ) STOP 'tracer_Db as readen in input is invalid'
       IF (tracer%Ds /= 0.0_dp ) STOP "I've found a non-zero Ds (surface diffusion coefficient) in input file. Not implemented yet"
 
-      lambda = calc_lambda()     ! diffusion
-      lambda_s = calc_lambda_s() ! surface diffusion
+      lambda = calc_lambda(tracer%Db)      ! bulk diffusion
+      lambda_s = calc_lambda(tracer%Ds)  ! surface diffusion. is 0 for Ds=0
 
       vacf = 0.0_dp ! vacf(x:z, past:next)
 
@@ -116,9 +116,6 @@ MODULE MOMENT_PROPAGATION
       integer(kind=i2b) :: i, j, k, l, l_inv, ip, jp, kp
       logical :: error
       logical, intent(out) :: is_converged
-
-      lambda = calc_lambda()      ! bulk diffusion
-      lambda_s = calc_lambda_s()  ! surface diffusion. is 0 for Ds=0
 
       error=.false.
 
@@ -212,12 +209,13 @@ MODULE MOMENT_PROPAGATION
 
 
 
-    ! ==============================================================================
+!==============================================================================
 
-    PURE FUNCTION CALC_EXP_DPHI( i, j, k, ip, jp, kp)
+  PURE FUNCTION CALC_EXP_DPHI( i, j, k, ip, jp, kp)
+    implicit none
     REAL(DP) :: CALC_EXP_DPHI
     INTEGER(i2b), INTENT(IN) :: i, j, k, ip, jp, kp
-    IF( tracer%z == 0.0_dp ) THEN
+    IF( abs(tracer%z) <= epsilon(1._dp) ) THEN
       calc_exp_dphi = 1.0_dp
     ELSE
       calc_exp_dphi = EXP( tracer%z * dphi(i,j,k,ip,jp,kp) )
@@ -228,6 +226,7 @@ MODULE MOMENT_PROPAGATION
 
   PURE FUNCTION DPHI(i,j,k,ip,jp,kp)
     use system, only: phi, elec_slope
+    implicit none
     REAL(DP) :: dphi
     integer(i2b), intent(in) :: i, j, k, ip, jp, kp
     dphi = phi(ip,jp,kp) - phi(i,j,k)
@@ -248,27 +247,22 @@ MODULE MOMENT_PROPAGATION
 
           ! ==============================================================================
 
-          PURE FUNCTION CALC_LAMBDA()
-          use system, only: kBT
-          REAL(DP) :: calc_lambda
-          calc_lambda = 4.0_dp*tracer%Db/kBT
-        END FUNCTION CALC_LAMBDA
-
-        ! ==============================================================================
-
-        PURE FUNCTION CALC_LAMBDA_S()
-        use system, only: kBT
-        REAL(DP) :: calc_lambda_s
-        calc_lambda_s = 4.0_dp*tracer%Ds/kBT
-      END FUNCTION CALC_LAMBDA_S
+  PURE FUNCTION CALC_LAMBDA(d)
+    use system, only: kBT
+    implicit none
+    real(dp) :: calc_lambda
+    real(dp), intent(in) :: d ! diffusion coefficient to be used to compute lambda. See review by Ladd.
+    calc_lambda = 4.0_dp*d/kBT
+  END FUNCTION CALC_LAMBDA
 
       ! ==============================================================================
 
-      PURE FUNCTION CALC_SCATTPROP(n,rho,w,lambda,fermi)
-      real(DP) :: calc_scattprop
-      real(dp), intent(in) :: n, rho, w, lambda, fermi
-      calc_scattprop = n/rho - w + lambda*w*fermi
-      END FUNCTION CALC_SCATTPROP
+  pure function calc_scattprop (n,rho,w,lambda,fermi)
+    implicit none
+    real(dp) :: calc_scattprop
+    real(dp), intent(in) :: n, rho, w, lambda, fermi
+    calc_scattprop = n/rho - w + lambda*w*fermi
+  end function calc_scattprop
 
     ! ==============================================================================
 
@@ -290,14 +284,14 @@ MODULE MOMENT_PROPAGATION
     ! ==============================================================================
 
     LOGICAL PURE FUNCTION testPositivity(ka)
-    REAL(dp), INTENT(IN) :: ka
-    LOGICAL, PARAMETER :: succeeded=.true.
-    IF (ka<0.0_dp) THEN
-      testPositivity = .NOT.succeeded
-    ELSE
-      testPositivity = succeeded
-    END IF
-  END FUNCTION testPositivity
+      REAL(dp), INTENT(IN) :: ka
+      LOGICAL, PARAMETER :: succeeded=.true.
+      IF (ka<0.0_dp) THEN
+        testPositivity = .NOT.succeeded
+      ELSE
+        testPositivity = succeeded
+      END IF
+    END FUNCTION testPositivity
 
   ! ==============================================================================
 
