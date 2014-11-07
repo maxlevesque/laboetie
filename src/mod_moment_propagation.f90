@@ -168,7 +168,7 @@ MODULE MOMENT_PROPAGATION
 
         else if ( nature==fluid .and. interfacial .and. considerAdsorption ) then
           restpart = restpart - tracer%ka ! ICI JE METTRAI restpart*(1-ka)
-          
+
           Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity (:,i,j,k,next) &
             + restpart * Propagated_Quantity (:,i,j,k,now) &
             + Propagated_Quantity_Adsorbed (:,i,j,k,now) * tracer%kd
@@ -294,20 +294,5 @@ MODULE MOMENT_PROPAGATION
         ALLOCATE(Propagated_Quantity_Adsorbed(x:z,lx,ly,lz,now:next), source=0.0_dp)
       end if
     END SUBROUTINE test_and_allocate_what_is_needed_for_moment_propagation
-
-    ! ==============================================================================
-
-  !LOGICAL PURE FUNCTION NOT_YET_CONVERGED(t)
-  !  integer(i2b), intent(in) :: t
-  !  if(t < (lbound(vacf,2)+2)) then
-  !    not_yet_converged = .true.
-  !  else if( vacf(x,lbound(vacf,2)+t) /= vacf(x,lbound(vacf,2)+t-1) &
-  !      .or. vacf(y,lbound(vacf,2)+t) /= vacf(y,lbound(vacf,2)+t-1) &
-  !      .or. vacf(z,lbound(vacf,2)+t) /= vacf(z,lbound(vacf,2)+t-1)  ) then
-  !    not_yet_converged = .true.
-  !  else
-  !    not_yet_converged = .false. ! ie is converged
-  !  end if
-  !END FUNCTION NOT_YET_CONVERGED
 
 END MODULE MOMENT_PROPAGATION
