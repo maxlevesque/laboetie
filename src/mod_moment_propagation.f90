@@ -167,8 +167,8 @@ MODULE MOMENT_PROPAGATION
             Propagated_Quantity(:,i,j,k,next) + restpart*Propagated_Quantity(:,i,j,k,now)
 
         else if ( nature==fluid .and. interfacial .and. considerAdsorption ) then
-          restpart = restpart - tracer%ka ! ICI JE METTRAI restpart*(1-ka) pour être plus physique, mais c'est peut être ça qui fait la discontinuité de JMV
-
+          restpart = restpart - tracer%ka ! ICI JE METTRAI restpart*(1-ka)
+          
           Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity (:,i,j,k,next) &
             + restpart * Propagated_Quantity (:,i,j,k,now) &
             + Propagated_Quantity_Adsorbed (:,i,j,k,now) * tracer%kd
