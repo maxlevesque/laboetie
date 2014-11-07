@@ -130,13 +130,13 @@ module io
 
                             IF      ( nature == solid )                            THEN
                                 WRITE(5,*) VMDpink,coo
-                                PRINT*,coo,"solid"
+                                ! PRINT*,coo,"solid"
                             ELSE IF ( nature == fluid .AND. isInterfacial )        THEN
                                 WRITE(5,*) VMDgreen,coo
-                                PRINT*,coo,"fluid interfacial"
+                                ! PRINT*,coo,"fluid interfacial"
                             ELSE IF ( nature == fluid .AND. (.NOT.isInterfacial) ) THEN
                                 WRITE(5,*) VMDwhite,coo
-                                PRINT*,coo,"fluid NOT interfacial"
+                                ! PRINT*,coo,"fluid NOT interfacial"
                             ELSE
                                 STOP 'While writing supercell.xsf, I found a node that has undocumented nature'
                             END IF
