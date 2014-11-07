@@ -168,7 +168,6 @@ MODULE MOMENT_PROPAGATION
 
         else if ( nature==fluid .and. interfacial .and. considerAdsorption ) then
           restpart = restpart - tracer%ka ! ICI JE METTRAI restpart*(1-ka) pour être plus physique, mais c'est peut être ça qui fait la discontinuité de JMV
-          if (restpart<0.0_dp) error=.true.
 
           Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity (:,i,j,k,next) &
             + restpart * Propagated_Quantity (:,i,j,k,now) &
@@ -178,24 +177,11 @@ MODULE MOMENT_PROPAGATION
             Propagated_Quantity_Adsorbed(:,i,j,k,now) * (1.0_dp - tracer%kd) &
             + Propagated_Quantity(:,i,j,k,now)*tracer%ka
 
-          ! do concurrent (l=lbm%lmin+1:lbm%lmax)
-          !   ip = pbc(i+lbm%vel(l)%coo(x) ,x)
-          !   jp = pbc(j+lbm%vel(l)%coo(y) ,y)
-          !   kp = pbc(k+lbm%vel(l)%coo(z) ,z)
-          !   if (.not. (node(ip,jp,kp)%isInterfacial .and. node(ip,jp,kp)%nature==fluid)) cycle ! is_interfacial is fluid AND interface
-          !   fermi = 1.0_dp/(1.0_dp + calc_exp_dphi(i,j,k,ip,jp,kp)) ! 1/2 when tracer has no charge
-          !   scattprop = calc_scattprop( n(i,j,k,l), node(i,j,k)%solventDensity, lbm%vel(l)%a0, lambda_s, fermi)
-          !   restpart = restpart - scattprop
-          !   l_inv = lbm%vel(l)%inv
-          !   scattprop_p = calc_scattprop( n(ip,jp,kp,l_inv), node(ip,jp,kp)%solventDensity, lbm%vel(l_inv)%a0,&
-          !     lambda_s, 1.0_dp-fermi)
-          !   Propagated_Quantity_adsorbed (:,i,j,k,next) = &
-          !     Propagated_Quantity_adsorbed (:,i,j,k,next) + Propagated_Quantity_adsorbed (:,ip,jp,kp,now)*scattprop_p
-          !   u_star = u_star + scattprop* lbm%vel(l)%coo(:)
-          ! end do
-
         end if
+
+        if (restpart<0.0_dp) error=.true.
       end do
+
 
       if(error) stop 'somewhere restpart is negative' ! TODO one should find a better function for ads and des, as did Benjamin for pi
 
