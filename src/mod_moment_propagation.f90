@@ -36,8 +36,8 @@ MODULE MOMENT_PROPAGATION
 
       tracer%ka = input_dp('tracer_ka') ! adsorption
       tracer%kd = input_dp('tracer_kd') ! desorption
-      if (tracer%ka < epsilon(1._dp)) stop 'I detected tracer%ka to be <0 in module moment_propagation. STOP.'
-      if (tracer%kd < epsilon(1._dp)) stop 'I detected tracer%kd to be <0 in module moment_propagation. STOP.'
+      if (tracer%ka < -epsilon(1._dp)) stop 'I detected tracer%ka to be <0 in module moment_propagation. STOP.'
+      if (tracer%kd < -epsilon(1._dp)) stop 'I detected tracer%kd to be <0 in module moment_propagation. STOP.'
 
       if ( abs(tracer%kd)<=epsilon(1._dp) ) then ! if kd=0
         tracer%K = 0.0_dp ! don't do the division by 0
@@ -178,8 +178,8 @@ MODULE MOMENT_PROPAGATION
             + Propagated_Quantity(:,i,j,k,now)*tracer%ka
 
         end if
-
         if (restpart<0.0_dp) error=.true.
+
       end do
 
 
