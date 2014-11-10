@@ -14,19 +14,23 @@ contains
   subroutine update_populations
     use system, only: fluid, f_ext, n, solid
     implicit none
-    integer(i2b) :: l
+    integer(i2b) :: l, ll, lu
+    ll = lbm%lmin
+    lu = lbm%lmax
     ! apply force on all fluid nodes and update populations
-    do concurrent (l= lbm%lmin: lbm%lmax)
+    do concurrent (l= ll:lu)
       where (node%nature == fluid)
         n(:,:,:,l) =  lbm%vel(l)%a0*node%solventDensity &
-        + lbm%vel(l)%a1*( lbm%vel(l)%coo(x)*(node%solventFlux(x) + f_ext(x)) &
-        + lbm%vel(l)%coo(y)*(node%solventFlux(y) + f_ext(y)) &
-        + lbm%vel(l)%coo(z)*(node%solventFlux(z) + f_ext(z)) )
-        elsewhere
-        n(:,:,:,l) =     lbm%vel(l)%a0*node%solventDensity  &
-        + lbm%vel(l)%a1*(  lbm%vel(l)%coo(x)*node%solventFlux(x) &
-        + lbm%vel(l)%coo(y)*node%solventFlux(y) &
-        + lbm%vel(l)%coo(z)*node%solventFlux(z) )
+          + lbm%vel(l)%a1*( &
+            lbm%vel(l)%coo(x)*(node%solventFlux(x) + f_ext(x)) &
+          + lbm%vel(l)%coo(y)*(node%solventFlux(y) + f_ext(y)) &
+          + lbm%vel(l)%coo(z)*(node%solventFlux(z) + f_ext(z)) )
+      elsewhere
+        n(:,:,:,l) =  lbm%vel(l)%a0*node%solventDensity  &
+          + lbm%vel(l)%a1*(  &
+            lbm%vel(l)%coo(x)*node%solventFlux(x) &
+          + lbm%vel(l)%coo(y)*node%solventFlux(y) &
+          + lbm%vel(l)%coo(z)*node%solventFlux(z) )
       end where
     end do
 
