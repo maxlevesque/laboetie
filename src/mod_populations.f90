@@ -2,7 +2,7 @@ MODULE POPULATIONS
 
   use precision_kinds
   use constants, only: x, y, z
-  use system, only: supercell, node
+  use system, only: node
   use mod_lbmodel, only: lbm
   implicit none
 
@@ -35,9 +35,7 @@ contains
             + c(z)*node%solventFlux(z)  )
       end where
     end do
-
-    ! check that no population n < 0
-    ! call check_population (n)
+    ! call check_population (n) ! check that no population n < 0
   end subroutine update_populations
 
   subroutine check_population (arrayin)
