@@ -1,7 +1,6 @@
 PROGRAM main
 
   IMPLICIT NONE
-
   ! init the system: read input, geometry, composition, external forces, periodicity, ...
   CALL init_simu
 
