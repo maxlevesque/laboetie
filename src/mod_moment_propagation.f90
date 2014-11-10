@@ -124,6 +124,7 @@ MODULE MOMENT_PROPAGATION
     SUBROUTINE PROPAGATE(it, is_converged)
 
       use system, only: fluid, solid, n, node
+      use input, only: input_char
       implicit none
       integer(i2b), intent(in) :: it
       real(dp) :: fermi, fractionOfParticleRemaining, scattprop, scattprop_p, exp_dphi, rho, n_loc(lbm%lmin:lbm%lmax)
@@ -132,6 +133,7 @@ MODULE MOMENT_PROPAGATION
       integer(i2b) :: i, j, k, l, ip, jp, kp, nature, ll, lu, l_inv_loc, l_inv(lbm%lmin:lbm%lmax), c(x:z,lbm%lmin:lbm%lmax)
       logical :: error, interfacial
       logical, intent(out) :: is_converged
+      character(1) :: ompvar
 
       error=.false.
 
@@ -143,6 +145,13 @@ MODULE MOMENT_PROPAGATION
       a0(:) = lbm%vel(:)%a0
       l_inv(:) = lbm%vel(:)%inv
 
+      ompvar = input_char("openmpover") ! this prepares the code to parallelize over x, y or z slices depending on lb.in. TODO
+
+!$OMP PARALLEL DO PRIVATE(i,j,k,l,ip,jp,kp,fermi,scattprop,l_inv_loc,scattprop_p,n_loc,rho,nature,interfacial,u_star) &
+!$OMP PRIVATE(fractionOfParticleRemaining,Propagated_Quantity_loc) &
+!$OMP SHARED(node,n,lambda,Propagated_Quantity,l_inv,a0,c,ll,lu,lx,ly,lz,considerAdsorption,tracer) &
+!$OMP SHARED(Propagated_Quantity_Adsorbed) &
+!$OMP REDUCTION(+:vacf)
       do k=1,lz ! we parallelize over k. If system is 30x30x1 parallelization is useless!
         do j=1,ly
           do i=1,lx
@@ -155,10 +164,6 @@ MODULE MOMENT_PROPAGATION
             interfacial = node(i,j,k)%isInterfacial
 
             Propagated_Quantity_loc(:) = Propagated_Quantity(:,i,j,k,next)
-!$OMP PARALLEL DO PRIVATE(l,ip,jp,kp,fermi,scattprop,l_inv_loc,scattprop_p) &
-!$OMP SHARED(node,n,lambda,Propagated_Quantity,l_inv,a0,c,ll,lu) REDUCTION(-:fractionOfParticleRemaining) &
-!$OMP REDUCTION(+:u_star,Propagated_Quantity_loc) &
-!$OMP FIRSTPRIVATE(i,j,k)
             do l = ll+1, lu
               ip = pbc( i+c(x,l) ,x)
               jp = pbc( j+c(y,l) ,y)
@@ -173,7 +178,6 @@ MODULE MOMENT_PROPAGATION
                 a0(l_inv_loc), lambda, 1.0_dp-fermi)
               Propagated_Quantity_loc(:) = Propagated_Quantity_loc(:) + Propagated_Quantity(:,ip,jp,kp,now)*scattprop_p
             end do
-!$OMP END PARALLEL DO
             Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity_loc(:)
             vacf(:,now) = vacf(:,now) + Propagated_Quantity(:,i,j,k,now)*u_star(:)
 
@@ -195,6 +199,7 @@ MODULE MOMENT_PROPAGATION
           end do
         end do
       end do
+!$OMP END PARALLEL DO
 
 
       if(error) stop 'somewhere restpart is negative' ! TODO one should find a better function for ads and des, as did Benjamin for pi
