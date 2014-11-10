@@ -129,9 +129,13 @@ MODULE MOMENT_PROPAGATION
       integer(i2b), intent(in) :: it
       real(dp) :: fermi, fractionOfParticleRemaining, scattprop, scattprop_p, exp_dphi, rho, n_loc(lbm%lmin:lbm%lmax)
       integer(i2b), parameter :: now=0, next=1, past=-1
-      real(dp) :: u_star(x:z), Propagated_Quantity_loc(x:z), a0(lbm%lmin:lbm%lmax)
-      integer(i2b) :: i, j, k, l, ip, jp, kp, nature, ll, lu, l_inv_loc, l_inv(lbm%lmin:lbm%lmax), c(x:z,lbm%lmin:lbm%lmax)
-      logical :: error, interfacial
+      real(dp) :: u_star(x:z), Propagated_Quantity_loc(x:z), density_loc
+      integer(i2b) :: i, j, k, l, ip, jp, kp, nature_loc, ll, lu, l_inv_loc
+      integer(i2b), save, allocatable :: c(:,:), l_inv(:)
+      integer(kind(fluid)), save, allocatable :: nature(:,:,:)
+      real(dp), save, allocatable :: density(:,:,:), a0(:)
+      logical :: error, interfacial_loc
+      logical, save, allocatable :: interfacial(:,:,:)
       logical, intent(out) :: is_converged
       character(1) :: ompvar
 
@@ -139,53 +143,58 @@ MODULE MOMENT_PROPAGATION
 
       ll = lbm%lmin
       lu = lbm%lmax
-      c(x,:) = lbm%vel(:)%coo(x)
-      c(y,:) = lbm%vel(:)%coo(y)
-      c(z,:) = lbm%vel(:)%coo(z)
-      a0(:) = lbm%vel(:)%a0
-      l_inv(:) = lbm%vel(:)%inv
+      if (.not. allocated(c)) then
+        allocate(c(x:z,ll:lu))
+        c(x,:) = lbm%vel(:)%coo(x)
+        c(y,:) = lbm%vel(:)%coo(y)
+        c(z,:) = lbm%vel(:)%coo(z)
+      end if
+      if (.not. allocated(a0)) allocate(a0(ll:lu), source=lbm%vel(:)%a0)
+      if (.not. allocated(l_inv)) allocate(l_inv(ll:lu), source=lbm%vel(:)%inv)
+      if (.not. allocated(density)) allocate (density(lx,ly,lz), source=node(:,:,:)%solventDensity)
+      if (.not. allocated(nature)) allocate (nature(lx,ly,lz), source=node(:,:,:)%nature)
+      if (.not. allocated(interfacial)) allocate (interfacial(lx,ly,lz), source=node(:,:,:)%isInterfacial)
 
       ompvar = input_char("openmpover") ! this prepares the code to parallelize over x, y or z slices depending on lb.in. TODO
 
-!$OMP PARALLEL DO PRIVATE(i,j,k,l,ip,jp,kp,fermi,scattprop,l_inv_loc,scattprop_p,n_loc,rho,nature,interfacial,u_star) &
-!$OMP PRIVATE(fractionOfParticleRemaining,Propagated_Quantity_loc) &
-!$OMP SHARED(node,n,lambda,Propagated_Quantity,l_inv,a0,c,ll,lu,lx,ly,lz,considerAdsorption,tracer) &
-!$OMP SHARED(Propagated_Quantity_Adsorbed) &
+!$OMP PARALLEL DO PRIVATE(i,j,k,l,ip,jp,kp,fermi,scattprop,l_inv_loc,scattprop_p,n_loc,density_loc,nature_loc,u_star) &
+!$OMP PRIVATE(fractionOfParticleRemaining,Propagated_Quantity_loc,interfacial_loc) &
+!$OMP SHARED(nature,n,lambda,Propagated_Quantity,l_inv,a0,c,ll,lu,lx,ly,lz,considerAdsorption,tracer) &
+!$OMP SHARED(Propagated_Quantity_Adsorbed,density,interfacial) &
 !$OMP REDUCTION(+:vacf)
       do k=1,lz ! we parallelize over k. If system is 30x30x1 parallelization is useless!
         do j=1,ly
           do i=1,lx
-            if (node(i,j,k)%nature/=fluid) cycle
+            nature_loc = nature(i,j,k)
+            if (nature_loc/=fluid) cycle
             u_star(:) = 0.0_dp ! the average velocity at r
             fractionOfParticleRemaining = 1.0_dp ! fraction of particles staying at r; decreases in the loop over neighbours
             n_loc(:) = n(i,j,k,:)
-            rho = node(i,j,k)%solventDensity
-            nature = node(i,j,k)%nature
-            interfacial = node(i,j,k)%isInterfacial
-
+            density_loc = density(i,j,k)
+            interfacial_loc = Interfacial(i,j,k)
             Propagated_Quantity_loc(:) = Propagated_Quantity(:,i,j,k,next)
-            do l = ll+1, lu
+            do l = ll+1, lu ! ll is velocity=0
               ip = pbc( i+c(x,l) ,x)
               jp = pbc( j+c(y,l) ,y)
               kp = pbc( k+c(z,l) ,z)
-              if ( node(ip,jp,kp)%nature /= fluid ) cycle
+              if ( nature(ip,jp,kp) /= fluid ) cycle
               fermi = 1.0_dp/(1.0_dp + calc_exp_dphi(i,j,k,ip,jp,kp))
-              scattprop = calc_scattprop( n_loc(l), rho, a0(l), lambda, fermi) ! scattering probability at r
+              scattprop = calc_scattprop( n_loc(l), density_loc, a0(l), lambda, fermi) ! scattering probability at r
               fractionOfParticleRemaining = fractionOfParticleRemaining - scattprop ! what is scattered away is not found anymore at r
               u_star(:) = u_star(:) + scattprop*c(x:z,l)
               l_inv_loc = l_inv(l)
-              scattprop_p = calc_scattprop( n(ip,jp,kp,l_inv_loc), node(ip,jp,kp)%solventDensity,&
-                a0(l_inv_loc), lambda, 1.0_dp-fermi)
+              scattprop_p = calc_scattprop( n(ip,jp,kp,l_inv_loc), density(ip,jp,kp), a0(l_inv_loc), lambda, 1.0_dp-fermi)
               Propagated_Quantity_loc(:) = Propagated_Quantity_loc(:) + Propagated_Quantity(:,ip,jp,kp,now)*scattprop_p
             end do
             Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity_loc(:)
             vacf(:,now) = vacf(:,now) + Propagated_Quantity(:,i,j,k,now)*u_star(:)
 
             ! NOW, UPDATE THE PROPAGATED QUANTITIES
-            if ( nature==fluid .and. .not.interfacial ) then
+            if (   (nature_loc==fluid .and. .not.interfacial_loc .and. considerAdsorption) &
+              .or. (nature_loc==fluid .and. .not.considerAdsorption) )then
               Propagated_Quantity(:,i,j,k,next) = &
                 Propagated_Quantity(:,i,j,k,next) + fractionOfParticleRemaining*Propagated_Quantity(:,i,j,k,now)
-            else if ( nature==fluid .and. interfacial .and. considerAdsorption ) then
+            else if ( nature_loc==fluid .and. interfacial_loc .and. considerAdsorption ) then
               fractionOfParticleRemaining = fractionOfParticleRemaining - tracer%ka ! ICI JE METTRAI fractionOfParticleRemaining*(1-ka)
               Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity (:,i,j,k,next) &
                 + fractionOfParticleRemaining * Propagated_Quantity (:,i,j,k,now) &
@@ -193,6 +202,8 @@ MODULE MOMENT_PROPAGATION
               Propagated_Quantity_Adsorbed(:,i,j,k,next) = &
                 Propagated_Quantity_Adsorbed(:,i,j,k,now) * (1.0_dp - tracer%kd) &
                 + Propagated_Quantity(:,i,j,k,now)*tracer%ka
+            else
+              stop "OMG YOU KILLED THE QUEEN!"
             end if
 
             if (abs(fractionOfParticleRemaining)<epsilon(1._dp)) error=.true.
