@@ -28,7 +28,7 @@ MODULE MOMENT_PROPAGATION
     SUBROUTINE INIT
 
       use system, ONLY: phi, fluid, solid, n, node
-      use input, ONLY: input_dp
+      use input, ONLY: input_dp, input_log
       implicit none
       real(dp) :: boltz_weight, Pstat, scattprop, scattprop_p, fermi, exp_dphi, exp_min_dphi, sum_of_boltz_weight, rho
       real(dp) :: n_loc(lbm%lmin:lbm%lmax)
@@ -101,21 +101,24 @@ MODULE MOMENT_PROPAGATION
 
       PRINT*, 0, REAL(vacf(:,tini),sp)
 
-      OPEN(99, file='output/vacf.dat')
-      WRITE(99,*)'# time t, VACF_x(t), VACF_y(t), VACF_z(t)'
-      WRITE(99,*) 0, vacf(x,tini), vacf(y,tini), vacf(z,tini)
 
-      if (considerAdsorption) then
-        OPEN(100, FILE='output/adsorbed_density.dat')
-        WRITE(100,*)
-        WRITE(100,*)"# time ",0
-        DO i=1,lx; DO j=1,ly; DO k=1,lz;
-          IF ( node(i,j,k)%isInterfacial .and. node(i,j,k)%nature==fluid ) THEN
-            WRITE(100,*)i,j,k,SUM(Propagated_Quantity_Adsorbed(:,i,j,k,now))
-          END IF
-        END DO; END DO; END DO;
-        CLOSE(100)
+      if (input_log("print_vacf",.true.)) then
+        OPEN(99, file='output/vacf.dat')
+        WRITE(99,*)'# time t, VACF_x(t), VACF_y(t), VACF_z(t)'
+        WRITE(99,*) 0, vacf(:,tini)
       end if
+
+      ! if (considerAdsorption) then
+      !   OPEN(100, FILE='output/adsorbed_density.dat')
+      !   WRITE(100,*)
+      !   WRITE(100,*)"# time ",0
+      !   DO i=1,lx; DO j=1,ly; DO k=1,lz;
+      !     IF ( node(i,j,k)%isInterfacial .and. node(i,j,k)%nature==fluid ) THEN
+      !       WRITE(100,*)i,j,k,SUM(Propagated_Quantity_Adsorbed(:,i,j,k,now))
+      !     END IF
+      !   END DO; END DO; END DO;
+      !   CLOSE(100)
+      ! end if
 
     END SUBROUTINE INIT
 
@@ -124,7 +127,7 @@ MODULE MOMENT_PROPAGATION
     SUBROUTINE PROPAGATE(it, is_converged)
 
       use system, only: fluid, solid, n, node
-      use input, only: input_char
+      use input, only: input_char, input_log
       implicit none
       integer(i2b), intent(in) :: it
       real(dp) :: fermi, fractionOfParticleRemaining, scattprop, scattprop_p, exp_dphi, rho, n_loc(lbm%lmin:lbm%lmax)
@@ -225,7 +228,7 @@ MODULE MOMENT_PROPAGATION
         Propagated_Quantity_Adsorbed(:,:,:,:,next) = 0.0_dp
       end if
 
-      WRITE(99,*) it, vacf(x,now), vacf(y,now), vacf(z,now)
+      if (input_log("print_vacf",.true.)) write(99,*) it, vacf(:,now)
 
       !~     OPEN(100, FILE='output/adsorbed_density.dat', ACCESS='append')
       !~         WRITE(100,*)
