@@ -193,11 +193,11 @@ MODULE MOMENT_PROPAGATION
             vacf(:,now) = vacf(:,now) + Propagated_Quantity(:,i,j,k,now)*u_star(:)
 
             ! NOW, UPDATE THE PROPAGATED QUANTITIES
-            if (   (nature_loc==fluid .and. .not.interfacial_loc .and. considerAdsorption) &
-              .or. (nature_loc==fluid .and. .not.considerAdsorption) )then
+            if (   (.not.interfacial_loc .and. considerAdsorption) &
+              .or. (.not.considerAdsorption) )then
               Propagated_Quantity(:,i,j,k,next) = &
                 Propagated_Quantity(:,i,j,k,next) + fractionOfParticleRemaining*Propagated_Quantity(:,i,j,k,now)
-            else if ( nature_loc==fluid .and. interfacial_loc .and. considerAdsorption ) then
+            else if ( interfacial_loc .and. considerAdsorption ) then
               fractionOfParticleRemaining = fractionOfParticleRemaining - tracer%ka ! ICI JE METTRAI fractionOfParticleRemaining*(1-ka)
               Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity (:,i,j,k,next) &
                 + fractionOfParticleRemaining * Propagated_Quantity (:,i,j,k,now) &
