@@ -19,7 +19,7 @@ subroutine comp_j
   ju =supercell%geometry%dimensions%indiceMax(y)
   kl =supercell%geometry%dimensions%indiceMin(z)
   ku =supercell%geometry%dimensions%indiceMax(z)
-j
+
   do concurrent (i=il:iu, j=jl:ju, k=kl:ku)
     node(i,j,k)%solventFlux(x) = 0.5_dp*(node(i,j,k)%solventFlux(x) + sum(n(i,j,k,:)*lbm%vel(:)%coo(x)))
     node(i,j,k)%solventFlux(y) = 0.5_dp*(node(i,j,k)%solventFlux(y) + sum(n(i,j,k,:)*lbm%vel(:)%coo(y)))
