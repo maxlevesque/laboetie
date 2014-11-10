@@ -138,30 +138,41 @@ CONTAINS
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  FUNCTION input_log (tag)
+  FUNCTION input_log (tag,defaultValue)
     IMPLICIT NONE
     logical :: input_log
     CHARACTER(*), INTENT(IN) :: tag
+    logical, optional, intent(in) :: defaultValue
+    logical :: ifoundtag
     CHARACTER :: text
     INTEGER(i2b) :: i, j
-    IF (tag=='point_charge_electrostatic') THEN
-      STOP 'The tag point_charge_electrostatic in dft.in must be renamed direct_sum since July 27th, 2014'
-    END IF
     j=LEN(tag)
     DO i =1,SIZE( input_line)
-      IF( input_line(i)(1:j)==tag .AND. input_line(i)(j+1:j+1)==' ' ) READ( input_line (i) (j+4:j+50) , * ) text
+      IF( input_line(i)(1:j)==tag .AND. input_line(i)(j+1:j+1)==' ' ) then
+        READ( input_line (i) (j+4:j+50) , * ) text
+        ifoundtag = .true.
+        exit
+      end if
     END DO
     j = 999 ! means error in reading
     IF( text(1:1) == 'T' ) j = 1 ! means true, 2 means false
     IF( text(1:1) == 't' ) j = 1
     IF( text(1:1) == 'F' ) j = 2
     IF( text(1:1) == 'f' ) j = 2
-    IF( j == 999 ) THEN
-      PRINT*, 'I did not find the tag ', tag,' in dft.in'
-      STOP
-    END IF
-    IF( j == 1 ) input_log = .TRUE.
-    IF( j == 2 ) input_log = .FALSE.
+    IF( j == 1 ) then
+      input_log = .TRUE.
+    else IF( j == 2 ) then
+      input_log = .FALSE.
+    else if ( present(defaultValue) .and. (.not.ifoundtag .or. j==999)) then
+      input_log = defaultValue
+    else
+      print*, "bug in input_log while looking at tag",tag
+      print*,"default, optional, value is present",present(defaultvalue)
+      print*,"I found the tag",ifoundtag
+      print*,"j=",j
+      print*,"at the end input_log is",input_log
+      stop
+    end if
   END FUNCTION input_log
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

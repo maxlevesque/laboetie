@@ -10,7 +10,7 @@ DEBUG = -Og -g -Wall -Wextra -fimplicit-none -fbacktrace -std=f2008 -pedantic -f
 #-g turns on debugging
 #-p turns on profiling
 
-OPTIM = -O3 -march=native #-ffast-math -funroll-loops
+OPTIM = -O3 -march=native -fopenmp #-ffast-math -funroll-loops
 # -fopenmp for OPENMP support
 
 EXE = laboetie
@@ -26,7 +26,7 @@ OBJS = 	$(SRCDIR)/mod_precision_kinds.f90 \
 		$(SRCDIR)/mod_myallocations.f90 \
 		$(SRCDIR)/mod_populations.f90 \
 		$(SRCDIR)/mod_supercell.f90 \
-	    	$(SRCDIR)/backup_phi_c_plus_c_minus.f90 \
+	  $(SRCDIR)/backup_phi_c_plus_c_minus.f90 \
 		$(SRCDIR)/advect.f90 \
 		$(SRCDIR)/charges_init.f90 \
 		$(SRCDIR)/charge_test.f90 \
@@ -38,10 +38,10 @@ OBJS = 	$(SRCDIR)/mod_precision_kinds.f90 \
 		$(SRCDIR)/electrostatic_pot.f90 \
 		$(SRCDIR)/equilibration_with_constraints.f90 \
 		$(SRCDIR)/equilibration_without_constraint.f90 \
+		$(SRCDIR)/module_io.f90 \
 		$(SRCDIR)/init_simu.f90 \
 		$(SRCDIR)/just_eq_smolu.f90 \
 		$(SRCDIR)/main.f90 \
-		$(SRCDIR)/module_io.f90 \
 		$(SRCDIR)/poisson_nernst_planck.f90 \
 		$(SRCDIR)/propagation.f90 \
 		$(SRCDIR)/smolu.f90 \
@@ -58,4 +58,4 @@ OBJS = 	$(SRCDIR)/mod_precision_kinds.f90 \
 	 $(FC) $(FCFLAGS) $(DEBUG) -o $(EXE) $(OBJS) $(LDFLAGS)
 
  clean:
-	rm -vf gmon.out $(EXE) $(MODDIR)/* 
+	rm -vf gmon.out $(EXE) $(MODDIR)/*

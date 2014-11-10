@@ -28,10 +28,10 @@ MODULE MOMENT_PROPAGATION
     SUBROUTINE INIT
 
       use system, ONLY: phi, fluid, solid, n, node
-      use input, ONLY: input_dp
+      use input, ONLY: input_dp, input_log
       implicit none
       real(dp) :: boltz_weight, Pstat, scattprop, scattprop_p, fermi, exp_dphi, exp_min_dphi, sum_of_boltz_weight, rho
-      real(dp) :: pop(lbm%lmin:lbm%lmax)
+      real(dp) :: n_loc(lbm%lmin:lbm%lmax)
       integer(i2b) :: i, j, k, l, l_inv, ip, jp, kp, i_sum
 
       tracer%ka = input_dp('tracer_ka') ! adsorption
@@ -73,7 +73,7 @@ MODULE MOMENT_PROPAGATION
 
       do concurrent (i=1:lx, j=1:ly, k=1:lz, node(i,j,k)%nature==fluid )
         boltz_weight = exp(-tracer%z*phi(i,j,k))/Pstat
-        pop = n(i,j,k,:)
+        n_loc = n(i,j,k,:)
         rho = node(i,j,k)%solventDensity
 
         sum_of_boltz_weight = sum_of_boltz_weight + boltz_weight
@@ -88,7 +88,7 @@ MODULE MOMENT_PROPAGATION
           exp_dphi = calc_exp_dphi( i, j, k, ip, jp, kp)
           exp_min_dphi = 1.0_dp/exp_dphi ! =1 if tracer%z=0
           fermi = 1.0_dp/(1.0_dp + exp_dphi) ! =0.5 if tracer%z=0
-          scattprop = calc_scattprop( pop(l), rho, lbm%vel(l)%a0, lambda, fermi)
+          scattprop = calc_scattprop( n_loc(l), rho, lbm%vel(l)%a0, lambda, fermi)
           vacf(:,tini) = vacf(:,tini) + boltz_weight *scattprop *lbm%vel(l)%coo(:)**2
 
           l_inv = lbm%vel(l)%inv ! comes to r
@@ -101,21 +101,24 @@ MODULE MOMENT_PROPAGATION
 
       PRINT*, 0, REAL(vacf(:,tini),sp)
 
-      OPEN(99, file='output/vacf.dat')
-      WRITE(99,*)'# time t, VACF_x(t), VACF_y(t), VACF_z(t)'
-      WRITE(99,*) 0, vacf(x,tini), vacf(y,tini), vacf(z,tini)
 
-      if (considerAdsorption) then
-        OPEN(100, FILE='output/adsorbed_density.dat')
-        WRITE(100,*)
-        WRITE(100,*)"# time ",0
-        DO i=1,lx; DO j=1,ly; DO k=1,lz;
-          IF ( node(i,j,k)%isInterfacial .and. node(i,j,k)%nature==fluid ) THEN
-            WRITE(100,*)i,j,k,SUM(Propagated_Quantity_Adsorbed(:,i,j,k,now))
-          END IF
-        END DO; END DO; END DO;
-        CLOSE(100)
+      if (input_log("print_vacf",.true.)) then
+        OPEN(99, file='output/vacf.dat')
+        WRITE(99,*)'# time t, VACF_x(t), VACF_y(t), VACF_z(t)'
+        WRITE(99,*) 0, vacf(:,tini)
       end if
+
+      ! if (considerAdsorption) then
+      !   OPEN(100, FILE='output/adsorbed_density.dat')
+      !   WRITE(100,*)
+      !   WRITE(100,*)"# time ",0
+      !   DO i=1,lx; DO j=1,ly; DO k=1,lz;
+      !     IF ( node(i,j,k)%isInterfacial .and. node(i,j,k)%nature==fluid ) THEN
+      !       WRITE(100,*)i,j,k,SUM(Propagated_Quantity_Adsorbed(:,i,j,k,now))
+      !     END IF
+      !   END DO; END DO; END DO;
+      !   CLOSE(100)
+      ! end if
 
     END SUBROUTINE INIT
 
@@ -124,63 +127,93 @@ MODULE MOMENT_PROPAGATION
     SUBROUTINE PROPAGATE(it, is_converged)
 
       use system, only: fluid, solid, n, node
+      use input, only: input_char, input_log
       implicit none
       integer(i2b), intent(in) :: it
-      real(dp) :: fermi, restpart, scattprop, scattprop_p, exp_dphi, rho, pop(lbm%lmin:lbm%lmax)
+      real(dp) :: fermi, fractionOfParticleRemaining, scattprop, scattprop_p, exp_dphi, rho, n_loc(lbm%lmin:lbm%lmax)
       integer(i2b), parameter :: now=0, next=1, past=-1
-      real(dp), dimension(3) :: u_star
-      integer(i2b) :: i, j, k, l, l_inv, ip, jp, kp, nature
-      logical :: error, interfacial
+      real(dp) :: u_star(x:z), Propagated_Quantity_loc(x:z), density_loc
+      integer(i2b) :: i, j, k, l, ip, jp, kp, nature_loc, ll, lu, l_inv_loc
+      integer(i2b), save, allocatable :: c(:,:), l_inv(:)
+      integer(kind(fluid)), save, allocatable :: nature(:,:,:)
+      real(dp), save, allocatable :: density(:,:,:), a0(:)
+      logical :: error, interfacial_loc
+      logical, save, allocatable :: interfacial(:,:,:)
       logical, intent(out) :: is_converged
+      character(1) :: ompvar
 
       error=.false.
 
-      do concurrent (i=1:lx, j=1:ly, k=1:lz, node(i,j,k)%nature==fluid )
-        u_star = 0.0_dp ! the average velocity at r
-        restpart = 1.0_dp ! fraction of particles staying at r; decreases in the loop over neighbours
-        pop = n(i,j,k,:)
-        rho = node(i,j,k)%solventDensity
-        nature = node(i,j,k)%nature
-        interfacial = node(i,j,k)%isInterfacial
+      ll = lbm%lmin
+      lu = lbm%lmax
+      if (.not. allocated(c)) then
+        allocate(c(x:z,ll:lu))
+        c(x,:) = lbm%vel(:)%coo(x)
+        c(y,:) = lbm%vel(:)%coo(y)
+        c(z,:) = lbm%vel(:)%coo(z)
+      end if
+      if (.not. allocated(a0)) allocate(a0(ll:lu), source=lbm%vel(:)%a0)
+      if (.not. allocated(l_inv)) allocate(l_inv(ll:lu), source=lbm%vel(:)%inv)
+      if (.not. allocated(density)) allocate (density(lx,ly,lz), source=node(:,:,:)%solventDensity)
+      if (.not. allocated(nature)) allocate (nature(lx,ly,lz), source=node(:,:,:)%nature)
+      if (.not. allocated(interfacial)) allocate (interfacial(lx,ly,lz), source=node(:,:,:)%isInterfacial)
 
-        do l = lbm%lmin+1, lbm%lmax
-          ip = pbc(i+lbm%vel(l)%coo(x) ,x)
-          jp = pbc(j+lbm%vel(l)%coo(y) ,y)
-          kp = pbc(k+lbm%vel(l)%coo(z) ,z)
-          if ( node(ip,jp,kp)%nature /= fluid ) cycle
-          fermi = 1.0_dp/(1.0_dp + calc_exp_dphi(i,j,k,ip,jp,kp))
-          scattprop = calc_scattprop( pop(l), rho, lbm%vel(l)%a0, lambda, fermi) ! scattering probability at r
-          restpart = restpart - scattprop ! what is scattered away is not found anymore at r
-          u_star = u_star + scattprop * lbm%vel(l)%coo(:)
-          l_inv = lbm%vel(l)%inv
-          scattprop_p = calc_scattprop( n(ip,jp,kp,lbm%vel(l)%inv), node(ip,jp,kp)%solventDensity,&
-            lbm%vel(l_inv)%a0, lambda, 1.0_dp-fermi)
-          Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity(:,i,j,k,next) + Propagated_Quantity(:,ip,jp,kp,now)*scattprop_p
+      ! ompvar = input_char("openmpover") ! this prepares the code to parallelize over x, y or z slices depending on lb.in. TODO
+
+!$OMP PARALLEL DO PRIVATE(i,j,k,l,ip,jp,kp,fermi,scattprop,l_inv_loc,scattprop_p,n_loc,density_loc,nature_loc,u_star) &
+!$OMP PRIVATE(fractionOfParticleRemaining,Propagated_Quantity_loc,interfacial_loc) &
+!$OMP SHARED(nature,n,lambda,Propagated_Quantity,l_inv,a0,c,ll,lu,lx,ly,lz,considerAdsorption,tracer) &
+!$OMP SHARED(Propagated_Quantity_Adsorbed,density,interfacial) &
+!$OMP REDUCTION(+:vacf)
+      do k=1,lz ! we parallelize over k. If system is 30x30x1 parallelization is useless!
+        do j=1,ly
+          do i=1,lx
+            nature_loc = nature(i,j,k)
+            if (nature_loc/=fluid) cycle
+            u_star(:) = 0.0_dp ! the average velocity at r
+            fractionOfParticleRemaining = 1.0_dp ! fraction of particles staying at r; decreases in the loop over neighbours
+            n_loc(:) = n(i,j,k,:)
+            density_loc = density(i,j,k)
+            interfacial_loc = Interfacial(i,j,k)
+            Propagated_Quantity_loc(:) = Propagated_Quantity(:,i,j,k,next)
+            do l = ll+1, lu ! ll is velocity=0
+              ip = pbc( i+c(x,l) ,x)
+              jp = pbc( j+c(y,l) ,y)
+              kp = pbc( k+c(z,l) ,z)
+              if ( nature(ip,jp,kp) /= fluid ) cycle
+              fermi = 1.0_dp/(1.0_dp + calc_exp_dphi(i,j,k,ip,jp,kp))
+              scattprop = calc_scattprop( n_loc(l), density_loc, a0(l), lambda, fermi) ! scattering probability at r
+              fractionOfParticleRemaining = fractionOfParticleRemaining - scattprop ! what is scattered away is not found anymore at r
+              u_star(:) = u_star(:) + scattprop*c(x:z,l)
+              l_inv_loc = l_inv(l)
+              scattprop_p = calc_scattprop( n(ip,jp,kp,l_inv_loc), density(ip,jp,kp), a0(l_inv_loc), lambda, 1.0_dp-fermi)
+              Propagated_Quantity_loc(:) = Propagated_Quantity_loc(:) + Propagated_Quantity(:,ip,jp,kp,now)*scattprop_p
+            end do
+            Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity_loc(:)
+            vacf(:,now) = vacf(:,now) + Propagated_Quantity(:,i,j,k,now)*u_star(:)
+
+            ! NOW, UPDATE THE PROPAGATED QUANTITIES
+            if (   (.not.interfacial_loc .and. considerAdsorption) &
+              .or. (.not.considerAdsorption) )then
+              Propagated_Quantity(:,i,j,k,next) = &
+                Propagated_Quantity(:,i,j,k,next) + fractionOfParticleRemaining*Propagated_Quantity(:,i,j,k,now)
+            else if ( interfacial_loc .and. considerAdsorption ) then
+              fractionOfParticleRemaining = fractionOfParticleRemaining - tracer%ka ! ICI JE METTRAI fractionOfParticleRemaining*(1-ka)
+              Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity (:,i,j,k,next) &
+                + fractionOfParticleRemaining * Propagated_Quantity (:,i,j,k,now) &
+                + Propagated_Quantity_Adsorbed (:,i,j,k,now) * tracer%kd
+              Propagated_Quantity_Adsorbed(:,i,j,k,next) = &
+                Propagated_Quantity_Adsorbed(:,i,j,k,now) * (1.0_dp - tracer%kd) &
+                + Propagated_Quantity(:,i,j,k,now)*tracer%ka
+            else
+              stop "OMG YOU KILLED THE QUEEN!"
+            end if
+
+            if (abs(fractionOfParticleRemaining)<epsilon(1._dp)) error=.true.
+          end do
         end do
-
-        vacf(:,now) = vacf(:,now) + Propagated_Quantity(:,i,j,k,now)*u_star(:)
-
-        ! NOW, UPDATE THE PROPAGATED QUANTITIES
-
-        if ( nature==fluid .and. .not.interfacial ) then
-          Propagated_Quantity(:,i,j,k,next) = &
-            Propagated_Quantity(:,i,j,k,next) + restpart*Propagated_Quantity(:,i,j,k,now)
-
-        else if ( nature==fluid .and. interfacial .and. considerAdsorption ) then
-          restpart = restpart - tracer%ka ! ICI JE METTRAI restpart*(1-ka)
-
-          Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity (:,i,j,k,next) &
-            + restpart * Propagated_Quantity (:,i,j,k,now) &
-            + Propagated_Quantity_Adsorbed (:,i,j,k,now) * tracer%kd
-
-          Propagated_Quantity_Adsorbed(:,i,j,k,next) = &
-            Propagated_Quantity_Adsorbed(:,i,j,k,now) * (1.0_dp - tracer%kd) &
-            + Propagated_Quantity(:,i,j,k,now)*tracer%ka
-
-        end if
-        if (restpart<0.0_dp) error=.true.
-
       end do
+!$OMP END PARALLEL DO
 
 
       if(error) stop 'somewhere restpart is negative' ! TODO one should find a better function for ads and des, as did Benjamin for pi
@@ -195,7 +228,7 @@ MODULE MOMENT_PROPAGATION
         Propagated_Quantity_Adsorbed(:,:,:,:,next) = 0.0_dp
       end if
 
-      WRITE(99,*) it, vacf(x,now), vacf(y,now), vacf(z,now)
+      if (input_log("print_vacf",.true.)) write(99,*) it, vacf(:,now)
 
       !~     OPEN(100, FILE='output/adsorbed_density.dat', ACCESS='append')
       !~         WRITE(100,*)

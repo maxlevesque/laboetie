@@ -90,6 +90,14 @@ contains
     else
       pbc = i
     end if
-  end function
+  end function pbc
+  !
+  ! pure function pbc3 (i) ! Apply periodic boundary conditions to node indices
+  !   implicit none
+  !   integer :: pbc3(x:z)
+  !   integer, intent(in) :: i(x:z)
+  !   pbc3 = [ pbc(i(1),x) , pbc(i(2),y) , pbc(i(3),z) ]
+  ! end function pbc3
+  !
 
 end module system
