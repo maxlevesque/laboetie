@@ -3,7 +3,7 @@
 
 subroutine comp_rho
 
-  use system, only:  n, supercell, node
+  use system, only:  n, node
   implicit none
 
   ! new density is the sum over all velocities of the population at each node
