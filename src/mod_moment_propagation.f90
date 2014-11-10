@@ -174,32 +174,26 @@ MODULE MOMENT_PROPAGATION
               Propagated_Quantity_loc(:) = Propagated_Quantity_loc(:) + Propagated_Quantity(:,ip,jp,kp,now)*scattprop_p
             end do
 !$OMP END PARALLEL DO
- Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity_loc(:)
+            Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity_loc(:)
+            vacf(:,now) = vacf(:,now) + Propagated_Quantity(:,i,j,k,now)*u_star(:)
 
+            ! NOW, UPDATE THE PROPAGATED QUANTITIES
+            if ( nature==fluid .and. .not.interfacial ) then
+              Propagated_Quantity(:,i,j,k,next) = &
+                Propagated_Quantity(:,i,j,k,next) + fractionOfParticleRemaining*Propagated_Quantity(:,i,j,k,now)
+            else if ( nature==fluid .and. interfacial .and. considerAdsorption ) then
+              fractionOfParticleRemaining = fractionOfParticleRemaining - tracer%ka ! ICI JE METTRAI fractionOfParticleRemaining*(1-ka)
+              Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity (:,i,j,k,next) &
+                + fractionOfParticleRemaining * Propagated_Quantity (:,i,j,k,now) &
+                + Propagated_Quantity_Adsorbed (:,i,j,k,now) * tracer%kd
+              Propagated_Quantity_Adsorbed(:,i,j,k,next) = &
+                Propagated_Quantity_Adsorbed(:,i,j,k,now) * (1.0_dp - tracer%kd) &
+                + Propagated_Quantity(:,i,j,k,now)*tracer%ka
+            end if
 
-        vacf(:,now) = vacf(:,now) + Propagated_Quantity(:,i,j,k,now)*u_star(:)
-
-        ! NOW, UPDATE THE PROPAGATED QUANTITIES
-
-        if ( nature==fluid .and. .not.interfacial ) then
-          Propagated_Quantity(:,i,j,k,next) = &
-            Propagated_Quantity(:,i,j,k,next) + fractionOfParticleRemaining*Propagated_Quantity(:,i,j,k,now)
-
-        else if ( nature==fluid .and. interfacial .and. considerAdsorption ) then
-          fractionOfParticleRemaining = fractionOfParticleRemaining - tracer%ka ! ICI JE METTRAI fractionOfParticleRemaining*(1-ka)
-
-          Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity (:,i,j,k,next) &
-            + fractionOfParticleRemaining * Propagated_Quantity (:,i,j,k,now) &
-            + Propagated_Quantity_Adsorbed (:,i,j,k,now) * tracer%kd
-
-          Propagated_Quantity_Adsorbed(:,i,j,k,next) = &
-            Propagated_Quantity_Adsorbed(:,i,j,k,now) * (1.0_dp - tracer%kd) &
-            + Propagated_Quantity(:,i,j,k,now)*tracer%ka
-
-        end if
-        if (abs(fractionOfParticleRemaining)<epsilon(1._dp)) error=.true.
-
-      end do; end do
+            if (abs(fractionOfParticleRemaining)<epsilon(1._dp)) error=.true.
+          end do
+        end do
       end do
 
 
