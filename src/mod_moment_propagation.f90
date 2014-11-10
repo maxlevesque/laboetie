@@ -155,7 +155,7 @@ MODULE MOMENT_PROPAGATION
       if (.not. allocated(nature)) allocate (nature(lx,ly,lz), source=node(:,:,:)%nature)
       if (.not. allocated(interfacial)) allocate (interfacial(lx,ly,lz), source=node(:,:,:)%isInterfacial)
 
-      ompvar = input_char("openmpover") ! this prepares the code to parallelize over x, y or z slices depending on lb.in. TODO
+      ! ompvar = input_char("openmpover") ! this prepares the code to parallelize over x, y or z slices depending on lb.in. TODO
 
 !$OMP PARALLEL DO PRIVATE(i,j,k,l,ip,jp,kp,fermi,scattprop,l_inv_loc,scattprop_p,n_loc,density_loc,nature_loc,u_star) &
 !$OMP PRIVATE(fractionOfParticleRemaining,Propagated_Quantity_loc,interfacial_loc) &
