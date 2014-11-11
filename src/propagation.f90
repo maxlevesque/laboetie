@@ -11,9 +11,9 @@ subroutine propagation
   lx = supercell%geometry%dimensions%indiceMax(x)
   ly = supercell%geometry%dimensions%indiceMax(y)
   lz = supercell%geometry%dimensions%indiceMax(z)
-  allocate(old_n(lx,ly,lz))
   call boundPM
   ! for each velocity, find the futur node and put it population at current time
+  allocate(old_n(lx,ly,lz))
   do l= lbm%lmin, lbm%lmax
     old_n = n(:,:,:,l) ! backup population before propagation
     ! propagate for each starting node i,j,k to ip, jp, kp
@@ -58,20 +58,24 @@ SUBROUTINE BOUNDPM
   use constants, only: x, y, z
   use mod_lbmodel, only: lbm
   implicit none
-  integer(i2b) :: i, j, k, l, w, ip, jp, kp
+  integer(i2b) :: i, j, k, l, l_inv, ip, jp, kp
+  integer(i2b) :: ip_all(lbm%lmin:lbm%lmax), jp_all(lbm%lmin:lbm%lmax), kp_all(lbm%lmin:lbm%lmax)
   real(dp) :: tmp
   do i= 1, supercell%geometry%dimensions%indiceMax(x)
+    ip_all(:) = [(pbc( i+ lbm%vel(l)%coo(x) ,x) ,l=lbm%lmin,lbm%lmax)]
     do j= 1, supercell%geometry%dimensions%indiceMax(y)
+      jp_all(:) = [(pbc( j+ lbm%vel(l)%coo(y) ,y) ,l=lbm%lmin,lbm%lmax)]
       do k= 1, supercell%geometry%dimensions%indiceMax(z)
+        kp_all(:) = [(pbc( k+ lbm%vel(l)%coo(z) ,z) ,l=lbm%lmin,lbm%lmax)]
         do l= lbm%lmin, lbm%lmax, 2
-          ip= pbc( i+ lbm%vel(l)%coo(x) ,x)
-          jp= pbc( j+ lbm%vel(l)%coo(y) ,y)
-          kp= pbc( k+ lbm%vel(l)%coo(z) ,z)
+          ip= ip_all(l)
+          jp= jp_all(l)
+          kp= kp_all(l)
           if( node(i,j,k)%nature /= node(ip,jp,kp)%nature ) then
-            w = lbm%vel(l)%inv
+            l_inv = lbm%vel(l)%inv
             tmp = n(i,j,k,l)
-            n(i,j,k,l) = n(ip,jp,kp,w)
-            n(ip,jp,kp,w) = tmp
+            n(i,j,k,l) = n(ip,jp,kp,l_inv)
+            n(ip,jp,kp,l_inv) = tmp
           end if
         end do
       end do

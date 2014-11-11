@@ -28,13 +28,13 @@ subroutine equilibration_without_constraint
   call comp_j      ! compute momenta
   call advect      ! solute motion: advection step
 
-  do iteration= 1, d_iter     ! solute motion: diffusion step
+  do iteration= 1, d_iter   ! solute motion: diffusion step
     call sor                ! compute phi with sucessive overrelaxation method
     call electrostatic_pot  ! compute phi + phi_external (due to electrostatic field elec_slope(x:z))
     call smolu              ! this time full smolu, not just_equ_smolu
     call charge_test        ! check charge conservation
   end do
 
-end do timeloop
+  end do timeloop
 
 end subroutine equilibration_without_constraint

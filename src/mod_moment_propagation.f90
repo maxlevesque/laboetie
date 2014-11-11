@@ -133,7 +133,8 @@ MODULE MOMENT_PROPAGATION
       real(dp) :: fermi, fractionOfParticleRemaining, scattprop, scattprop_p, exp_dphi, rho, n_loc(lbm%lmin:lbm%lmax)
       integer(i2b), parameter :: now=0, next=1, past=-1
       real(dp) :: u_star(x:z), Propagated_Quantity_loc(x:z), density_loc
-      integer(i2b) :: i, j, k, l, ip, jp, kp, nature_loc, ll, lu, l_inv_loc
+      integer(i2b) :: i, j, k, l, ip, jp, kp, nature_loc, ll, lu, l_inv_loc, ip_all(lbm%lmin:lbm%lmax),&
+        jp_all(lbm%lmin:lbm%lmax), kp_all(lbm%lmin:lbm%lmax)
       integer(i2b), save, allocatable :: c(:,:), l_inv(:)
       integer(kind(fluid)), save, allocatable :: nature(:,:,:)
       real(dp), save, allocatable :: density(:,:,:), a0(:)
@@ -161,15 +162,19 @@ MODULE MOMENT_PROPAGATION
       ! ompvar = input_char("openmpover") ! this prepares the code to parallelize over x, y or z slices depending on lb.in. TODO
 
 !$OMP PARALLEL DO PRIVATE(i,j,k,l,ip,jp,kp,fermi,scattprop,l_inv_loc,scattprop_p,n_loc,density_loc,nature_loc,u_star) &
-!$OMP PRIVATE(fractionOfParticleRemaining,Propagated_Quantity_loc,interfacial_loc) &
+!$OMP PRIVATE(ip_all,jp_all,kp_all,fractionOfParticleRemaining,Propagated_Quantity_loc,interfacial_loc) &
 !$OMP SHARED(nature,n,lambda,Propagated_Quantity,l_inv,a0,c,ll,lu,lx,ly,lz,considerAdsorption,tracer) &
-!$OMP SHARED(Propagated_Quantity_Adsorbed,density,interfacial) &
-!$OMP REDUCTION(+:vacf)
+!$OMP SHARED(Propagated_Quantity_Adsorbed,density,interfacial,error) &
+!$OMP REDUCTION(+:vacf) &
+!$OMP DEFAULT(NONE)
       do k=1,lz ! we parallelize over k. If system is 30x30x1 parallelization is useless!
+        kp_all(:) = [( pbc( k+c(z,l) ,z) , l=ll, lu)]
         do j=1,ly
+          jp_all(:) = [( pbc( j+c(y,l) ,y) , l=ll, lu)]
           do i=1,lx
             nature_loc = nature(i,j,k)
             if (nature_loc/=fluid) cycle
+            ip_all(:) = [( pbc( i+c(x,l) ,x) , l=ll, lu)]
             u_star(:) = 0.0_dp ! the average velocity at r
             fractionOfParticleRemaining = 1.0_dp ! fraction of particles staying at r; decreases in the loop over neighbours
             n_loc(:) = n(i,j,k,:)
@@ -177,14 +182,14 @@ MODULE MOMENT_PROPAGATION
             interfacial_loc = Interfacial(i,j,k)
             Propagated_Quantity_loc(:) = Propagated_Quantity(:,i,j,k,next)
             do l = ll+1, lu ! ll is velocity=0
-              ip = pbc( i+c(x,l) ,x)
-              jp = pbc( j+c(y,l) ,y)
-              kp = pbc( k+c(z,l) ,z)
+              ip = ip_all(l)
+              jp = jp_all(l)
+              kp = kp_all(l)
               if ( nature(ip,jp,kp) /= fluid ) cycle
               fermi = 1.0_dp/(1.0_dp + calc_exp_dphi(i,j,k,ip,jp,kp))
               scattprop = calc_scattprop( n_loc(l), density_loc, a0(l), lambda, fermi) ! scattering probability at r
               fractionOfParticleRemaining = fractionOfParticleRemaining - scattprop ! what is scattered away is not found anymore at r
-              u_star(:) = u_star(:) + scattprop*c(x:z,l)
+              u_star(:) = u_star(:) + scattprop*c(:,l)
               l_inv_loc = l_inv(l)
               scattprop_p = calc_scattprop( n(ip,jp,kp,l_inv_loc), density(ip,jp,kp), a0(l_inv_loc), lambda, 1.0_dp-fermi)
               Propagated_Quantity_loc(:) = Propagated_Quantity_loc(:) + Propagated_Quantity(:,ip,jp,kp,now)*scattprop_p
@@ -248,7 +253,6 @@ MODULE MOMENT_PROPAGATION
       ELSE
         is_converged = .false.
       END IF
-
     END SUBROUTINE PROPAGATE
 
 
