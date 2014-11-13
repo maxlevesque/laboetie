@@ -46,7 +46,7 @@ module system
     type (type_latticenode), allocatable, public :: node(:,:,:) ! should replace supercell%node
 
 !    real(dp) :: rho_0 ! solvent density in the bulk
-    real(dp), allocatable, dimension(:,:,:,:) :: n ! population :(lx,ly,lz,velocities)
+    real(dp), allocatable, dimension(:,:,:,:) :: n ! population of position and velocities
 !    real(dp), allocatable, dimension(:,:,:) :: rho ! rho(i,j,k) = sum_l n(i,j,k,l)
 !    real(dp), allocatable, dimension(:,:,:) :: jx, jy, jz ! jx(i,j,k) = sum_l c_x(l) * n(i,j,k,l)    where c_x(l) = c(1,l)
 
