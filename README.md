@@ -14,7 +14,7 @@ laboetie is written on the basis of a code by Capuani, Frenkel, Rotenberg et al.
 ## Strategy
 
 laboetie is written in fortran. Some Fortran 2003 or more advanced functions require not-too-old versions of gcc-gfortran.
-You are expected to find allocatable arrays, modules, object oriented programming, do concurrent, among others.  
+You are expected to find allocatable arrays, modules, object oriented programming, do concurrent, among others. 
 
 ## License
 
@@ -30,6 +30,39 @@ You need to have scons installed. SCons is a modern GNU make with much easier sy
 Check your linux distribution tutorials to install SCons. A simple `sudo make install scons` is sufficient in Ubuntu, or `sudo yum install scons` in Fedora derivatives.
 
 Once installed, just type `scons` in the folder you extracted laboetie in.
+
+## Parallelism
+
+The moment propagation is parallelized. It uses the OPENMP API. It is enabled by default (see `-fopenmp` in the Makefile).  
+To disable openmp parallelism, remove `-fopenmp` from line 13 of Makefile.
+
+By default, laboetie will use all the threads of your computer.
+
+How do you control the number of threads used by OPENMP?  
+You should export OMP_NUM_THREADS=3 in your terminal before executing laboetie if you want laboetie to use 3 threads:  
+Thus, to compile and execute laboetie limited to 8 threads on my computer, I type in my terminal:
+```bash
+$ make
+$ export OMP_NUM_THREADS=8
+$ ./laboetie
+```
+
+Please note that the run time, user time, system time and cpu time printed to you by laboetie are not usable anymore when OMP_NUM_THREADS > 1. This is an issue that needs to be corrected.
+
+Parallelism is implemented by dividing the system along almost independent slices along the z direction: if your system has {100,100,1} nodes along the x, y and z directions, respectively, then it is absolutely useless to multithread your job: use `export OMP_NUM_THREADS=1`.
+
+For now, OPENMP in laboetie is memory bound. Preliminary speed-ups for systems of few hundred of nodes are as follow:
+```
+# number of threads, speed-up
+1, 1
+2, 1.9
+3, 2.6
+4, 3.1
+6, 2.7
+8, 2.7
+```
+
+I would recommand to use 2 or 4 threads only.
 
 ## Inputs (lb.in)
 
