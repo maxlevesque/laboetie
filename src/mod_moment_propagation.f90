@@ -168,12 +168,12 @@ MODULE MOMENT_PROPAGATION
 !$OMP REDUCTION(+:vacf) &
 !$OMP DEFAULT(NONE)
       do k=1,lz ! we parallelize over k. If system is 30x30x1 parallelization is useless!
-        kp_all(:) = [( pbc( k+c(z,l) ,z) , l=ll, lu)]
+        kp_all(:) = [( pbc( k+c(z,l) ,z) , l=ll,lu)]
         do j=1,ly
-          jp_all(:) = [( pbc( j+c(y,l) ,y) , l=ll, lu)]
+          jp_all(:) = [( pbc( j+c(y,l) ,y) , l=ll,lu)]
           do i=1,lx
             if (nature(i,j,k)/=fluid) cycle
-            ip_all(:) = [( pbc( i+c(x,l) ,x) , l=ll, lu)]
+            ip_all(:) = [( pbc( i+c(x,l) ,x) , l=ll,lu)]
             u_star(:) = 0.0_dp ! the average velocity at r
             fractionOfParticleRemaining = 1.0_dp ! fraction of particles staying at r; decreases in the loop over neighbours
             n_loc(:) = n(:,i,j,k) ! CTODO CHANGER ORDRE INDICES
@@ -200,18 +200,17 @@ MODULE MOMENT_PROPAGATION
               Propagated_Quantity(:,i,j,k,next) = &
                 Propagated_Quantity(:,i,j,k,next) + fractionOfParticleRemaining*Propagated_Quantity(:,i,j,k,now)
             else if ( Interfacial(i,j,k) .and. considerAdsorption ) then
-              fractionOfParticleRemaining = fractionOfParticleRemaining - tracer%ka ! ICI JE METTRAI fractionOfParticleRemaining*(1-ka)
+              fractionOfParticleRemaining = fractionOfParticleRemaining - tracer%ka
               Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity (:,i,j,k,next) &
                 + fractionOfParticleRemaining * Propagated_Quantity (:,i,j,k,now) &
                 + Propagated_Quantity_Adsorbed (:,i,j,k,now) * tracer%kd
               Propagated_Quantity_Adsorbed(:,i,j,k,next) = &
                 Propagated_Quantity_Adsorbed(:,i,j,k,now) * (1.0_dp - tracer%kd) &
                 + Propagated_Quantity(:,i,j,k,now)*tracer%ka
-            else
-              stop "OMG YOU KILLED THE QUEEN!"
             end if
 
-            if (abs(fractionOfParticleRemaining)<epsilon(1._dp)) error=.true.
+            if( fractionOfParticleRemaining < epsilon(1._dp) ) error=.true.
+
           end do
         end do
       end do
