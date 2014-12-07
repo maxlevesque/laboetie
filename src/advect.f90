@@ -1,6 +1,6 @@
 ! Advect charge density using the volumetric interpretation of the lattice boltzmann
 subroutine advect
-  use precision_kinds
+  use precision_kinds, only: dp, i2b
   use constants, only: x, y, z
   use system, only: c_plus, c_minus, flux_site_minus, flux_site_plus, el_curr_x, el_curr_y, el_curr_z, &
   ion_curr_x, ion_curr_y, ion_curr_z, fluid, pbc, supercell, node

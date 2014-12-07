@@ -8,13 +8,14 @@
 subroutine drop_tracers
 
   use precision_kinds, only: dp
-  USE system, only: tmom, tmax, elec_slope
+  USE system, only: n, tmom, tmax, elec_slope
   USE moment_propagation, only: init, propagate, deallocate_propagated_quantity!, print_vacf, integrate_vacf!, not_yet_converged
   USE input, only: input_dp
 
   IMPLICIT NONE
   integer :: it
   logical :: is_converged
+  ! real(dp), allocatable, dimension(:,:,:,:), contiguous :: n
 
   PRINT*,'       step           VACF(x)                   VACF(y)                   VACF(z)'
   PRINT*,'       ----------------------------------------------------------------------------------'
@@ -49,16 +50,25 @@ contains
 
   subroutine update_tracer_population
     use precision_kinds, only: dp, i2b
-    use system, only: n, f_ext, fluid, elec_slope, supercell, lbm, x, y, z, node
+    use system, only: f_ext, fluid, elec_slope, supercell, lbm, x, y, z, node
     use populations, only: check_population
     use input, only: input_dp
     implicit none
-    integer(i2b) :: l
+    integer(i2b) :: l, ll, lu, lx, ly, lz, i,j,k
     type tracer
       real(dp) :: D ! diffusion coefficient
       real(dp) :: q ! charge
     end type
     type(tracer) :: tr
+
+    ll = lbm%lmin
+    lu = lbm%lmax
+    lx = supercell%geometry%dimensions%indiceMax(x)
+    ly = supercell%geometry%dimensions%indiceMax(y)
+    lz = supercell%geometry%dimensions%indiceMax(z)
+
+    deallocate(n) ! the purpose here is to prepare n with the good index arrangement to fit correctly in memory with inner loop over l in moment propagation.
+    allocate( n(ll:lu,lx,ly,lz) ,source=0._dp)
 
     tr%D = input_dp('tracer_Db')
     if (tr%D<=epsilon(1._dp)) stop 'D_tracer, ie tracer_Db in input is invalid'
@@ -66,22 +76,32 @@ contains
     tr%q = input_dp('tracer_z')
 
     ! apply force on all fluid nodes and update populations
-    do concurrent( l= lbm%lmin: lbm%lmax )
-      where( node%nature ==fluid )
-        n(:,:,:,l) = lbm%vel(l)%a0*node%solventDensity &
-                   + lbm%vel(l)%a1*(&
-           lbm%vel(l)%coo(x)*(node%solventFlux(x) + f_ext(x) - node%solventDensity*tr%q *tr%D *elec_slope(x)) &
-         + lbm%vel(l)%coo(y)*(node%solventFlux(y) + f_ext(y) - node%solventDensity*tr%q *tr%D *elec_slope(y)) &
-         + lbm%vel(l)%coo(z)*(node%solventFlux(z) + f_ext(z) - node%solventDensity*tr%q *tr%D *elec_slope(z)) )
-      elsewhere
-        n(:,:,:,l) = lbm%vel(l)%a0*node%solventDensity + lbm%vel(l)%a1*( &
-                          lbm%vel(l)%coo(x)*node%solventFlux(x) + &
-                          lbm%vel(l)%coo(y)*node%solventFlux(y) + &
-                          lbm%vel(l)%coo(z)*node%solventFlux(z) )
-      end where
+    do concurrent (l=ll:lu, i=1:lx, j=1:ly, k=1:lz)
+      if( node(i,j,k)%nature==fluid ) then
+        n(l,i,j,k) = lbm%vel(l)%a0 *node(i,j,k)%solventdensity + lbm%vel(l)%a1 &
+          *sum( lbm%vel(l)%coo(:)*(node(i,j,k)%solventFlux(:) +f_ext(:) -node(i,j,k)%solventDensity*tr%q*tr%D*elec_slope(:) ) )
+      else
+        n(l,i,j,k) = lbm%vel(l)%a0 *node(i,j,k)%solventdensity + lbm%vel(l)%a1 &
+          *sum( lbm%vel(l)%coo(:)*node(i,j,k)%solventFlux(:))
+      end if
     end do
 
-    call check_population(n)   ! check that no population n < 0
+    !
+    ! do concurrent( l= lbm%lmin: lbm%lmax )
+    !   where( node%nature ==fluid )
+    !     n(l,:,:,:) = lbm%vel(l)%a0*node%solventDensity &
+    !                + lbm%vel(l)%a1*(&
+    !        lbm%vel(l)%coo(x)*(node%solventFlux(x) + f_ext(x) - node%solventDensity*tr%q *tr%D *elec_slope(x)) &
+    !      + lbm%vel(l)%coo(y)*(node%solventFlux(y) + f_ext(y) - node%solventDensity*tr%q *tr%D *elec_slope(y)) &
+    !      + lbm%vel(l)%coo(z)*(node%solventFlux(z) + f_ext(z) - node%solventDensity*tr%q *tr%D *elec_slope(z)) )
+    !   elsewhere
+    !     n(l,:,:,:) = lbm%vel(l)%a0*node%solventDensity + lbm%vel(l)%a1*( &
+    !                       lbm%vel(l)%coo(x)*node%solventFlux(x) + &
+    !                       lbm%vel(l)%coo(y)*node%solventFlux(y) + &
+    !                       lbm%vel(l)%coo(z)*node%solventFlux(z) )
+    !   end where
+    ! end do
+
   end subroutine update_tracer_population
 
 end subroutine drop_tracers
