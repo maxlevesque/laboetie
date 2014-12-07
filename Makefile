@@ -10,7 +10,7 @@ DEBUG = -Og -g -Wall -Wextra -fimplicit-none -fbacktrace -std=f2008 -pedantic -f
 #-g turns on debugging
 #-p turns on profiling
 
-OPTIM = -O3 -march=native -fopenmp #-ffast-math -funroll-loops
+OPTIM = -O3 -march=native -fopenmp -ffast-math -funroll-loops
 # -fopenmp for OPENMP support
 
 EXE = laboetie
