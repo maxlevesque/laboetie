@@ -1,7 +1,10 @@
 PROGRAM main
-
+  use mod_time, only: tick, tock
   IMPLICIT NONE
+  integer :: t
+
   ! init the system: read input, geometry, composition, external forces, periodicity, ...
+  call tick(t)
   CALL init_simu
 
   ! system equilibration: -D_equil <= time <= 0
@@ -9,8 +12,8 @@ PROGRAM main
   ! one then arrives at Poisson-Boltzmann distribution. For now, Poisson is solved using SOR and
   ! Nernst-Planck by Link-Flux without advection.
   PRINT*
-  PRINT*,'Poisson + Nernst-Plack'
-  PRINT*,'======================'
+  PRINT*,'Poisson + Nernst-Planck'
+  PRINT*,'======================='
   CALL poisson_nernst_planck
   PRINT*
 
@@ -44,7 +47,5 @@ PROGRAM main
   CALL drop_tracers
   PRINT*
 
-  ! close everything nicely
-  CALL close_simu
-
+  print*,"Execution time:", real(tock(t),4),"sec"
 END PROGRAM main

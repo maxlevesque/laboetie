@@ -26,12 +26,12 @@ OBJS = 	$(SRCDIR)/mod_precision_kinds.f90 \
 		$(SRCDIR)/mod_myallocations.f90 \
 		$(SRCDIR)/mod_populations.f90 \
 		$(SRCDIR)/mod_supercell.f90 \
-	  $(SRCDIR)/backup_phi_c_plus_c_minus.f90 \
+		$(SRCDIR)/mod_time.f90 \
+		$(SRCDIR)/backup_phi_c_plus_c_minus.f90 \
 		$(SRCDIR)/advect.f90 \
 		$(SRCDIR)/charges_init.f90 \
 		$(SRCDIR)/charge_test.f90 \
 		$(SRCDIR)/check_charge_distribution_equilibrium.f90 \
-		$(SRCDIR)/close_simu.f90 \
 		$(SRCDIR)/comp_j.f90 \
 		$(SRCDIR)/comp_rho.f90 \
 		$(SRCDIR)/drop_tracers.f90 \
