@@ -96,9 +96,10 @@ subroutine equilibration_new
     !    call velocity_profiles(t) ! print velocity profiles
     ! end if
 
-    ! bounce back (boundpm) to simplify propagation step
+    ! BOUNCE BACK (boundpm) to simplify propagation step
     if(supercellgeometrylabel/=-1) then ! if supercell has fluid nodes only, bounce back is useless
       do concurrent(l=1:lmax:2)
+        l_inv = lbm%vel(l)%inv
         do concurrent(k=1:n3)
           kp=pbc(k+cz(l),z)
           do concurrent(j=1:n2)
@@ -106,7 +107,6 @@ subroutine equilibration_new
             do concurrent(i=1:n1)
               ip=pbc(i+cx(l),x)
               if( nature(i,j,k) /= nature(ip,jp,kp) ) then
-                l_inv = lbm%vel(l)%inv
                 n_loc = n(i,j,k,l)
                 n(i,j,k,l) = n(ip,jp,kp,l_inv)
                 n(ip,jp,kp,l_inv) = n_loc
@@ -150,11 +150,19 @@ subroutine equilibration_new
 
     ! update momentum densities after the propagation
     ! this is completely local in space and my be parallelized very well
-    do concurrent (i=1:n1, j=1:n2, k=1:n3)
-      jx(i,j,k) = (jx(i,j,k) + sum(n(i,j,k,:)*cx(:)))/2._dp
-      jy(i,j,k) = (jy(i,j,k) + sum(n(i,j,k,:)*cy(:)))/2._dp
-      jz(i,j,k) = (jz(i,j,k) + sum(n(i,j,k,:)*cz(:)))/2._dp
+    do concurrent (l=1:lmax)
+      jx = jx +n(:,:,:,l)*cx(l)
+      jy = jy +n(:,:,:,l)*cy(l)
+      jz = jz +n(:,:,:,l)*cz(l)
     end do
+    jx=jx/2
+    jy=jy/2
+    jz=jz/2
+    ! do concurrent (i=1:n1, j=1:n2, k=1:n3)
+    !   jx(i,j,k) = (jx(i,j,k) + sum(n(i,j,k,:)*cx(:)))/2._dp
+    !   jy(i,j,k) = (jy(i,j,k) + sum(n(i,j,k,:)*cy(:)))/2._dp
+    !   jz(i,j,k) = (jz(i,j,k) + sum(n(i,j,k,:)*cz(:)))/2._dp
+    ! end do
 
     ! check convergence
     l2err = norm2(jx-jx_old+jy-jy_old+jz-jz_old)
