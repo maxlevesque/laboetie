@@ -17,12 +17,15 @@ PROGRAM main
   CALL poisson_nernst_planck
   PRINT*
 
+  print*,"Lattice Boltzmann evolution"
+  print*,"==========================="
+  call equilibration_new
   ! 0 <= time <= Tequil
-  PRINT*
-  PRINT*,'Unconstrained equilibration'
-  PRINT*,'==========================='
-  CALL equilibration_without_constraint
-  PRINT*
+  ! PRINT*
+  ! PRINT*,'Unconstrained equilibration'
+  ! PRINT*,'==========================='
+  ! CALL equilibration_without_constraint
+  ! PRINT*
 
   ! Tequil < time < Tmom
   ! One applies external forces and solves coupled Navier-Stokes and Nernst-Planck equations.
@@ -30,11 +33,11 @@ PROGRAM main
   ! at previous step and deduces local velocities. Ionic flux are then calculated using link-flux.
   ! Link flux gives access to force created on fluid for following step. At each new local ionic
   ! concentration, one calculates the electrostatic potential solving Poisson equation.
-  PRINT*
-  PRINT*,'Constrained equilibration'
-  PRINT*,'========================='
-  CALL equilibration_with_constraints
-  PRINT*
+  ! PRINT*
+  ! PRINT*,'Constrained equilibration'
+  ! PRINT*,'========================='
+  ! CALL equilibration_with_constraints
+  ! PRINT*
 
   ! Tmom <= time <= Tmax
   ! once stationary point is reached under constraints, populations and electrostatic potential
