@@ -36,6 +36,8 @@ subroutine supercell_definition
 
   ! construct medium geometry
   select case (supercell%geometry%label)
+  case (-1) ! free of any solid node
+    ! dont do anything since node%nature has already been init to fluid everywhere
   case (0) ! custom geometry
     call construct_custom
   case (1) ! supercell%geometry%label = 1 is two solid walls normal to Z axis.
