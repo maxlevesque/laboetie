@@ -6,7 +6,7 @@ subroutine equilibration_new
   use constants, only: x, y, z, zerodp, epsdp
   implicit none
   integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3,lmax,tmax,l_inv
-  integer :: fluid_nodes, print_frequency
+  integer :: fluid_nodes, print_frequency, supercellgeometrylabel
   integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
   real(dp) :: sigma, n_loc, f_ext_loc(3), l2err, target_error
   real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, old_n, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z
@@ -21,6 +21,8 @@ subroutine equilibration_new
     print*,"Hi Benjamin ! :))"
     stop
   end if
+
+  supercellgeometrylabel = supercell%geometry%label ! -1 for solid free cell
 
   print_frequency = input_int('print_frequency',10000)
   fluid_nodes = count( node%nature==fluid )
@@ -86,17 +88,25 @@ subroutine equilibration_new
     ! end if
 
     ! bounce back (boundpm) to simplify propagation step
-    do concurrent( i=1:n1, j=1:n2, k=1:n3, l=1:lmax:2)
-      ip=pbc(i+cx(l),x)
-      jp=pbc(j+cy(l),y)
-      kp=pbc(k+cz(l),z)
-      if( nature(i,j,k) /= nature(ip,jp,kp) ) then
-        l_inv = lbm%vel(l)%inv
-        n_loc = n(i,j,k,l)
-        n(i,j,k,l) = n(ip,jp,kp,l_inv)
-        n(ip,jp,kp,l_inv) = n_loc
-      end if
-    end do
+    if(supercellgeometrylabel/=-1) then ! if supercell has fluid nodes only, bounce back is useless
+      do concurrent(l=1:lmax:2)
+        do concurrent(k=1:n3)
+          kp=pbc(k+cz(l),z)
+          do concurrent(j=1:n2)
+            jp=pbc(j+cy(l),y)
+            do concurrent(i=1:n1)
+              ip=pbc(i+cx(l),x)
+              if( nature(i,j,k) /= nature(ip,jp,kp) ) then
+                l_inv = lbm%vel(l)%inv
+                n_loc = n(i,j,k,l)
+                n(i,j,k,l) = n(ip,jp,kp,l_inv)
+                n(ip,jp,kp,l_inv) = n_loc
+              end if
+            end do
+          end do
+        end do
+      end do
+    end if
 
     ! propagation step
     do l=1,lmax
