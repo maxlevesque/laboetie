@@ -8,7 +8,7 @@ subroutine equilibration_new
   integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3,lmax,tmax,l_inv
   integer :: fluid_nodes, print_frequency, supercellgeometrylabel
   integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
-  real(dp) :: sigma, n_loc, f_ext_loc(3), l2err, target_error
+  real(dp) :: sigma, n_loc, f_ext_loc(3), l2err, target_error, minimumvalueofJ, maximumvalueofJ
   real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, old_n, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z
   real(dp), allocatable, dimension(:) :: a0, a1
   integer, allocatable, dimension(:) :: cx, cy, cz
@@ -53,17 +53,23 @@ subroutine equilibration_new
   compensate_f_ext = input_log("compensate_f_ext")
   if(compensate_f_ext) open(79,file="./output/vacf_centralnode.dat")
 
-  print*,'       step     <j>_x            <j>_y            <j>_z             err.            target.err.'
+  print*,'       step    maxval(j)          L2.err.          target.err.'
   print*,'       ----------------------------------------------------------------------------------------'
 
-  do t=1,huge(t) !tmax
+  ! TIME STEPS
+  do t=1,huge(t)
 
     if( modulo(t, print_frequency) == 0) then
-      print*,t,&
-      real(sum(jx/density, mask=node%nature==fluid)/fluid_nodes,sp), &
-      real(sum(jy/density, mask=node%nature==fluid)/fluid_nodes,sp), &
-      real(sum(jz/density, mask=node%nature==fluid)/fluid_nodes,sp), &
-      real(l2err,sp), real(target_error,sp)
+      minimumvalueofJ = min(minval(abs(jx)/density,density>epsdp),minval(abs(jy)/density,density>epsdp),&
+        minval(abs(jz)/density,density>epsdp))
+      if(minimumvalueofJ<=epsdp) minimumvalueofJ = zerodp
+      maximumvalueofJ = max(maxval(abs(jx)/density,density>epsdp),maxval(abs(jy)/density,density>epsdp),&
+        maxval(abs(jz)/density,density>epsdp))
+      print*,t,real([minimumvalueofJ,maximumvalueofJ,l2err,target_error],sp)
+      ! real(sum(jx/density, mask=node%nature==fluid)/fluid_nodes,sp), &
+      ! real(sum(jy/density, mask=node%nature==fluid)/fluid_nodes,sp), &
+      ! real(sum(jz/density, mask=node%nature==fluid)/fluid_nodes,sp), &
+
     end if
 
     ! VACF of central node
@@ -77,10 +83,13 @@ subroutine equilibration_new
     jz_old = jz
 
     ! collision
-    do concurrent(i=1:n1, j=1:n2, k=1:n3, l=1:lmax)
-      n(i,j,k,l) = a0(l)*density(i,j,k) +a1(l)*(&
-        cx(l)*(jx(i,j,k)+f_ext_x(i,j,k)) + cy(l)*(jy(i,j,k)+f_ext_y(i,j,k)) + cz(l)*(jz(i,j,k)+f_ext_z(i,j,k)))
+    do concurrent(l=1:lmax)
+      n(:,:,:,l) = a0(l)*density +a1(l)*(cx(l)*(jx+f_ext_x)+cy(l)*(jy+f_ext_y)+cz(l)*(jz+f_ext_z))
     end do
+    ! do concurrent(i=1:n1, j=1:n2, k=1:n3, l=1:lmax)
+    !   n(i,j,k,l) = a0(l)*density(i,j,k) +a1(l)*(&
+    !     cx(l)*(jx(i,j,k)+f_ext_x(i,j,k)) + cy(l)*(jy(i,j,k)+f_ext_y(i,j,k)) + cz(l)*(jz(i,j,k)+f_ext_z(i,j,k)))
+    ! end do
 
     ! print velocity profile if you need/want it
     ! if( modulo(t, print_frequency) == 0) then
