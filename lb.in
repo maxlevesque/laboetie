@@ -2,19 +2,21 @@
 # LaBo INPUT FILE
 ################################################################################
 
-lx = 1
-ly = 1
-lz = 30
-
+lx = 21
+ly = 21
+lz = 21
+print_frequency = 100
+target_error = 1.e-12
 lbmodel = D3Q19
 
 timestepmax_for_PoissonNernstPlanck = 100
 D_equil = 10 # number of steps for equilibrating charges (finding PB solution). 1 if charge (salt) free fluid.
 t_equil = 20 # number of steps for equilibrating the flux without constraints
 tmom = 200 # between t_equil and tmom, constraints are applieds (pression, electric field,...)
-tmax = 200000000 # between tmom and tmax, moment propagation is done
+tmax = 50000 # between tmom and tmax, moment propagation is done
 
-geometryLabel = 1 # 0 for a custom cell (written in geom.in)
+geometryLabel = -1  # -1 for free cell, ie fluid everywhere 
+		# 0 for a custom cell (written in geom.in)
 	          # 1 for a slit, i.e. two walls at z=zmin and z=zmax
                   # 2 for a cylinder along Z. lx have to be equal to ly.
                   # 3 for a body centered cubic cell with solid spheres in contact
@@ -28,7 +30,8 @@ geometryLabel = 1 # 0 for a custom cell (written in geom.in)
 
 stripes = 0.0 0.0 0.0
 initialSolventDensity = 1.0 # fluid density in LB units
-f_ext = 0.0 0.0 0.0 # external force
+f_ext = 0.0 0.0 1.e-4 # external force
+compensate_f_ext = T 
 
 ################################################################################
 # charge of the solid
