@@ -58,16 +58,21 @@ SUBROUTINE BOUNDPM
   use constants, only: x, y, z
   use mod_lbmodel, only: lbm
   implicit none
-  integer(i2b) :: i, j, k, l, l_inv, ip, jp, kp
+  integer(i2b) :: i, j, k, l, l_inv, ip, jp, kp,imax,jmax,kmax,lmin,lmax
   integer(i2b) :: ip_all(lbm%lmin:lbm%lmax), jp_all(lbm%lmin:lbm%lmax), kp_all(lbm%lmin:lbm%lmax)
   real(dp) :: tmp
-  do i= 1, supercell%geometry%dimensions%indiceMax(x)
+  imax = supercell%geometry%dimensions%indiceMax(x)
+  jmax = supercell%geometry%dimensions%indiceMax(y)
+  kmax = supercell%geometry%dimensions%indiceMax(z)
+  lmin = lbm%lmin
+  lmax = lbm%lmax
+  do i=1,imax
     ip_all(:) = [(pbc( i+ lbm%vel(l)%coo(x) ,x) ,l=lbm%lmin,lbm%lmax)]
-    do j= 1, supercell%geometry%dimensions%indiceMax(y)
+    do j=1,jmax
       jp_all(:) = [(pbc( j+ lbm%vel(l)%coo(y) ,y) ,l=lbm%lmin,lbm%lmax)]
-      do k= 1, supercell%geometry%dimensions%indiceMax(z)
+      do k=1,kmax
         kp_all(:) = [(pbc( k+ lbm%vel(l)%coo(z) ,z) ,l=lbm%lmin,lbm%lmax)]
-        do l= lbm%lmin, lbm%lmax, 2
+        do l=lmin,lmax,2
           ip= ip_all(l)
           jp= jp_all(l)
           kp= kp_all(l)
