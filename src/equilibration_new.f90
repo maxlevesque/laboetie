@@ -2,17 +2,17 @@ subroutine equilibration_new
   use precision_kinds, only: i2b, dp, sp
   use system, only: fluid, supercell, node, lbm, n, pbc
   use populations, only: update_populations
-  use input, only: input_dp3, input_dp, input_int
+  use input, only: input_dp3, input_dp, input_int, input_log
   use constants, only: x, y, z, zerodp, epsdp
   implicit none
   integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3,lmax,tmax,l_inv
   integer :: fluid_nodes, print_frequency
   integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
-  real(dp) :: sigma, n_loc, f_ext(3), f_ext_loc(3), l2err, target_error
-  real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, old_n, jx_old, jy_old, jz_old
+  real(dp) :: sigma, n_loc, f_ext_loc(3), l2err, target_error
+  real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, old_n, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z
   real(dp), allocatable, dimension(:) :: a0, a1
   integer, allocatable, dimension(:) :: cx, cy, cz
-  logical :: convergence_reached
+  logical :: convergence_reached, compensate_f_ext
 
   sigma = input_dp('sigma', zerodp) ! net charge of the solid phase. Kind of an external potential.
   if( abs(sigma) > epsilon(1._dp) ) then
@@ -24,7 +24,6 @@ subroutine equilibration_new
 
   print_frequency = input_int('print_frequency',10000)
   fluid_nodes = count( node%nature==fluid )
-  f_ext = zerodp ! external potential (pressure gradient init to 0)
   tmax = input_int("tmax") ! maximum number of iterations
   target_error = input_dp("target_error")
   n1 = supercell%geometry%dimensions%indicemax(1)
@@ -38,12 +37,19 @@ subroutine equilibration_new
   allocate( jz     (n1,n2,n3), source=node%solventflux(z))
   allocate( jz_old (n1,n2,n3) )
   allocate( nature (n1,n2,n3), source=node%nature)
+  allocate( f_ext_x(n1,n2,n3), source=zerodp)
+  allocate( f_ext_y(n1,n2,n3), source=zerodp)
+  allocate( f_ext_z(n1,n2,n3), source=zerodp)
+  f_ext_loc = zerodp ! this is important and spagetty like... please read carefully before modifying this line
   lmax = lbm%lmax
   allocate( cx(lmax), source=lbm%vel(:)%coo(1))
   allocate( cy(lmax), source=lbm%vel(:)%coo(2))
   allocate( cz(lmax), source=lbm%vel(:)%coo(3))
   allocate( a0(lmax), source=lbm%vel(:)%a0)
   allocate( a1(lmax), source=lbm%vel(:)%a1)
+
+  compensate_f_ext = input_log("compensate_f_ext")
+  if(compensate_f_ext) open(79,file="./output/vacf_centralnode.dat")
 
   print*,'       step     <j>_x            <j>_y            <j>_z             err.            target.err.'
   print*,'       ----------------------------------------------------------------------------------------'
@@ -58,6 +64,11 @@ subroutine equilibration_new
       real(l2err,sp), real(target_error,sp)
     end if
 
+    ! VACF of central node
+    if( compensate_f_ext ) then
+      write(79,*)t, norm2( [jx(n1/2+1,n2/2+1,n3/2+1) , jy(n1/2+1,n2/2+1,n3/2+1) , jz(n1/2+1,n2/2+1,n3/2+1)] )
+    end if
+
     ! backup moment density (velocities) to test convergence at the end of the timestep
     jx_old = jx
     jy_old = jy
@@ -65,16 +76,8 @@ subroutine equilibration_new
 
     ! collision
     do concurrent(i=1:n1, j=1:n2, k=1:n3, l=1:lmax)
-      if( node(i,j,k)%nature == fluid ) then
-        f_ext_loc = f_ext
-      else
-        f_ext_loc = zerodp
-      end if
       n(i,j,k,l) = a0(l)*density(i,j,k) +a1(l)*(&
-      cx(l)*(jx(i,j,k)+f_ext_loc(x)) + cy(l)*(jy(i,j,k)+f_ext_loc(y)) + cz(l)*(jz(i,j,k)+f_ext_loc(z)))
-      ! n(i,j,k,l) = a0(l)*density(i,j,k) +a1(l)* dot_product( &
-        ! [cx(l), cy(l), cz(l)],&
-        ! [jx(i,j,k)+f_ext_loc(x) , jy(i,j,k)+f_ext_loc(y) , jz(i,j,k)+f_ext_loc(z)] )
+        cx(l)*(jx(i,j,k)+f_ext_x(i,j,k)) + cy(l)*(jy(i,j,k)+f_ext_y(i,j,k)) + cz(l)*(jz(i,j,k)+f_ext_z(i,j,k)))
     end do
 
     ! print velocity profile if you need/want it
@@ -136,7 +139,7 @@ subroutine equilibration_new
 
     ! check convergence
     l2err = norm2(jx-jx_old+jy-jy_old+jz-jz_old)
-    if( l2err <= target_error ) then
+    if( l2err <= target_error .and. t>2) then
       convergence_reached = .true.
     else
       convergence_reached = .false.
@@ -144,16 +147,60 @@ subroutine equilibration_new
 
     ! chose to apply external contraints (f_ext) or not
     if( convergence_reached ) then
-      if( norm2(f_ext-input_dp3("f_ext")) <= epsdp .and. t>2) then ! if equilibration with constraints is already converged
+      if( norm2(f_ext_loc-input_dp3("f_ext")) <= epsdp .and. t>2) then ! if equilibration with constraints is already converged
         exit
-      else ! if equilibration is without external forces, then now add external forces
-        print*,"       Applying constraints"
-        f_ext = input_dp3("f_ext")
+      else ! if equilibration has been carried out without external forces up to now, then add external forces
+        print*,"       Applying constraints at time step",t
+        f_ext_loc = input_dp3("f_ext")
+        print*,"       Pressure gradient (f_ext in lb.in) is",f_ext_loc
+        if(.not.compensate_f_ext) then ! the force is exerced everywhere with same intensity
+          print*,"       It is applied homogeneously everywhere in the fluid"
+          f_ext_x = f_ext_loc(1)
+          f_ext_y = f_ext_loc(2)
+          f_ext_z = f_ext_loc(3)
+        else if(compensate_f_ext) then ! force applied to central node only
+          print*,"       It is applied to the central node only. Other nodes see a homogeneous compensating potential"
+          if(modulo(n1,2)==0 .or. modulo(n2,2)==0 .or. modulo(n3,2)==0) then
+            print*,"ERROR: l.158 of equilibration_new.f90"
+            print*,"=====  when compensate_f_ext, there should be odd number of nodes in all directions"
+            print*,"n1, n2, n3 =",n1,n2,n3
+            stop
+          end if
+          where(nature==fluid)
+            f_ext_x = -f_ext_loc(1)/(fluid_nodes-1)
+            f_ext_y = -f_ext_loc(2)/(fluid_nodes-1)
+            f_ext_z = -f_ext_loc(3)/(fluid_nodes-1)
+          else where
+            f_ext_x = zerodp
+            f_ext_y = zerodp
+            f_ext_z = zerodp
+          end where
+          if(nature(n1/2+1,n2/2+1,n3/2+1)/=fluid) then
+            print*,"ERROR: l.168 of equilibration_new.f90"
+            print*,"=====  The central node must be fluid. Otherwise is madness! :)"
+            print*,"This is sparta!"
+            stop
+          end if
+          f_ext_x(n1/2+1,n2/2+1,n3/2+1) = f_ext_loc(1)
+          f_ext_y(n1/2+1,n2/2+1,n3/2+1) = f_ext_loc(2)
+          f_ext_z(n1/2+1,n2/2+1,n3/2+1) = f_ext_loc(3)
+        end if
       end if
     end if
 
   end do
 
+  close(79)
   print*,"       Convergence reached at time step",t-1
+
+  if( compensate_f_ext ) then
+    open(91,file="./output/vel-field_central.dat")
+    do i=1,n1
+      do k=1,n2
+        write(91,*) i, k, jx(i,n2/2+1,k), jz(i,n2/2+1,k)
+      end do
+    end do
+    close(91)
+  end if
 
 end subroutine equilibration_new
