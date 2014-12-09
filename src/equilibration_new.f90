@@ -6,7 +6,7 @@ subroutine equilibration_new
   use constants, only: x, y, z, zerodp, epsdp
   implicit none
   integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3,lmax,tmax,l_inv
-  integer :: fluid_nodes, print_frequency, supercellgeometrylabel
+  integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext
   integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
   real(dp) :: sigma, n_loc, f_ext_loc(3), l2err, target_error, minimumvalueofJ, maximumvalueofJ
   real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, old_n, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z
@@ -74,7 +74,7 @@ subroutine equilibration_new
 
     ! VACF of central node
     if( compensate_f_ext .and. convergence_reached_without_fext) then
-      write(79,*)t, jx(n1/2+1,n2/2+1,n3/2+1) , jy(n1/2+1,n2/2+1,n3/2+1) , jz(n1/2+1,n2/2+1,n3/2+1)
+      write(79,*)t-tfext, jx(n1/2+1,n2/2+1,n3/2+1) , jy(n1/2+1,n2/2+1,n3/2+1) , jz(n1/2+1,n2/2+1,n3/2+1)
     end if
 
     ! backup moment density (velocities) to test convergence at the end of the timestep
@@ -194,7 +194,8 @@ subroutine equilibration_new
 
       ! if you have already converged without fext, but not yet with fext, then enable fext
       else if(convergence_reached_without_fext .and. .not.convergence_reached_with_fext) then
-        print*,"       Applying constraints at time step",t
+        tfext=t+1
+        print*,"       Applying constraints at time step",tfext
         f_ext_loc = input_dp3("f_ext")
         print*,"       Pressure gradient (f_ext in lb.in) is",f_ext_loc
         if(.not.compensate_f_ext) then ! the force is exerced everywhere with same intensity
