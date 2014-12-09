@@ -62,20 +62,18 @@ subroutine equilibration_new
   do t=1,huge(t)
 
     if( modulo(t, print_frequency) == 0) then
-      minimumvalueofJ = min(minval(abs(jx)/density,density>epsdp),minval(abs(jy)/density,density>epsdp),&
-        minval(abs(jz)/density,density>epsdp))
+      minimumvalueofJ = min(  minval(abs(jx)/density,density>epsdp),&
+                              minval(abs(jy)/density,density>epsdp),&
+                              minval(abs(jz)/density,density>epsdp)  )
       if(minimumvalueofJ<=epsdp) minimumvalueofJ = zerodp
-      maximumvalueofJ = max(maxval(abs(jx)/density,density>epsdp),maxval(abs(jy)/density,density>epsdp),&
-        maxval(abs(jz)/density,density>epsdp))
-      print*,t,real([minimumvalueofJ,maximumvalueofJ,l2err,target_error],sp)
-      ! real(sum(jx/density, mask=node%nature==fluid)/fluid_nodes,sp), &
-      ! real(sum(jy/density, mask=node%nature==fluid)/fluid_nodes,sp), &
-      ! real(sum(jz/density, mask=node%nature==fluid)/fluid_nodes,sp), &
-
+      maximumvalueofJ = max(  maxval(abs(jx)/density,density>epsdp),&
+                              maxval(abs(jy)/density,density>epsdp),&
+                              maxval(abs(jz)/density,density>epsdp)  )
+      print*, t, real([minimumvalueofJ,maximumvalueofJ,l2err,target_error],sp)
     end if
 
     ! VACF of central node
-    if( compensate_f_ext ) then
+    if( compensate_f_ext .and. convergence_reached_without_fext) then
       write(79,*)t, jx(n1/2+1,n2/2+1,n3/2+1) , jy(n1/2+1,n2/2+1,n3/2+1) , jz(n1/2+1,n2/2+1,n3/2+1)
     end if
 
