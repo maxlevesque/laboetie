@@ -12,7 +12,7 @@ subroutine equilibration_new
   real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, old_n, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z
   real(dp), allocatable, dimension(:) :: a0, a1
   integer, allocatable, dimension(:) :: cx, cy, cz
-  logical :: convergence_reached, compensate_f_ext
+  logical :: convergence_reached, compensate_f_ext, convergence_reached_without_fext, convergence_reached_with_fext
 
   sigma = input_dp('sigma', zerodp) ! net charge of the solid phase. Kind of an external potential.
   if( abs(sigma) > epsilon(1._dp) ) then
@@ -50,8 +50,10 @@ subroutine equilibration_new
   allocate( a0(lmax), source=lbm%vel(:)%a0)
   allocate( a1(lmax), source=lbm%vel(:)%a1)
 
+  convergence_reached_without_fext = .false.
+  convergence_reached_with_fext = .false.
   compensate_f_ext = input_log("compensate_f_ext")
-  if(compensate_f_ext) open(79,file="./output/vacf_centralnode.dat")
+  if(compensate_f_ext) open(79,file="./output/v_centralnode.dat")
 
   print*,'       step    maxval(j)          L2.err.          target.err.'
   print*,'       ----------------------------------------------------------------------------------------'
@@ -74,7 +76,7 @@ subroutine equilibration_new
 
     ! VACF of central node
     if( compensate_f_ext ) then
-      write(79,*)t, norm2( [jx(n1/2+1,n2/2+1,n3/2+1) , jy(n1/2+1,n2/2+1,n3/2+1) , jz(n1/2+1,n2/2+1,n3/2+1)] )
+      write(79,*)t, jx(n1/2+1,n2/2+1,n3/2+1) , jy(n1/2+1,n2/2+1,n3/2+1) , jz(n1/2+1,n2/2+1,n3/2+1)
     end if
 
     ! backup moment density (velocities) to test convergence at the end of the timestep
@@ -172,11 +174,28 @@ subroutine equilibration_new
       convergence_reached = .false.
     end if
 
+    ! select your branch
+    if(convergence_reached) then
+      if( .not.convergence_reached_without_fext ) then
+        convergence_reached_without_fext = .true.
+      else if( convergence_reached_without_fext ) then
+        convergence_reached_with_fext = .true.
+      else
+        print*,"ERROR: l.182 of equilibration_new.f90"
+        print*,"=====  I did not anticipate this possibility. Review your if tree."
+        stop
+      end if
+    end if
+
     ! chose to apply external contraints (f_ext) or not
     if( convergence_reached ) then
-      if( norm2(f_ext_loc-input_dp3("f_ext")) <= epsdp .and. t>2) then ! if equilibration with constraints is already converged
-        exit
-      else ! if equilibration has been carried out without external forces up to now, then add external forces
+
+      ! if you are already converged without then with f_ext then quit time loop. Stationary state is found.
+      if( convergence_reached_without_fext .and. convergence_reached_with_fext .and. t>2) then
+        exit ! loop over time steps
+
+      ! if you have already converged without fext, but not yet with fext, then enable fext
+      else if(convergence_reached_without_fext .and. .not.convergence_reached_with_fext) then
         print*,"       Applying constraints at time step",t
         f_ext_loc = input_dp3("f_ext")
         print*,"       Pressure gradient (f_ext in lb.in) is",f_ext_loc
@@ -211,6 +230,11 @@ subroutine equilibration_new
           f_ext_x(n1/2+1,n2/2+1,n3/2+1) = f_ext_loc(1)
           f_ext_y(n1/2+1,n2/2+1,n3/2+1) = f_ext_loc(2)
           f_ext_z(n1/2+1,n2/2+1,n3/2+1) = f_ext_loc(3)
+          if( any( abs([sum(f_ext_x),sum(f_ext_y),sum(f_ext_z)]) > epsdp ) ) then
+            print*,"ERROR: l.215 of equilibration_new.f90"
+            print*,"=====  The compensation is not well-implemented."
+            stop
+          end if
         end if
       end if
     end if
@@ -221,12 +245,15 @@ subroutine equilibration_new
   print*,"       Convergence reached at time step",t-1
 
   if( compensate_f_ext ) then
+    open(90,file="./output/f_ext-field.dat")
     open(91,file="./output/vel-field_central.dat")
     do i=1,n1
       do k=1,n2
+        write(90,*) i, k, f_ext_x(i,n2/2+1,k), f_ext_z(i,n2/2+1,k)
         write(91,*) i, k, jx(i,n2/2+1,k), jz(i,n2/2+1,k)
       end do
     end do
+    close(90)
     close(91)
   end if
 
