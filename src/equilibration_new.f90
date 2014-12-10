@@ -74,7 +74,7 @@ subroutine equilibration_new
 
     ! VACF of central node
     if( compensate_f_ext .and. convergence_reached_without_fext) then
-      write(79,*)t-tfext, jx(n1/2+1,n2/2+1,n3/2+1) , jy(n1/2+1,n2/2+1,n3/2+1) , jz(n1/2+1,n2/2+1,n3/2+1)
+      write(79,*)t-tfext, jz(n1/2+1,n2/2+1,n3/2+1)
     end if
 
     ! backup moment density (velocities) to test convergence at the end of the timestep
@@ -164,6 +164,37 @@ subroutine equilibration_new
     !   jz(i,j,k) = (jz(i,j,k) + sum(n(i,j,k,:)*cz(:)))/2._dp
     ! end do
 
+
+
+    if( compensate_f_ext .and. convergence_reached_without_fext .and. t==tfext) then
+      open(90,file="./output/f_ext-field_t0.dat")
+      open(91,file="./output/vel-field_central_t0.dat")
+      do i=1,n1
+        do k=1,n3
+          write(90,*) i, k, f_ext_x(i,n2/2+1,k), f_ext_z(i,n2/2+1,k)
+          write(91,*) i, k,      jx(i,n2/2+1,k)     ,      jz(i,n2/2+1,k)
+        end do
+      end do
+      close(90)
+      close(91)
+    end if
+    if( compensate_f_ext .and. convergence_reached_without_fext .and. t==tfext+1) then
+      open(90,file="./output/f_ext-field_t1.dat")
+      open(91,file="./output/vel-field_central_t1.dat")
+      do i=1,n1
+        do k=1,n3
+          write(90,*) i, k, f_ext_x(i,n2/2+1,k), f_ext_z(i,n2/2+1,k)
+          write(91,*) i, k, jx(i,n2/2+1,k), jz(i,n2/2+1,k)
+        end do
+      end do
+      close(90)
+      close(91)
+    end if
+
+
+
+
+
     ! check convergence
     l2err = norm2(jx-jx_old+jy-jy_old+jz-jz_old)
     if( l2err <= target_error .and. t>2) then
@@ -247,9 +278,9 @@ subroutine equilibration_new
     open(90,file="./output/f_ext-field.dat")
     open(91,file="./output/vel-field_central.dat")
     do i=1,n1
-      do k=1,n2
+      do k=1,n3
         write(90,*) i, k, f_ext_x(i,n2/2+1,k), f_ext_z(i,n2/2+1,k)
-        write(91,*) i, k, jx(i,n2/2+1,k), jz(i,n2/2+1,k)
+        write(91,*) i, k,      jx(i,n2/2+1,k),      jz(i,n2/2+1,k)
       end do
     end do
     close(90)
