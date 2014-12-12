@@ -1,11 +1,14 @@
 subroutine equilibration_new
+
   use precision_kinds, only: i2b, dp, sp
   use system, only: fluid, supercell, node, lbm, n, pbc
   use populations, only: update_populations
   use input, only: input_dp3, input_dp, input_int, input_log
   use constants, only: x, y, z, zerodp, epsdp
+  use mod_time, only: tick, tock
+
   implicit none
-  integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3,lmax,tmax,l_inv
+  integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3,lmax,tmax,l_inv,timer(100),g,ng
   integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext
   integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
   real(dp) :: sigma, n_loc, f_ext_loc(3), l2err, target_error, minimumvalueofJ, maximumvalueofJ
@@ -55,11 +58,15 @@ subroutine equilibration_new
   compensate_f_ext = input_log("compensate_f_ext")
   if(compensate_f_ext) open(79,file="./output/v_centralnode.dat")
 
-  print*,'       step    maxval(j)          L2.err.          target.err.'
-  print*,'       ----------------------------------------------------------------------------------------'
+  print*,'       step    minval(j)        maxval(j)          L2.err.          target.err.'
+  print*,'       ------------------------------------------------------------------------'
+
 
   ! TIME STEPS
   do t=1,huge(t)
+
+    g=0
+    g=g+1 ; call tick(timer(g))
 
     if( modulo(t, print_frequency) == 0) then
       minimumvalueofJ = min(  minval(abs(jx)/density,density>epsdp),&
@@ -72,20 +79,34 @@ subroutine equilibration_new
       print*, t, real([minimumvalueofJ,maximumvalueofJ,l2err,target_error],sp)
     end if
 
+    !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !1
+
     ! VACF of central node
     if( compensate_f_ext .and. convergence_reached_without_fext) then
       write(79,*)t-tfext, jz(n1/2+1,n2/2+1,n3/2+1)
     end if
+
+    !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !2
 
     ! backup moment density (velocities) to test convergence at the end of the timestep
     jx_old = jx
     jy_old = jy
     jz_old = jz
 
+    !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !3
+
     ! collision
-    do concurrent(l=1:lmax)
-      n(:,:,:,l) = a0(l)*density +a1(l)*(cx(l)*(jx+f_ext_x)+cy(l)*(jy+f_ext_y)+cz(l)*(jz+f_ext_z))
+    !$OMP PARALLEL DO DEFAULT(NONE) &
+    !$OMP SHARED(n,lmax,cx,jx,f_ext_x,cy,jy,f_ext_y,cz,jz,f_ext_z,a0,density,a1)&
+    !$OMP PRIVATE(l)
+    do l=1,lmax
+      n(:,:,:,l) = a0(l)*density &
+        +a1(l)*(cx(l)*(jx+f_ext_x)+cy(l)*(jy+f_ext_y)+cz(l)*(jz+f_ext_z))
     end do
+    !$OMP END PARALLEL DO
+
+    !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !4
+
     ! do concurrent(i=1:n1, j=1:n2, k=1:n3, l=1:lmax)
     !   n(i,j,k,l) = a0(l)*density(i,j,k) +a1(l)*(&
     !     cx(l)*(jx(i,j,k)+f_ext_x(i,j,k)) + cy(l)*(jy(i,j,k)+f_ext_y(i,j,k)) + cz(l)*(jz(i,j,k)+f_ext_z(i,j,k)))
@@ -95,6 +116,8 @@ subroutine equilibration_new
     ! if( modulo(t, print_frequency) == 0) then
     !    call velocity_profiles(t) ! print velocity profiles
     ! end if
+
+    !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !5
 
     ! BOUNCE BACK (boundpm) to simplify propagation step
     if(supercellgeometrylabel/=-1) then ! if supercell has fluid nodes only, bounce back is useless
@@ -117,7 +140,12 @@ subroutine equilibration_new
       end do
     end if
 
+    !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !6
+
     ! propagation step
+    !$OMP PARALLEL DO DEFAULT(NONE) &
+    !$OMP SHARED(n,n3,n2,n1,lmax,cz,cy,cx) &
+    !$OMP PRIVATE(l,k,j,i,ip,jp,kp,old_n)
     do l=1,lmax
       old_n = n(:,:,:,l)
       do k=1,n3
@@ -131,6 +159,9 @@ subroutine equilibration_new
         end do
       end do
     end do
+    !$OMP END PARALLEL DO
+
+    !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !7
 
     ! check new populations
     if(any(n<0)) then
@@ -143,18 +174,29 @@ subroutine equilibration_new
     ! this is also completely local in space
     density = sum(n,4)
 
+    !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !8
+
     ! print*,sum(density)
     ! if( abs(sum(density)/real(n1*n2*n3,kind(density)) -1._dp) > epsilon(1._dp) ) then
     !   stop "otto"
     ! end if
 
+    !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !9
+
     ! update momentum densities after the propagation
     ! this is completely local in space and my be parallelized very well
-    do concurrent (l=1:lmax)
+    !$OMP PARALLEL DO DEFAULT(NONE)&
+    !$OMP PRIVATE(l)&
+    !$OMP SHARED(lmax,n,cx,cy,cz)&
+    !$OMP REDUCTION(+:jx)&
+    !$OMP REDUCTION(+:jy)&
+    !$OMP REDUCTION(+:jz)
+    do l=1,lmax
       jx = jx +n(:,:,:,l)*cx(l)
       jy = jy +n(:,:,:,l)*cy(l)
       jz = jz +n(:,:,:,l)*cz(l)
     end do
+    !$OMP END PARALLEL DO
     jx=jx/2
     jy=jy/2
     jz=jz/2
@@ -164,7 +206,7 @@ subroutine equilibration_new
     !   jz(i,j,k) = (jz(i,j,k) + sum(n(i,j,k,:)*cz(:)))/2._dp
     ! end do
 
-
+    !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !10
 
     if( compensate_f_ext .and. convergence_reached_without_fext .and. t==tfext) then
       open(90,file="./output/f_ext-field_t0.dat")
@@ -192,7 +234,7 @@ subroutine equilibration_new
     end if
 
 
-
+    ! !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !11
 
 
     ! check convergence
@@ -202,6 +244,9 @@ subroutine equilibration_new
     else
       convergence_reached = .false.
     end if
+
+    !print*,g,tock(timer(g)); g=g+1; call tick(timer(g))
+
 
     ! select your branch
     if(convergence_reached) then
@@ -273,6 +318,9 @@ subroutine equilibration_new
 
   close(79)
   print*,"       Convergence reached at time step",t-1
+
+  print*,"       vz maximum at node",maxloc(abs(jz)/density)
+  print*,"       Central node is at",n1/2+1,n2/2+1,n3/2+1
 
   if( compensate_f_ext ) then
     open(90,file="./output/f_ext-field.dat")
