@@ -4,14 +4,13 @@ FC = gfortran
 # flags forall (e.g. look for system .mod files, required in gfortran)
 FCFLAGS = -J $(MODDIR)
 # libraries needed for linking, unused in the examples
-LDFLAGS = -lfftw3
+LDFLAGS = 
 
 DEBUG = -Og -g -Wall -Wextra -fimplicit-none -fbacktrace -std=f2008 -pedantic -fwhole-file -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -fbounds-check -fcheck=all -fcheck-array-temporaries -Warray-temporaries -Wconversion -pg -Wunused-parameter -Wimplicit-interface -frecursive
 #-g turns on debugging
 #-p turns on profiling
 
-OPTIM = -O3 -march=native -fopenmp -ffast-math -funroll-loops
-# -fopenmp for OPENMP support
+OPTIM = -O3 -march=native -ffast-math -funroll-loops -fopenmp
 
 EXE = laboetie
 
