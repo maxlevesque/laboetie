@@ -25,15 +25,13 @@ subroutine charges_init
   sigma = input_dp('sigma')
   lambda_d = input_dp('lambda_D')
 
-  if( lambda_D <= 0.0_dp ) then
+  if( lambda_D <= epsilon(1._dp) ) then
     print*, 'salt free fluid'
     rho_0 = 0.0_dp
   else
     rho_0 = 1.0_dp / (4.0_dp*pi*bjl*lambda_D**2)
   end if
-  print*,'rho_0 =',rho_0
   rho_ch = 1.0_dp / (4.0_dp*pi*bjl*lambda_D**2) ! DONT UNDERSTAND AWFULL THING WHAT IS THE F* DIFFERENCE BETWEEN RHO_0 AND CH.RHO_0 IN C CODE?
-print*,'rho_ch=',rho_ch
 
   ! count of solid, fluid and interfacial nodes
   count_solid = count(node%nature==solid)
@@ -44,16 +42,33 @@ print*,'rho_ch=',rho_ch
 
   ! read where are distributed the charges
 !  call read_charge_distrib
+
+
+
   charge_distrib = input_char("charge_distrib")
   if( charge_distrib(1:3) /= 'int' .and. charge_distrib(1:3)/='sol') stop 'charge_distrib can only be int or sol for now'
 
   ! distribute charge, depending on where user asked
   if( charge_distrib(1:3) == 'sol') then
-    sigma_solid = sigma / count_solid ! charges distributed in all solid nodes
+    if(count_solid/=0) then
+      sigma_solid = sigma / count_solid ! charges distributed in all solid nodes
+    else
+      sigma_solid = 0
+    end if
+
   else if( charge_distrib(1:3) == 'int') then
-    sigma_solid = sigma / count_solid_int ! charges distributed in interfacial solid nodes only
+    if(count_solid_int/=0) then
+      sigma_solid = sigma / count_solid_int ! charges distributed in interfacial solid nodes only
+    else
+      sigma_solid = 0
+    end if
   end if
-  sigma_fluid = -1.0_dp * sigma / count_fluid ! charges distributed in all fluid nodes
+
+  if(count_fluid/=0) then
+    sigma_fluid = -1.0_dp * sigma / count_fluid ! charges distributed in all fluid nodes
+  else
+    sigma_fluid = 0
+  end if
 
   in_c_plus_solid  = +0.5_dp*sigma_solid;
   in_c_minus_solid = -0.5_dp*sigma_solid;
@@ -66,28 +81,29 @@ print*,'rho_ch=',rho_ch
     in_c_minus_fluid = 0.5_dp*rho_0 - sigma_fluid
   end if
 
+  if(abs(sigma)>epsilon(1._dp)) then
+    if(charge_distrib(1:3)=='int') then
+      print*,'The total charge is set ONLY on the solid nodes at the interface (',count_solid_int,'/',count_solid,')'
+      print*,'Internal sites (at the interface) = ',count_solid_int,', charge per link =',sigma_solid
+      print*,'External sites = ',count_fluid,' charge per link =',sigma_fluid
+    else if(charge_distrib(1:3)=='sol') then
+      print*,'Internal sites =',count_solid,' charge per link =',sigma_solid
+      print*,'External sites =',count_fluid,' charge per link =',sigma_fluid
+      stop 'only surface charge is implemented for now in charge_init.f90'
+    else
+      stop 'pb in charges_init.f90'
+    end if
 
-  if(charge_distrib(1:3)=='int') then
-    print*,'The total charge is set ONLY on the solid nodes at the interface (',count_solid_int,'/',count_solid,')'
-    print*,'Internal sites (at the interface) = ',count_solid_int,', charge per link =',sigma_solid
-    print*,'External sites = ',count_fluid,' charge per link =',sigma_fluid
-  else if(charge_distrib(1:3)=='sol') then
-    print*,'Internal sites =',count_solid,' charge per link =',sigma_solid
-    print*,'External sites =',count_fluid,' charge per link =',sigma_fluid
-    stop 'only surface charge is implemented for now in charge_init.f90'
-  else
-    stop 'pb in charges_init.f90'
+    print*,'Salt concentration ',0.5*rho_0
+    print*,'Init density values :'
+    print*,'p_solid =',in_c_plus_solid
+    print*,'p_fluid =',in_c_plus_fluid
+    print*,'m_solid =',in_c_minus_solid
+    print*,'m_fluid =',in_c_minus_fluid
+    print*,'*********************************************************************'
+
+    print*,'ATTENTION ONLY SURFACE CHARGE IS OK FOR NOW'
   end if
-
-  print*,'Salt concentration ',0.5*rho_0
-  print*,'Init density values :'
-  print*,'p_solid =',in_c_plus_solid
-  print*,'p_fluid =',in_c_plus_fluid
-  print*,'m_solid =',in_c_minus_solid
-  print*,'m_fluid =',in_c_minus_fluid
-  print*,'*********************************************************************'
-
-  print*,'ATTENTION ONLY SURFACE CHARGE IS OK FOR NOW'
 
   where(node%nature==solid .and. node%isInterfacial )
     c_plus = in_c_plus_solid
