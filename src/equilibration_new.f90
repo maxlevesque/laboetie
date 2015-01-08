@@ -277,9 +277,11 @@ subroutine equilibration_new
 
         if(.not.compensate_f_ext) then ! the force is exerced everywhere with same intensity
           print*,"       It is applied homogeneously everywhere in the fluid"
-          f_ext_x = f_ext_loc(1)
-          f_ext_y = f_ext_loc(2)
-          f_ext_z = f_ext_loc(3)
+          where(nature==fluid)
+            f_ext_x = f_ext_loc(1)
+            f_ext_y = f_ext_loc(2)
+            f_ext_z = f_ext_loc(3)
+          end where
 
         else if(compensate_f_ext) then ! force applied to a central particle only
           pd = input_int("dominika_particle_diameter",1)
