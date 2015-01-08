@@ -4,7 +4,7 @@ FC = gfortran
 # flags forall (e.g. look for system .mod files, required in gfortran)
 FCFLAGS = -J $(MODDIR)
 # libraries needed for linking, unused in the examples
-LDFLAGS = 
+LDFLAGS =
 
 DEBUG = -Og -g -Wall -Wextra -fimplicit-none -fbacktrace -std=f2008 -pedantic -fwhole-file -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -fbounds-check -fcheck=all -fcheck-array-temporaries -Warray-temporaries -Wconversion -pg -Wunused-parameter -Wimplicit-interface -frecursive
 #-g turns on debugging
@@ -15,18 +15,18 @@ OPTIM = -O3 -march=native -ffast-math -funroll-loops -fopenmp
 EXE = laboetie
 
 
-OBJS = 	$(SRCDIR)/mod_precision_kinds.f90 \
+OBJS = 	$(SRCDIR)/module_precision_kinds.f90 \
 	$(SRCDIR)/module_mathematica.f90 \
-	$(SRCDIR)/mod_input.f90 \
-	$(SRCDIR)/mod_constants.f90 \
-	$(SRCDIR)/mod_lbmodel.f90 \
-	$(SRCDIR)/mod_system.f90 \
-	$(SRCDIR)/mod_geometry.f90 \
-	$(SRCDIR)/mod_moment_propagation.f90 \
-	$(SRCDIR)/mod_myallocations.f90 \
-	$(SRCDIR)/mod_populations.f90 \
-	$(SRCDIR)/mod_supercell.f90 \
-	$(SRCDIR)/mod_time.f90 \
+	$(SRCDIR)/module_input.f90 \
+	$(SRCDIR)/module_constants.f90 \
+	$(SRCDIR)/module_lbmodel.f90 \
+	$(SRCDIR)/module_system.f90 \
+	$(SRCDIR)/module_geometry.f90 \
+	$(SRCDIR)/module_moment_propagation.f90 \
+	$(SRCDIR)/module_myallocations.f90 \
+	$(SRCDIR)/module_populations.f90 \
+	$(SRCDIR)/module_supercell.f90 \
+	$(SRCDIR)/module_time.f90 \
 	$(SRCDIR)/backup_phi_c_plus_c_minus.f90 \
 	$(SRCDIR)/advect.f90 \
 	$(SRCDIR)/charges_init.f90 \
