@@ -8,14 +8,14 @@ subroutine equilibration_new
   use mod_time, only: tick, tock
 
   implicit none
-  integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3,lmax,tmax,l_inv,timer(100),g,ng
+  integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3,lmax,tmax,l_inv,timer(100),g,ng,pdr,pd
   integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext
   integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
   real(dp) :: sigma, n_loc, f_ext_loc(3), l2err, target_error, minimumvalueofJ, maximumvalueofJ
   real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, old_n, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z
   real(dp), allocatable, dimension(:) :: a0, a1
   integer, allocatable, dimension(:) :: cx, cy, cz
-  logical :: convergence_reached, compensate_f_ext, convergence_reached_without_fext, convergence_reached_with_fext
+  logical :: convergence_reached, compensate_f_ext, convergence_reached_without_fext, convergence_reached_with_fext, err
 
   sigma = input_dp('sigma', zerodp) ! net charge of the solid phase. Kind of an external potential.
   if( abs(sigma) > epsilon(1._dp) ) then
@@ -55,7 +55,7 @@ subroutine equilibration_new
 
   convergence_reached_without_fext = .false.
   convergence_reached_with_fext = .false.
-  compensate_f_ext = input_log("compensate_f_ext")
+  compensate_f_ext = input_log("compensate_f_ext",.false.)
   if(compensate_f_ext) open(79,file="./output/v_centralnode.dat")
 
   print*,'       step    minval(j)        maxval(j)          L2.err.          target.err.'
@@ -64,9 +64,8 @@ subroutine equilibration_new
 
   ! TIME STEPS
   do t=1,huge(t)
-
-    g=0
-    g=g+1 ; call tick(timer(g))
+    ! g=0
+    ! g=g+1 ; call tick(timer(g))
 
     if( modulo(t, print_frequency) == 0) then
       minimumvalueofJ = min(  minval(abs(jx)/density,density>epsdp),&
@@ -274,42 +273,83 @@ subroutine equilibration_new
         print*,"       Applying constraints at time step",tfext
         f_ext_loc = input_dp3("f_ext")
         print*,"       Pressure gradient (f_ext in lb.in) is",f_ext_loc
+
         if(.not.compensate_f_ext) then ! the force is exerced everywhere with same intensity
           print*,"       It is applied homogeneously everywhere in the fluid"
           f_ext_x = f_ext_loc(1)
           f_ext_y = f_ext_loc(2)
           f_ext_z = f_ext_loc(3)
-        else if(compensate_f_ext) then ! force applied to central node only
-          print*,"       It is applied to the central node only. Other nodes see a homogeneous compensating potential"
+
+        else if(compensate_f_ext) then ! force applied to a central particle only
+          pd = input_int("dominika_particle_diameter",1)
+          print*,"       Dominika's particle has diameter (lb units)", pd
+          if( modulo(pd,2)==0 ) then
+            print*,"ERROR: l. 285 particle diameter must be odd"
+            print*,"-----  It is now",pd
+            stop
+          end if
+
           if(modulo(n1,2)==0 .or. modulo(n2,2)==0 .or. modulo(n3,2)==0) then
             print*,"ERROR: l.158 of equilibration_new.f90"
             print*,"=====  when compensate_f_ext, there should be odd number of nodes in all directions"
             print*,"n1, n2, n3 =",n1,n2,n3
             stop
           end if
-          where(nature==fluid)
-            f_ext_x = -f_ext_loc(1)/(fluid_nodes-1)
-            f_ext_y = -f_ext_loc(2)/(fluid_nodes-1)
-            f_ext_z = -f_ext_loc(3)/(fluid_nodes-1)
+          pdr = pd/2 ! nodes of the particle on the right (or left) of the particle center. If particle is diameter 3, we have 1 node on the left and 1 on the right, so pd=3, pdr=3/2=1
+
+          f_ext_x = zerodp
+          f_ext_y = zerodp
+          f_ext_z = zerodp
+
+          l=0
+          err=.false.
+          open(47,file="output/dominika_particle_shape.xyz")
+          do i=n1/2+1-pdr,n1/2+1+pdr
+            do j=n2/2+1-pdr,n2/2+1+pdr
+              do k=n3/2+1-pdr,n3/2+1+pdr
+                if( norm2(real([ i-(n1/2+1), j-(n2/2+1), k-(n3/2+1) ],dp)) > real(pd,dp)/2._dp ) cycle
+                if (nature(i,j,k)/=fluid) err=.true.
+                f_ext_x(i,j,k) = f_ext_loc(1)
+                f_ext_y(i,j,k) = f_ext_loc(2)
+                f_ext_z(i,j,k) = f_ext_loc(3)
+                l=l+1
+                write(47,*)i,j,k ! use ListPointPlot3D[data,BoxRatios->{1,1,1}] in Mathematica to read this file
+              end do
+            end do
+          end do
+          close(47)
+          if(err.eqv..true.) then
+            print*,"ERROR: l306 of equilibration_new.f90. Dominika's particle at a solid node"
+            stop
+          end if
+
+          where(f_ext_x==f_ext_loc(1) .and. f_ext_y==f_ext_loc(2) .and. f_ext_z==f_ext_loc(3) )
+            f_ext_x = f_ext_x/l
+            f_ext_y = f_ext_y/l
+            f_ext_z = f_ext_z/l
           else where
+            f_ext_x = -f_ext_loc(1)/(fluid_nodes-l)
+            f_ext_y = -f_ext_loc(2)/(fluid_nodes-l)
+            f_ext_z = -f_ext_loc(3)/(fluid_nodes-l)
+          end where
+
+          where(nature/=fluid)
             f_ext_x = zerodp
             f_ext_y = zerodp
             f_ext_z = zerodp
           end where
-          if(nature(n1/2+1,n2/2+1,n3/2+1)/=fluid) then
-            print*,"ERROR: l.168 of equilibration_new.f90"
-            print*,"=====  The central node must be fluid. Otherwise is madness! :)"
-            print*,"This is sparta!"
-            stop
-          end if
-          f_ext_x(n1/2+1,n2/2+1,n3/2+1) = f_ext_loc(1)
-          f_ext_y(n1/2+1,n2/2+1,n3/2+1) = f_ext_loc(2)
-          f_ext_z(n1/2+1,n2/2+1,n3/2+1) = f_ext_loc(3)
+
+          ! check that we have a compensating background, i.e., that total force is zero
           if( any( abs([sum(f_ext_x),sum(f_ext_y),sum(f_ext_z)]) > epsdp ) ) then
             print*,"ERROR: l.215 of equilibration_new.f90"
             print*,"=====  The compensation is not well-implemented."
+            print*,"       sum(f_ext_x)=",sum(f_ext_x)
+            print*,"       sum(f_ext_y)=",sum(f_ext_y)
+            print*,"       sum(f_ext_z)=",sum(f_ext_z)
             stop
           end if
+
+          print*,"       I have applied a compensating background"
         end if
       end if
     end if
