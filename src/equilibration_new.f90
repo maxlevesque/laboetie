@@ -45,6 +45,7 @@ subroutine equilibration_new
   allocate( f_ext_x(n1,n2,n3), source=zerodp)
   allocate( f_ext_y(n1,n2,n3), source=zerodp)
   allocate( f_ext_z(n1,n2,n3), source=zerodp)
+
   f_ext_loc = zerodp ! this is important and spagetty like... please read carefully before modifying this line
   lmax = lbm%lmax
   allocate( cx(lmax), source=lbm%vel(:)%coo(1))
@@ -360,9 +361,9 @@ subroutine equilibration_new
   print*,"       Convergence reached at time step",t-1
 
   print*,"       vz maximum at node",maxloc(abs(jz)/density)
-  print*,"       Central node is at",n1/2+1,n2/2+1,n3/2+1
 
   if( compensate_f_ext ) then
+    print*,"       Central node is at",n1/2+1,n2/2+1,n3/2+1
     open(90,file="./output/f_ext-field.dat")
     open(91,file="./output/vel-field_central.dat")
     do i=1,n1
@@ -374,5 +375,12 @@ subroutine equilibration_new
     close(90)
     close(91)
   end if
+
+  ! put back arrays into original types
+  node%solventdensity = density
+  node%solventflux(x) = jx
+  node%solventflux(y) = jy
+  node%solventflux(z) = jz
+  node%nature = nature
 
 end subroutine equilibration_new
