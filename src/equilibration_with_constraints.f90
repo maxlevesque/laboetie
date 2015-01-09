@@ -1,49 +1,38 @@
 SUBROUTINE equilibration_with_constraints
-
-    USE precision_kinds, ONLY: i2b, dp
-    USE system, ONLY: tmom, D_iter, t_equil, time, fluid, sigma, supercell, f_ext, node
-    USE populations, ONLY: update_populations
-    USE input, only: input_dp3
-    USE constants, ONLY: x, y, z
-
-    IMPLICIT NONE
-    INTEGER(i2b) :: i
-    INTEGER(i2b) :: fluid_nodes
-
-    fluid_nodes = COUNT( node%nature==fluid )
-
-    PRINT*,'       step       current(x)                current(y)                 current(z)          density(debug purp.)'
-    PRINT*,'       --------------------------------------------------------------------------------------------------------'
-
-    f_ext = input_dp3("f_ext") ! read external forces
-
-    timeloop: DO time = t_equil, tmom
-
-        IF( MODULO(time, 10000) == 0) THEN
-            PRINT*,time,&
-                sum(node%solventFlux(x)/node%solventDensity, mask=node%nature==fluid)/fluid_nodes, &
-                sum(node%solventFlux(y)/node%solventDensity, mask=node%nature==fluid)/fluid_nodes, &
-                sum(node%solventFlux(z)/node%solventDensity, mask=node%nature==fluid)/fluid_nodes, &
-                sum(node%solventDensity) / real(product(supercell%geometry%dimensions%indiceMax(:)))
-        END IF
-
-        CALL update_populations ! populations
-        IF( MODULO(time, 10000) == 0) CALL velocity_profiles( time) ! print velocity profiles
-        CALL propagation    ! fluid motion
-        CALL comp_rho    ! fluid density
-        CALL comp_j    ! momenta
-        CALL advect    ! solute motion: advection step
-
-        ! solute motion: diffusion step
-        IF( sigma /= 0.0_dp ) THEN
-            DO i= 1, D_iter
-                CALL sor                ! compute phi with sucessive overrelaxation method
-                CALL electrostatic_pot  ! sum the electrostatic potential due to internal charges to the external field imposed by elec_slope(x:z))
-                CALL smolu              ! Smoluchowski
-                CALL charge_test        ! make sure charge is kept constant during simulation
-            END DO
-        END IF
-
-    END DO timeloop
-
-END SUBROUTINE equilibration_with_constraints
+  use precision_kinds, only: i2b, dp
+  use system, only: tmom, d_iter, t_equil, time, fluid, sigma, supercell, f_ext, node
+  use populations, only: update_populations
+  use input, only: input_dp3
+  use constants, only: x, y, z
+  implicit none
+  integer(i2b) :: i
+  integer(i2b) :: fluid_nodes
+  fluid_nodes = count( node%nature==fluid )
+  print*,'       step       current(x)                current(y)                 current(z)          density(debug purp.)'
+  print*,'       --------------------------------------------------------------------------------------------------------'
+  f_ext = input_dp3("f_ext") ! read external forces
+  do time = t_equil, tmom
+    if( modulo(time, 10000) == 0) then
+      print*,time,&
+        sum(node%solventflux(x)/node%solventdensity, mask=node%nature==fluid)/fluid_nodes, &
+        sum(node%solventflux(y)/node%solventdensity, mask=node%nature==fluid)/fluid_nodes, &
+        sum(node%solventflux(z)/node%solventdensity, mask=node%nature==fluid)/fluid_nodes, &
+        sum(node%solventdensity) / real(product(supercell%geometry%dimensions%indicemax(:)))
+    end if
+    call update_populations ! populations
+    if( modulo(time, 10000) == 0) call velocity_profiles( time) ! print velocity profiles
+    call propagation    ! fluid motion
+    call comp_rho    ! fluid density
+    call comp_j    ! momenta
+    call advect    ! solute motion: advection step
+    ! solute motion: diffusion step
+    if( abs(sigma) > epsilon(1._dp) ) then
+        do i= 1, d_iter
+            call sor                ! compute phi with sucessive overrelaxation method
+            call electrostatic_pot  ! sum the electrostatic potential due to internal charges to the external field imposed by elec_slope(x:z))
+            call smolu              ! smoluchowski
+            call charge_test        ! make sure charge is kept constant during simulation
+        end do
+    end if
+  end do
+end subroutine equilibration_with_constraints

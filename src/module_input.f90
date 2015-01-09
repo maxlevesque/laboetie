@@ -75,7 +75,7 @@ CONTAINS
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  PURE FUNCTION input_int (tag, defaultValue)
+  FUNCTION input_int (tag, defaultValue)
     IMPLICIT NONE
     INTEGER(I2B) :: input_int
     CHARACTER(*), INTENT(IN) :: tag
@@ -91,7 +91,12 @@ CONTAINS
         exit
       end if
     END DO
-    if (ifoundtag.eqv..false. .and. present(defaultValue)) input_int = defaultValue
+    if (ifoundtag.eqv..false. .and. present(defaultValue)) then
+      input_int = defaultValue
+    else if( ifoundtag.eqv..false. .and. .not.present(defaultValue) ) then
+      print*, "ERROR: Can't find tag",trim(adjustl(tag))," in input files"
+      stop
+    end if
   END FUNCTION input_int
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
