@@ -52,7 +52,7 @@ contains
     use precision_kinds, only: dp, i2b
     use system, only: f_ext, fluid, elec_slope, supercell, lbm, x, y, z, node
     use populations, only: check_population
-    use input, only: input_dp
+    use input, only: input_dp, input_dp3
     implicit none
     integer(i2b) :: l, ll, lu, lx, ly, lz, i,j,k
     type tracer
@@ -74,6 +74,7 @@ contains
     if (tr%D<=epsilon(1._dp)) stop 'D_tracer, ie tracer_Db in input is invalid'
 
     tr%q = input_dp('tracer_z')
+    f_ext(:) = input_dp3('f_ext')
 
     ! apply force on all fluid nodes and update populations
     do concurrent (l=ll:lu, i=1:lx, j=1:ly, k=1:lz)
