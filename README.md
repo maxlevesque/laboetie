@@ -1,28 +1,17 @@
 # laboetie
 
-laboetie is an elektrokinetic lattice boltzmann code with moment propagation and electrokinetics.
+laboetie is the fluid dynamics code for chemical applications.  
+It is based on the Lattice-Boltzmann algorithm to solve fluid dynamics equations.  
+[more to come]
 
-## Authors
+It is written by Maximilien Levesque [1] and Benjamin Rotenberg [2]  
+[1] École Normale Supérieure, PSL Research University, Département de Chimie, Sorbonne Universités – UPMC Univ Paris 06, CNRS UMR 8640 PASTEUR, 24 rue Lhomond, 75005 Paris, France
+[2] Sorbonne Universités, UPMC Univ. Paris 06, CNRS, UMR 8234, PHENIX, F-75005 Paris, France
 
-Maximilien Levesque  
-Benjamin Rotenberg
+# Please cite us!
 
-## Acknowledgments
-
-laboetie is written on the basis of a code by Capuani, Frenkel, Rotenberg et al.
-
-## Strategy
-
-laboetie is written in fortran. Some Fortran 2003 or more advanced functions require not-too-old versions of gcc-gfortran.
-You are expected to find allocatable arrays, modules, object oriented programming, do concurrent, among others. 
-
-## License
-
-This program, its sources, manual, etc., MUST NOT BE NOR DISTRIBUTED NOR MODIFIED NOR ANYTHING WITHOUT ASKING BENJAMIN ROTENBERG AND MAXIMILIEN LEVESQUE.
-
-## Github
-
-Github repo originaly created on 2013/02/01.
+We are academics. If you use Laboetie, could you please cite:  
+TODO
 
 ## Installation instructions
 
@@ -32,8 +21,7 @@ cd laboetie
 make
 ```
 
-
-## Parallelism
+### Parallelism
 
 The moment propagation is parallelized. It uses the OPENMP API. It is enabled by default (see `-fopenmp` in the Makefile).  
 To disable openmp parallelism, remove `-fopenmp` from line 13 of Makefile.
