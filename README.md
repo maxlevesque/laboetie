@@ -5,12 +5,12 @@ It is based on the Lattice-Boltzmann algorithm to solve fluid dynamics equations
 [more to come]
 
 It is written by Maximilien Levesque [1] and Benjamin Rotenberg [2]  
-[1] École Normale Supérieure, PSL Research University, Département de Chimie, Sorbonne Universités – UPMC Univ Paris 06, CNRS UMR 8640 PASTEUR, 24 rue Lhomond, 75005 Paris, France
+[1] École Normale Supérieure, PSL Research University, Département de Chimie, Sorbonne Universités – UPMC Univ Paris 06, CNRS UMR 8640 PASTEUR, 24 rue Lhomond, 75005 Paris, France  
 [2] Sorbonne Universités, UPMC Univ. Paris 06, CNRS, UMR 8234, PHENIX, F-75005 Paris, France
 
 # Please cite us!
 
-We are academics. If you use Laboetie, could you please cite:  
+We are academics. If you use Laboetie for one of your publication, could you please cite:  
 TODO
 
 ## Installation instructions
