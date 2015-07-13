@@ -10,7 +10,6 @@ subroutine drop_tracers
   use precision_kinds, only: dp
   USE system, only: n, tmom, tmax, elec_slope
   USE moment_propagation, only: init, propagate, deallocate_propagated_quantity!, print_vacf, integrate_vacf!, not_yet_converged
-  USE input, only: input_dp
 
   IMPLICIT NONE
   integer :: it
@@ -71,12 +70,14 @@ contains
     allocate( n(ll:lu,lx,ly,lz) ,source=0._dp)
 
     tr%D = input_dp('tracer_Db')
-    if (tr%D<=epsilon(1._dp)) stop 'D_tracer, ie tracer_Db in input is invalid'
+    if (tr%D<=epsilon(1._dp)) ERROR STOP 'The diffusion coefficient (tracer_Db in input file) is invalid'
 
-    tr%q = input_dp('tracer_z')
-    f_ext(:) = input_dp3('f_ext')
+    tr%q = input_dp('tracer_z', 0._dp)
+    f_ext(:) = input_dp3('f_ext', [0._dp,0._dp,0._dp] )
 
-    ! apply force on all fluid nodes and update populations
+    !
+    ! Apply force on all fluid nodes and update populations
+    !
     do concurrent (l=ll:lu, i=1:lx, j=1:ly, k=1:lz)
       if( node(i,j,k)%nature==fluid ) then
         n(l,i,j,k) = lbm%vel(l)%a0 *node(i,j,k)%solventdensity + lbm%vel(l)%a1 &

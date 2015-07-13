@@ -6,11 +6,11 @@ FCFLAGS = -J $(MODDIR)
 # libraries needed for linking, unused in the examples
 LDFLAGS =
 
-DEBUG = -Og -g -Wall -Wextra -fimplicit-none -fbacktrace -std=f2008 -pedantic -fwhole-file -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -fbounds-check -fcheck=all -fcheck-array-temporaries -Warray-temporaries -Wconversion -pg -Wunused-parameter -Wimplicit-interface -frecursive
+DEBUG = -g -Wall -fimplicit-none -fbacktrace -std=f2008 -pedantic -fwhole-file -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -fbounds-check -fcheck=all -pg -Wimplicit-interface -frecursive -Wno-unused
 #-g turns on debugging
 #-p turns on profiling
 
-OPTIM = -O3 -ffast-math -funroll-loops -fopenmp
+OPTIM = #-O3 -funroll-loops -fopenmp
 
 EXE = laboetie
 

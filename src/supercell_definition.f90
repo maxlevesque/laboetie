@@ -14,20 +14,26 @@ subroutine supercell_definition
                       construct_custom
   use io, only: print_supercell_xsf
   use mod_lbmodel, only: lbm
+
   implicit none
   integer(kind=i2b) :: i, j, k, ip, jp, kp, l !dummy
   character(len=150) :: filename
   integer(i2b) :: lx, ly, lz
 
-  ! geometry
-  supercell%geometry%label = input_int("geometryLabel")
+  !
+  ! Use the geometry builder ?
+  ! 0 means no builder, we will be reading geom.in
+  !
+  supercell%geometry%label = input_int("geometryLabel", 0)
 
-  ! define grid
+  !
+  ! Define the length of the cartesian grid in each direction
+  !
   lx = input_int("lx")
   ly = input_int("ly")
   lz = input_int("lz")
   supercell%geometry%dimensions%indiceMax(x:z) = [lx, ly, lz]
-  supercell%geometry%dimensions%indiceMin(x:z) = [1, 1, 1] ! Fortran style. C style arrays would start at 0.
+  supercell%geometry%dimensions%indiceMin(x:z) = [1, 1, 1]
 
   ! define which nodes are fluid and solid
   ! begins with fluid everywhere. Remember one defined fluid=0 and solid=1 as parameters.

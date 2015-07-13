@@ -1,57 +1,61 @@
-MODULE MOMENT_PROPAGATION
+MODULE moment_propagation
 
-  USE precision_kinds
-  USE constants, only: x, y, z
-  USE system, only: tmax, tmom, pbc, supercell, node
-  USE mod_lbmodel, only: lbm
+    USE precision_kinds
+    USE constants, only: x, y, z
+    USE system, only: tmax, tmom, pbc, supercell, node
+    USE mod_lbmodel, only: lbm
 
-  IMPLICIT NONE
+    IMPLICIT NONE
 
-  PRIVATE
-  PUBLIC :: init, propagate, deallocate_propagated_quantity
+    PRIVATE
+    PUBLIC :: init, propagate, deallocate_propagated_quantity
 
-  REAL(dp), ALLOCATABLE, DIMENSION(:,:,:,:,:) :: Propagated_Quantity, Propagated_Quantity_Adsorbed
-  INTEGER(i2b), PARAMETER :: now=0, next=1, past=-1, tini=past
-  REAL(dp), DIMENSION(x:z, past:next) :: vacf
-  REAL(dp) :: lambda, lambda_s ! lambda bulk and surface
-  TYPE type_tracer
-    REAL(dp) :: ka, kd, K, z, Db, Ds !K=ka/kd, z=tracer charge
-  END TYPE
-  TYPE(type_tracer) :: tracer
-  INTEGER(i2b), PRIVATE :: lx,ly,lz
-  logical :: considerAdsorption
+    REAL(dp), ALLOCATABLE, DIMENSION(:,:,:,:,:) :: Propagated_Quantity, Propagated_Quantity_Adsorbed
+    INTEGER(1), PARAMETER :: now=0, next=1, past=-1, tini=past
+    REAL(dp), DIMENSION(x:z, past:next) :: vacf
+    REAL(dp) :: lambda, lambda_s ! lambda bulk and surface
+    TYPE type_tracer
+      REAL(dp) :: ka, kd, K, z, Db, Ds !K=ka/kd, z=tracer charge
+    END TYPE
+    TYPE(type_tracer) :: tracer
+    INTEGER, PRIVATE :: lx, ly, lz
+    logical :: considerAdsorption
 
-  CONTAINS
+    CONTAINS
+    
+    !
+    !
+    !
+    SUBROUTINE init
 
-    ! ==============================================================================
+      USE system, ONLY: phi, fluid, solid, n, node
+      USE input, ONLY: input_dp, input_log
 
-    SUBROUTINE INIT
+      IMPLICIT NONE
 
-      use system, ONLY: phi, fluid, solid, n, node
-      use input, ONLY: input_dp, input_log
-      implicit none
       real(dp) :: boltz_weight, Pstat, scattprop, scattprop_p, fermi, exp_dphi, exp_min_dphi, sum_of_boltz_weight, rho
       real(dp) :: n_loc(lbm%lmin:lbm%lmax)
-      integer(i2b) :: i, j, k, l, l_inv, ip, jp, kp, i_sum
+      integer :: i, j, k, l, l_inv, ip, jp, kp, i_sum
+      REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
+stop "mama"
+      tracer%ka = input_dp('tracer_ka', 0._dp) ! Adsorption coefficient of the tracer
+      tracer%kd = input_dp('tracer_kd', 0._dp) ! Desorption coefficient of the tracer
+      IF (tracer%ka < -eps) ERROR STOP 'I detected tracer%ka to be <0 in module moment_propagation. STOP.'
+      IF (tracer%kd < -eps) ERROR STOP 'I detected tracer%kd to be <0 in module moment_propagation. STOP.'
 
-      tracer%ka = input_dp('tracer_ka') ! adsorption
-      tracer%kd = input_dp('tracer_kd') ! desorption
-      if (tracer%ka < -epsilon(1._dp)) stop 'I detected tracer%ka to be <0 in module moment_propagation. STOP.'
-      if (tracer%kd < -epsilon(1._dp)) stop 'I detected tracer%kd to be <0 in module moment_propagation. STOP.'
-
-      if ( abs(tracer%kd)<=epsilon(1._dp) ) then ! if kd=0
-        tracer%K = 0.0_dp ! don't do the division by 0
+      if ( abs(tracer%kd)<= eps ) then ! if kd=0
+        tracer%K = 0.0_dp
       else
         tracer%K = tracer%ka / tracer%kd
       end if
 
-      if ( abs(tracer%K)>epsilon(1.0_dp) ) then
+      if ( abs(tracer%K) > eps ) then
         considerAdsorption = .true.
       else
         considerAdsorption = .false.
       end if
 
-      tracer%z = input_dp('tracer_z') ! tracer's charge
+      tracer%z = input_dp('tracer_z', 0._dp) ! tracer's charge
       tracer%Db = input_dp('tracer_Db') ! bulk diffusion coefficient of tracer, i.e. the molecular diffusion coefficient
       tracer%Ds = input_dp('tracer_Ds') ! surface diffusion coefficient of tracer
       IF (tracer%Db <= 0.0_dp ) STOP 'tracer_Db as readen in input is invalid'
@@ -103,9 +107,9 @@ MODULE MOMENT_PROPAGATION
 
 
       if (input_log("print_vacf",.true.)) then
-        OPEN(99, file='output/vacf.dat')
-        WRITE(99,*)'# time t, VACF_x(t), VACF_y(t), VACF_z(t)'
-        WRITE(99,*) 0, vacf(:,tini)
+          OPEN(99, file='output/vacf.dat')
+          WRITE(99,*)'# time t, VACF_x(t), VACF_y(t), VACF_z(t)'
+          WRITE(99,*) 0, vacf(:,tini)
       end if
 
       ! if (considerAdsorption) then
@@ -121,9 +125,9 @@ MODULE MOMENT_PROPAGATION
       ! end if
 
     END SUBROUTINE INIT
-
-    ! ==============================================================================
-
+    !
+    !
+    !
     SUBROUTINE PROPAGATE(it, is_converged)
 
       use system, only: fluid, solid, n, node

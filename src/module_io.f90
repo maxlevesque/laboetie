@@ -41,11 +41,9 @@ module io
             print*,
             print*,
             print*,date(1:4),'/',date(5:6),'/',date(7:8),', ',time(1:2),'h',time(3:4),'m',time(5:6)
-            print*,'===================='
-            print*,'Laboetie, a Lattice Boltzmann Code with Electrokinetics and Surface Sorption'
-            print*,'============================================================================'
-            print*,'written by Maximilien Levesque and Benjamin Rotenberg'
-            print*,
+            print*,'=================================================='
+            print*,'Laboetie, fluid dynamics for chemical applications'
+            print*,'=================================================='
             print*,
         end subroutine
 
