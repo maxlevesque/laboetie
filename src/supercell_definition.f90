@@ -1,10 +1,9 @@
 ! Here we define the supercell: where are solid nodes and where are liquid nodes.
 subroutine supercell_definition
+
   use precision_kinds!, only: i2b, dp
   use constants, only: x, y, z
   use system, only: fluid, solid, pbc, supercell, node
-  use look_at_supercell, only: check_that_at_least_one_node_is_fluid,&
-                       check_that_all_nodes_are_wether_fluid_or_solid
   use input, only: input_int
   use geometry, only: construct_slit, construct_cylinder, construct_cc, construct_disc_benichou,&
                       construct_sinusoidal_walls_2d, CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D,&
@@ -16,9 +15,10 @@ subroutine supercell_definition
   use mod_lbmodel, only: lbm
 
   implicit none
+
   integer(kind=i2b) :: i, j, k, ip, jp, kp, l !dummy
   character(len=150) :: filename
-  integer(i2b) :: lx, ly, lz
+  integer(i2b) :: lx, ly, lz, nx, ny, nz
 
   !
   ! Use the geometry builder ?
@@ -32,12 +32,17 @@ subroutine supercell_definition
   lx = input_int("lx")
   ly = input_int("ly")
   lz = input_int("lz")
-  supercell%geometry%dimensions%indiceMax(x:z) = [lx, ly, lz]
+  nx = lx
+  ny = ly
+  nz = lz
+  supercell%geometry%dimensions%indiceMax(x:z) = [nx, ny, nz]
   supercell%geometry%dimensions%indiceMin(x:z) = [1, 1, 1]
+  ALLOCATE( node(nx,ny,nz) )
 
-  ! define which nodes are fluid and solid
-  ! begins with fluid everywhere. Remember one defined fluid=0 and solid=1 as parameters.
-  allocate( node(lx,ly,lz) )
+  !
+  ! Where are the solid/fluid nodes
+  ! begins with fluid everywhere. 
+  !
   node%nature = fluid
 
   ! construct medium geometry
@@ -74,13 +79,12 @@ subroutine supercell_definition
 
   call print_supercell_xsf
 
-!  call defineNormalToSurface
-
+  !
   ! check that at least one node (!!) is of fluid type
-  call check_that_at_least_one_node_is_fluid
-
-  ! check that the sum of all nodes is the sum of fluid nodes and of solid nodes, ie that no node has been forgotten somewhere
-  call check_that_all_nodes_are_wether_fluid_or_solid
+  ! 
+  IF( ALL(node%nature == solid )) THEN
+      ERROR STOP "All nodes are solid: no fluid, no fluid dynamics!"
+  END IF
 
   ! give a table that tells if you're interfacial or not
 !  call where_is_it_fluid_and_interfacial
@@ -103,20 +107,36 @@ subroutine supercell_definition
 !                end if
 !            end do
 !        end subroutine
-        subroutine detectInterfacialNodes
-        ! interfaces are here defined when one of two neighboring nodes is fluid when the other is solid
-            integer(i2b) :: i, j, k, l, iNext, jNext, kNext
-            node%isInterfacial = .false. ! init
-            do concurrent( i=1:lx, j=1:ly, k=1:lz )
-                velocityloop: do l = lbm%lmin+1, lbm%lmax ! lbm%lmin is zero velocity. arrival and departure cannot be different in nature
-                    iNext = pbc( i + lbm%vel(l)%coo(x), x)
-                    jNext = pbc( j + lbm%vel(l)%coo(y), y)
-                    kNext = pbc( k + lbm%vel(l)%coo(z), z)
-                    if( node(i,j,k)%nature /= node(iNext,jNext,kNext)%nature ) then
-                        node(i,j,k)%isInterfacial = .true.
-                        exit velocityloop
-                    end if
-                end do velocityloop
-            end do
-        end subroutine
+
+SUBROUTINE detectInterfacialNodes
+    !
+    ! interfaces are here defined when one of two neighboring nodes is fluid when the other is solid
+    !
+    IMPLICIT NONE
+
+    integer(i2b) :: i, j, k, l, iNext, jNext, kNext
+    
+    !
+    ! Init all nodes to non-interfacial
+    !
+    node%isInterfacial = .false.
+
+    !
+    ! Check every pair of nodes: two different nodes in a pair mean the fluid one is interfacial
+    !
+    do concurrent( i=1:lx, j=1:ly, k=1:lz )
+        velocityloop: do l = lbm%lmin+1, lbm%lmax ! skip zero velocity: arrival and departure cant be different
+            iNext = pbc( i + lbm%vel(l)%coo(x), x)
+            jNext = pbc( j + lbm%vel(l)%coo(y), y)
+            kNext = pbc( k + lbm%vel(l)%coo(z), z)
+            if( node(i,j,k)%nature /= node(iNext,jNext,kNext)%nature ) then
+                node(i,j,k)%isInterfacial = .true.
+                exit velocityloop
+            end if
+        end do velocityloop
+    end do
+end subroutine
+!
+!
+!
 end subroutine supercell_definition

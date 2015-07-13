@@ -1,12 +1,17 @@
 module geometry
+
     use precision_kinds ! all precision kinds defined in the dedicated module
     use system, only: fluid, solid, supercell, node
     use constants, only: x, y, z
+    
     implicit none
+
     !  private
     !  public construct_slit, construct_cylinder, construct_cc, construct_disc_benichou
-    contains
-        subroutine CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
+    
+contains
+    
+subroutine CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
             real(dp), dimension(1:2, 1:4) :: r ! there are 7 cylinders in the supercell, whose only x and y (1:2) coordinates are important
             ! lx is the half of the big size of the hexagon == length/2
             ! ly is the small size of the hexagone = length*sqrt(3)/2 = lx*sqrt(3)
@@ -44,7 +49,8 @@ module geometry
             end do
             node(:,:,1)%nature = solid
             node(:,:,lz)%nature = solid
-        end subroutine CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
+end subroutine CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
+
 
 SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
 ! construct the system described in Makhnovskii et al., Chem. Phys. 367, 110 (2010)
@@ -153,12 +159,13 @@ END SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
 
 
 SUBROUTINE CONSTRUCT_SLIT
-  integer(i2b) :: mi, ma
-  mi = lbound(node%nature,3)
-  ma = ubound(node%nature,3)
-  node%nature = fluid
-  node( :, :, mi)%nature = solid ! the lower bound of the thrid dimension of inside is solid
-  node( :, :, ma)%nature = solid ! so is the upper bound
+    IMPLICIT NONE
+    INTEGER(i2b) :: i, j
+    i = LBOUND( node%nature, 3)
+    j = UBOUND( node%nature, 3)
+    node%nature = fluid
+    node(:,:,i)%nature = solid ! the lower bound of the thrid dimension of inside is solid
+    node(:,:,j)%nature = solid ! so is the upper bound
 END SUBROUTINE CONSTRUCT_SLIT
 
 

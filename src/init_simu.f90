@@ -2,36 +2,46 @@ SUBROUTINE init_simu
 
     USE precision_kinds
     USE mod_lbmodel, ONLY: init_everything_related_to_lb_model => initialize
+    USE system, ONLY: node, n, solid
     USE io, ONLY: manageInputs => manage, print_header, print_input_in_output_folder, inquireNecessaryFilesExistence
     USE myallocations
+    USE input, ONLY: input_dp
 
     IMPLICIT NONE
 
-    CALL print_header  ! print header
+    REAL(dp) :: svden
+
+    CALL print_header
     CALL inquireNecessaryFilesExistence  ! check that input, output folder and file ./lb.in exist
     CALL manageInputs  ! go read the input file(s) and put everything in a character array
     CALL init_everything_related_to_lb_model ! init everything related to D3Q15 or D3Q19 etc ie LB models
     CALL supercell_definition    ! prepare supercell geometry
     CALL scheduler ! t_equil, tmom, tmax! schedule simulation
-    CALL init_moments_for_LB    ! init moments for Lattice Boltzmann
+
+    !
+    ! Init solvent populations
+    !
+    IF( .NOT. ALLOCATED(n)) CALL allocatereal4D(n)
+    n = 0
+
+    !
+    ! Init Solvent density
+    ! but in the solid, where it is 0
+    !
+    svden = input_dp("initialSolventDensity", 1._dp)
+    WHERE( node%nature /= solid )
+        node%solventdensity = svden
+    ELSEWHERE
+        node%solventdensity = 0
+    END WHERE
+
     CALL charges_init    ! init charge distribution
 
-    CONTAINS
+CONTAINS
     !
     !
     !
-    SUBROUTINE init_moments_for_LB
-        use precision_kinds, only: dp
-        use system, only: n, node
-        use input, only: input_dp
-        use mod_lbmodel, only: lbm
-        node%solventDensity = input_dp('initialSolventDensity',1.0_dp) ! read the initial, homogeneous, solvent density in input file
-        if (.not. allocated(n)) call allocateReal4D(n)  ! zeroth order moment == population(r,v) == mass density
-    END SUBROUTINE init_moments_for_LB
-    !
-    !
-    !
-    SUBROUTINE scheduler
+SUBROUTINE scheduler
         use system, only: t_equil, tmom, tmax, D_iter, time
         use input, only: input_int
         ! 4 times are important :
@@ -58,7 +68,7 @@ SUBROUTINE init_simu
         !if( tmom < t_equil ) then
         !    stop 'tracer moment propagation should come after equilibration.tmom should be >= t_equil. check input file.'
         !end if
-    end subroutine
+end subroutine
     !
     !
     !

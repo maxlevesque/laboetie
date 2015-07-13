@@ -23,7 +23,7 @@ PROGRAM main
   CALL poisson_nernst_planck
 
 
-  CALL equilibration_new
+  CALL equilibration
 stop "entre equilibration_new et drop_tracers"
   PRINT*
   PRINT*,'Moment propagation'

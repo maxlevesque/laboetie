@@ -7,6 +7,20 @@ module system
     use constants, only: x, y, z
     use mod_lbmodel, only: lbm
     implicit none
+
+    !
+    ! The solvent
+    !
+
+    !
+    ! Solvent population n (x,y,z,velocity)
+    !
+    REAL(dp), ALLOCATABLE, DIMENSION(:,:,:,:) :: n
+
+
+
+
+
     ! time
     integer(i2b) :: time ! time in simu, from 0 to tmax
     integer(i2b) :: t_equil, tmom, tmax ! 0->t_equil; t_equil->tmom; t_mom->tmax
@@ -45,8 +59,13 @@ module system
     type (type_supercell), public :: supercell ! supercell%node(i,j,k)%nature  supercell%node(i,j,k)%normal(x)   supercell%length   supercell%lengthmin:supercell%lengthmax
     type (type_latticenode), allocatable, public :: node(:,:,:) ! should replace supercell%node
 
-!    real(dp) :: rho_0 ! solvent density in the bulk
-    real(dp), allocatable, dimension(:,:,:,:) :: n ! population of position and velocities
+    !!!!!!!!!!!!!!!!!!!!! DANGER
+    !real(dp), allocatable, dimension(:,:,:,:) :: n ! population of position and velocities
+    !!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
 !    real(dp), allocatable, dimension(:,:,:) :: rho ! rho(i,j,k) = sum_l n(i,j,k,l)
 !    real(dp), allocatable, dimension(:,:,:) :: jx, jy, jz ! jx(i,j,k) = sum_l c_x(l) * n(i,j,k,l)    where c_x(l) = c(1,l)
 
