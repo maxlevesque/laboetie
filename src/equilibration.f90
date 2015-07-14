@@ -9,7 +9,7 @@ SUBROUTINE equilibration
 
     implicit none
     integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3,lmax,tmax,l_inv,timer(100),g,ng,pdr,pd
-    integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext
+    integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_velocities_frequency
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
     real(dp) :: n_loc, f_ext_loc(3), l2err, target_error
     REAL(dp) :: jminx, jminy, jminz, jmaxx, jmaxy, jmaxz, jmin, jmax
@@ -42,11 +42,20 @@ SUBROUTINE equilibration
     !
     ! Print info to terminal every that number of steps 
     !
-    print_frequency = input_int('print_frequency', INT(100000/(lx*ly*lz))+1 )
+    print_frequency = input_int('print_frequency', INT(100000/(lx*ly*lz)) )
+    IF( print_frequency==0) print_frequency=1
+
+    !
+    ! write velocity profiles to terminal every that number of steps
+    !
+    print_velocities_frequency = input_int("print_velocities_frequency", HUGE(1))
+    print*,"print_velocities_frequency=",print_velocities_frequency
 
     fluid_nodes = count( node%nature==fluid )
     tmax = input_int("tmax", HUGE(1)) ! maximum number of iterations
-    target_error = input_dp("target_error", 1.D-12)
+
+    target_error = input_dp("target_error", 1.D-10)
+    
     n1 = supercell%geometry%dimensions%indicemax(1)
     n2 = supercell%geometry%dimensions%indicemax(2)
     n3 = supercell%geometry%dimensions%indicemax(3)
@@ -64,6 +73,13 @@ SUBROUTINE equilibration
     jx_old = 0
     jy_old = 0
     jz_old = 0
+
+    OPEN(66, FILE="output/velocity_profile_of_z.dat")
+    WRITE(66,*) "# z, <v_x>_{x,y}, <v_y>_{x,y}, <v_z>_{x,y}"
+    OPEN(67, FILE="output/velocity_profile_of_y.dat")
+    WRITE(67,*) "# y, <v_x>_{x,z}, <v_y>_{x,z}, <v_z>_{x,z}"
+    OPEN(68, FILE="output/velocity_profile_of_x.dat")
+    WRITE(68,*) "# x, <v_x>_{y,z}, <v_y>_{y,z}, <v_z>_{y,z}"
     
     allocate( nature (n1,n2,n3), source=node%nature)
     allocate( f_ext_x(n1,n2,n3), source=zerodp)
@@ -99,18 +115,35 @@ SUBROUTINE equilibration
     do t=1,HUGE(t)
 
         !
-        ! Print timestep, etc 
+        ! Print sdtout timestep, etc 
         ! 
         IF( MODULO(t, print_frequency) == 0) THEN
-            jminx = MINVAL( ABS(jx)/density, density>eps)
-            jminy = MINVAL( ABS(jy)/density, density>eps)
-            jminz = MINVAL( ABS(jz)/density, density>eps)
-            jmin  = MIN( jminx, jminy, jminz )
             jmaxx = MAXVAL( ABS(jx)/density, density>eps)
             jmaxy = MAXVAL( ABS(jy)/density, density>eps)
             jmaxz = MAXVAL( ABS(jz)/density, density>eps)
             jmax  = MAX( jmaxx, jmaxy, jmaxz )
-            PRINT*, t, real( [jmin, jmax, l2err, target_error] ,sp)
+            PRINT*, t, real( [jmax, l2err, target_error] ,sp)
+        END IF
+
+        !
+        ! Write velocity profiles
+        !
+        IF( MODULO(t, print_velocities_frequency) == 0 .OR. t==1) THEN
+            Write(66,*)"# timestep",t
+            Write(67,*)"# timestep",t
+            Write(68,*)"# timestep",t
+            DO k=1,lz
+                WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
+            END DO
+            DO k=1,ly
+                WRITE(67,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
+            END DO
+            DO k=1,lx
+                WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
+            END DO
+            Write(66,*)
+            Write(67,*)
+            Write(68,*)
         END IF
 
         !
@@ -280,13 +313,12 @@ SUBROUTINE equilibration
         ! check convergence
         !
         l2err = norm2(jx-jx_old+jy-jy_old+jz-jz_old)
-        if( l2err <= target_error .and. t>2) then
+        if( l2err <= target_error .and. t>2 ) then
           convergence_reached = .true.
         else
           convergence_reached = .false.
         end if
 
-        !print*,g,tock(timer(g)); g=g+1; call tick(timer(g))
 
 
         ! select your branch
@@ -404,29 +436,34 @@ SUBROUTINE equilibration
 
   close(79)
   CLOSE(65) ! output/total_mass_flow.dat
-  print*,"       Convergence reached at time step",t-1
 
   !
   ! Print velocity 1D velocity field
   !
-  OPEN(66, FILE="output/velocity_profile_of_z.dat")
-  WRITE(66,*) "# z, <v_x>_{x,y}, <v_y>_{x,y}, <v_z>_{x,y}"
   DO k=1,lz
       WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
   END DO
-  CLOSE(66)
-  OPEN(66, FILE="output/velocity_profile_of_y.dat")
-  WRITE(66,*) "# y, <v_x>_{x,z}, <v_y>_{x,z}, <v_z>_{x,z}"
   DO k=1,ly
-      WRITE(66,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
+      WRITE(67,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
   END DO
-  CLOSE(66)
-  OPEN(66, FILE="output/velocity_profile_of_x.dat")
-  WRITE(66,*) "# x, <v_x>_{y,z}, <v_y>_{y,z}, <v_z>_{y,z}"
   DO k=1,lx
-      WRITE(66,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
+      WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
   END DO
   CLOSE(66)
+  CLOSE(67)
+  CLOSE(68)
+
+  !
+  ! Print velocity 2D profilew
+  !
+  OPEN(69, FILE="output/velocity_field_2d_z1.dat")
+  DO j=1,ly
+      DO k=1,lz
+          WRITE(69,*) j, k, jy(1,j,k), jz(1,j,k)
+      END DO
+  END DO
+  CLOSE(69)
+
 
   if( compensate_f_ext ) then
     print*,"       Central node is at",n1/2+1,n2/2+1,n3/2+1

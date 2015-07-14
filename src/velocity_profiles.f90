@@ -16,9 +16,9 @@ contains
     do i= supercell%geometry%dimensions%indiceMin(x), supercell%geometry%dimensions%indiceMax(x)
       do j= supercell%geometry%dimensions%indiceMin(y), supercell%geometry%dimensions%indiceMax(y)
         do k= supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
-          vx = node(i,j,k)%solventFlux(x)!/node(i,j,k)%solventDensity
-          vy = node(i,j,k)%solventFlux(y)!/node(i,j,k)%solventDensity
-          vz = node(i,j,k)%solventFlux(z)!/node(i,j,k)%solventDensity
+          vx = REAL(node(i,j,k)%solventFlux(x),sp)!/node(i,j,k)%solventDensity
+          vy = REAL(node(i,j,k)%solventFlux(y),sp)!/node(i,j,k)%solventDensity
+          vz = REAL(node(i,j,k)%solventFlux(z),sp)!/node(i,j,k)%solventDensity
           write(10,*) i, j, k, vx, vy, vz
         end do
       end do
