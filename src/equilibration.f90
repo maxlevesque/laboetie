@@ -22,8 +22,6 @@ SUBROUTINE equilibration
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
     LOGICAL :: write_total_mass_flow
 
-    PRINT*,"Converging toward the stationnary state ... be patient, read a paper, have a coffee, or pee."
-
     !
     ! laboetie doesnt work for charged solutes
     !
@@ -49,7 +47,6 @@ SUBROUTINE equilibration
     ! write velocity profiles to terminal every that number of steps
     !
     print_velocities_frequency = input_int("print_velocities_frequency", HUGE(1))
-    print*,"print_velocities_frequency=",print_velocities_frequency
 
     fluid_nodes = count( node%nature==fluid )
     tmax = input_int("tmax", HUGE(1)) ! maximum number of iterations
@@ -105,8 +102,13 @@ SUBROUTINE equilibration
         OPEN( 65, FILE="output/total_mass_flow.dat" )
     END IF
 
-    print*,'step    minval(j)        maxval(j)          L2.err.          target.err.'
-    print*,'------------------------------------------------------------------------'
+
+
+  PRINT*
+  PRINT*,'Lattice Boltzmann'
+  PRINT*,'================='
+  PRINT*,'       step     flux max           error         target error'
+  PRINT*,'       ----------------------------------------------------------------------------------'
 
 
     !
@@ -346,12 +348,9 @@ SUBROUTINE equilibration
           ! if you have already converged without fext, but not yet with fext, then enable fext
           else if(convergence_reached_without_fext .and. .not.convergence_reached_with_fext) then
             tfext=t+1
-            print*,"       Applying constraints at time step",tfext
             f_ext_loc = input_dp3("f_ext", [0._dp,0._dp,0._dp] )
-            print*,"       Pressure gradient (f_ext in lb.in) is",f_ext_loc
 
             if(.not.compensate_f_ext) then ! the force is exerced everywhere with same intensity
-              print*,"       It is applied homogeneously everywhere in the fluid"
               where(nature==fluid)
                 f_ext_x = f_ext_loc(1)
                 f_ext_y = f_ext_loc(2)

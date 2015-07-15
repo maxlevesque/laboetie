@@ -24,10 +24,7 @@ PROGRAM main
 
 
   CALL equilibration
-stop "entre equilibration_new et drop_tracers"
-  PRINT*
-  PRINT*,'Moment propagation'
-  PRINT*,'=================='
+
   CALL drop_tracers
   PRINT*
 

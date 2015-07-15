@@ -15,7 +15,9 @@ subroutine drop_tracers
   integer :: it
   logical :: is_converged
   ! real(dp), allocatable, dimension(:,:,:,:), contiguous :: n
-
+  PRINT*
+  PRINT*,'Moment propagation'
+  PRINT*,'=================='
   PRINT*,'       step           VACF(x)                   VACF(y)                   VACF(z)'
   PRINT*,'       ----------------------------------------------------------------------------------'
 
