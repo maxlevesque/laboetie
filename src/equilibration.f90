@@ -20,7 +20,7 @@ SUBROUTINE equilibration
     logical :: convergence_reached, compensate_f_ext, convergence_reached_without_fext, convergence_reached_with_fext, err
     INTEGER :: lx, ly, lz
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
-    LOGICAL :: WRITE_total_mass_flow
+    LOGICAL :: write_total_mass_flow
 
     !
     ! laboetie doesnt work for charged solutes
@@ -101,7 +101,7 @@ SUBROUTINE equilibration
     compensate_f_ext = input_log("compensate_f_ext",.false.)
     if(compensate_f_ext) open(79,file="./output/v_centralnode.dat")
 
-    WRITE_total_mass_flow = input_log("WRITE_total_mass_flow", .FALSE.)
+    write_total_mass_flow = input_log("write_total_mass_flow", .FALSE.)
     IF( WRITE_total_mass_flow ) THEN
         OPEN( 65, FILE="output/total_mass_flow.dat" )
     END IF
