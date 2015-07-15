@@ -12,15 +12,15 @@ SUBROUTINE equilibration
     integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_velocities_frequency
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
     real(dp) :: n_loc, f_ext_loc(3), l2err, target_error
-    REAL(dp) :: jminx, jminy, jminz, jmaxx, jmaxy, jmaxz, jmin, jmax
-    REAL(dp) :: jminx_old, jminy_old, jminz_old, jmaxx_old, jmaxy_old, jmaxz_old, jmin_old, jmax_old
+    REAL(dp) :: vmaxx, vmaxy, vmaxz, vmax
+    REAL(dp) :: vmaxx_old, vmaxy_old, vmaxz_old, vmax_old
     real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, old_n, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z
     real(dp), allocatable, dimension(:) :: a0, a1
     integer, allocatable, dimension(:) :: cx, cy, cz
     logical :: convergence_reached, compensate_f_ext, convergence_reached_without_fext, convergence_reached_with_fext, err
     INTEGER :: lx, ly, lz
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
-    LOGICAL :: write_total_mass_flow
+    LOGICAL :: WRITE_total_mass_flow
 
     !
     ! laboetie doesnt work for charged solutes
@@ -44,7 +44,7 @@ SUBROUTINE equilibration
     IF( print_frequency==0) print_frequency=1
 
     !
-    ! write velocity profiles to terminal every that number of steps
+    ! WRITE velocity profiles to terminal every that number of steps
     !
     print_velocities_frequency = input_int("print_velocities_frequency", HUGE(1))
 
@@ -71,12 +71,16 @@ SUBROUTINE equilibration
     jy_old = 0
     jz_old = 0
 
-    OPEN(66, FILE="output/velocity_profile_of_z.dat")
-    WRITE(66,*) "# z, <v_x>_{x,y}, <v_y>_{x,y}, <v_z>_{x,y}"
-    OPEN(67, FILE="output/velocity_profile_of_y.dat")
-    WRITE(67,*) "# y, <v_x>_{x,z}, <v_y>_{x,z}, <v_z>_{x,z}"
-    OPEN(68, FILE="output/velocity_profile_of_x.dat")
-    WRITE(68,*) "# x, <v_x>_{y,z}, <v_y>_{y,z}, <v_z>_{y,z}"
+    OPEN(66, FILE="output/mass-flow_profile_along_z.dat")
+    OPEN(67, FILE="output/mass-flow_profile_along_y.dat")
+    OPEN(68, FILE="output/mass-flow_profile_along_x.dat")
+    WRITE(66,*) "# z, <ρ.v_x>_{x,y}, <ρ.v_y>_{x,y}, <ρ.v_z>_{x,y}"
+    WRITE(67,*) "# y, <ρ.v_x>_{x,z}, <ρ.v_y>_{x,z}, <ρ.v_z>_{x,z}"
+    WRITE(68,*) "# x, <ρ.v_x>_{y,z}, <ρ.v_y>_{y,z}, <ρ.v_z>_{y,z}"
+
+    OPEN(56, FILE="output/mean-density_profile_along_z.dat")
+    OPEN(57, FILE="output/mean-density_profile_along_y.dat")
+    OPEN(58, FILE="output/mean-density_profile_along_x.dat")
     
     allocate( nature (n1,n2,n3), source=node%nature)
     allocate( f_ext_x(n1,n2,n3), source=zerodp)
@@ -97,8 +101,8 @@ SUBROUTINE equilibration
     compensate_f_ext = input_log("compensate_f_ext",.false.)
     if(compensate_f_ext) open(79,file="./output/v_centralnode.dat")
 
-    write_total_mass_flow = input_log("write_total_mass_flow", .FALSE.)
-    IF( write_total_mass_flow ) THEN
+    WRITE_total_mass_flow = input_log("WRITE_total_mass_flow", .FALSE.)
+    IF( WRITE_total_mass_flow ) THEN
         OPEN( 65, FILE="output/total_mass_flow.dat" )
     END IF
 
@@ -120,39 +124,45 @@ SUBROUTINE equilibration
         ! Print sdtout timestep, etc 
         ! 
         IF( MODULO(t, print_frequency) == 0) THEN
-            jmaxx = MAXVAL( ABS(jx)/density, density>eps)
-            jmaxy = MAXVAL( ABS(jy)/density, density>eps)
-            jmaxz = MAXVAL( ABS(jz)/density, density>eps)
-            jmax  = MAX( jmaxx, jmaxy, jmaxz )
-            PRINT*, t, real( [jmax, l2err, target_error] ,sp)
+            vmaxx = MAXVAL( ABS(jx)/density, density>eps)
+            vmaxy = MAXVAL( ABS(jy)/density, density>eps)
+            vmaxz = MAXVAL( ABS(jz)/density, density>eps)
+            vmax  = MAX( vmaxx, vmaxy, vmaxz )
+            PRINT*, t, real( [vmax, l2err, target_error] ,sp)
         END IF
 
         !
-        ! Write velocity profiles
+        ! WRITE velocity profiles
         !
         IF( MODULO(t, print_velocities_frequency) == 0 .OR. t==1) THEN
-            Write(66,*)"# timestep",t
-            Write(67,*)"# timestep",t
-            Write(68,*)"# timestep",t
+            WRITE(66,*)"# timestep",t
+            WRITE(67,*)"# timestep",t
+            WRITE(68,*)"# timestep",t
+            WRITE(56,*)"# timestep",t
+            WRITE(57,*)"# timestep",t
+            WRITE(58,*)"# timestep",t
             DO k=1,lz
+                WRITE(56,*) k, SUM(density(:,:,k))/ MAX( COUNT(density(:,:,k)>eps)  ,1)
                 WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
             END DO
             DO k=1,ly
+                WRITE(57,*) k, SUM(density(:,k,:))/ MAX( COUNT(density(:,k,:)>eps)  ,1)
                 WRITE(67,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
             END DO
             DO k=1,lx
+                WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps)  ,1)
                 WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
             END DO
-            Write(66,*)
-            Write(67,*)
-            Write(68,*)
+            WRITE(66,*)
+            WRITE(67,*)
+            WRITE(68,*)
         END IF
 
         !
         ! Dominika
         !
         if( compensate_f_ext .and. convergence_reached_without_fext) then
-          write(79,*)t-tfext, jz(n1/2+1,n2/2+1,n3/2+1)
+          WRITE(79,*)t-tfext, jz(n1/2+1,n2/2+1,n3/2+1)
         end if
 
         !
@@ -242,9 +252,9 @@ SUBROUTINE equilibration
         density = SUM(n,4)
 
         !
-        ! Write the total density
+        ! WRITE the total density
         !
-        IF( write_total_mass_flow ) THEN
+        IF( WRITE_total_mass_flow ) THEN
             WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ]) 
         END IF
 
@@ -287,8 +297,8 @@ SUBROUTINE equilibration
             open(91,file="./output/vel-field_central_t0.dat")
             do i=1,n1
                 do k=1,n3
-                    write(90,*) i, k, f_ext_x(i,n2/2+1,k), f_ext_z(i,n2/2+1,k)
-                    write(91,*) i, k,      jx(i,n2/2+1,k)     ,      jz(i,n2/2+1,k)
+                    WRITE(90,*) i, k, f_ext_x(i,n2/2+1,k), f_ext_z(i,n2/2+1,k)
+                    WRITE(91,*) i, k,      jx(i,n2/2+1,k)     ,      jz(i,n2/2+1,k)
                 end do
             end do
             close(90)
@@ -299,8 +309,8 @@ SUBROUTINE equilibration
             open(91,file="./output/vel-field_central_t1.dat")
             do i=1,n1
                 do k=1,n3
-                    write(90,*) i, k, f_ext_x(i,n2/2+1,k), f_ext_z(i,n2/2+1,k)
-                    write(91,*) i, k, jx(i,n2/2+1,k), jz(i,n2/2+1,k)
+                    WRITE(90,*) i, k, f_ext_x(i,n2/2+1,k), f_ext_z(i,n2/2+1,k)
+                    WRITE(91,*) i, k, jx(i,n2/2+1,k), jz(i,n2/2+1,k)
                 end do
             end do
             close(90)
@@ -390,7 +400,7 @@ SUBROUTINE equilibration
                       f_ext_y(i,j,k) = f_ext_loc(2)
                       f_ext_z(i,j,k) = f_ext_loc(3)
                       l=l+1
-                      write(47,*)i,j,k ! use ListPointPlot3D[data,BoxRatios->{1,1,1}] in Mathematica to read this file
+                      WRITE(47,*)i,j,k ! use ListPointPlot3D[data,BoxRatios->{1,1,1}] in Mathematica to read this file
                     end do
                   end do
                 end do
@@ -439,23 +449,35 @@ SUBROUTINE equilibration
   !
   ! Print velocity 1D velocity field
   !
+  WRITE(66,*)"# Steady state with convergence criteria", REAL(target_error)
+  WRITE(67,*)"# Steady state with convergence criteria", REAL(target_error)
+  WRITE(68,*)"# Steady state with convergence criteria", REAL(target_error)
+  WRITE(56,*)"# Steady state with convergence criteria", REAL(target_error)
+  WRITE(57,*)"# Steady state with convergence criteria", REAL(target_error)
+  WRITE(58,*)"# Steady state with convergence criteria", REAL(target_error)
   DO k=1,lz
       WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
+      WRITE(56,*) k, SUM(density(:,:,k))/ MAX( COUNT(density(:,:,k)>eps) ,1)
   END DO
   DO k=1,ly
       WRITE(67,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
+      WRITE(57,*) k, SUM(density(:,k,:))/ MAX( COUNT(density(:,k,:)>eps) ,1)
   END DO
   DO k=1,lx
       WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
+      WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps) ,1)
   END DO
   CLOSE(66)
   CLOSE(67)
   CLOSE(68)
+  CLOSE(56)
+  CLOSE(57)
+  CLOSE(58)
 
   !
   ! Print velocity 2D profilew
   !
-  OPEN(69, FILE="output/velocity_field_2d_z1.dat")
+  OPEN(69, FILE="output/velocity_field_2d_at_x.eq.1.dat")
   DO j=1,ly
       DO k=1,lz
           WRITE(69,*) j, k, jy(1,j,k), jz(1,j,k)
@@ -470,8 +492,8 @@ SUBROUTINE equilibration
     open(91,file="./output/vel-field_central.dat")
     do i=1,n1
       do k=1,n3
-        write(90,*) i, k, f_ext_x(i,n2/2+1,k), f_ext_z(i,n2/2+1,k)
-        write(91,*) i, k,      jx(i,n2/2+1,k),      jz(i,n2/2+1,k)
+        WRITE(90,*) i, k, f_ext_x(i,n2/2+1,k), f_ext_z(i,n2/2+1,k)
+        WRITE(91,*) i, k,      jx(i,n2/2+1,k),      jz(i,n2/2+1,k)
       end do
     end do
     close(90)
