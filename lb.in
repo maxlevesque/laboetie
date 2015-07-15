@@ -9,6 +9,6 @@ lz = 101
 
 geometryLabel = 1  # 1 => slit pore; 0 => geom.in; 11 => geom.pbm
 
-#f_ext = 0.00001  0.0  0.0
+f_ext = 0.00001  0.0  0.0
 #print_fequency = 1000
 #print_total_mass
