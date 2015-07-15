@@ -6,11 +6,11 @@ FCFLAGS = -J $(MODDIR)
 # libraries needed for linking, unused in the examples
 LDFLAGS =
 
-DEBUG = -Og -g -Wall -Wextra -fimplicit-none -fbacktrace -std=f2008 -pedantic -fwhole-file -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -fbounds-check -fcheck=all -fcheck-array-temporaries -Warray-temporaries -Wconversion -pg -Wunused-parameter -Wimplicit-interface -frecursive
+DEBUG = -g -Wall -Wno-unused -fimplicit-none #-fbacktrace -std=f2008 -fbounds-check -fcheck=all -pg -Wno-unused
 #-g turns on debugging
 #-p turns on profiling
 
-OPTIM = -O3 -ffast-math -funroll-loops -fopenmp
+OPTIM = -O3 -fopenmp -funroll-loops
 
 EXE = laboetie
 
@@ -25,7 +25,6 @@ OBJS = 	$(SRCDIR)/module_precision_kinds.f90 \
 	$(SRCDIR)/module_moment_propagation.f90 \
 	$(SRCDIR)/module_myallocations.f90 \
 	$(SRCDIR)/module_populations.f90 \
-	$(SRCDIR)/module_supercell.f90 \
 	$(SRCDIR)/module_time.f90 \
 	$(SRCDIR)/backup_phi_c_plus_c_minus.f90 \
 	$(SRCDIR)/advect.f90 \
@@ -33,12 +32,9 @@ OBJS = 	$(SRCDIR)/module_precision_kinds.f90 \
 	$(SRCDIR)/charge_test.f90 \
 	$(SRCDIR)/check_charge_distribution_equilibrium.f90 \
 	$(SRCDIR)/comp_j.f90 \
-	$(SRCDIR)/comp_rho.f90 \
 	$(SRCDIR)/drop_tracers.f90 \
 	$(SRCDIR)/electrostatic_pot.f90 \
-	$(SRCDIR)/equilibration_with_constraints.f90 \
-	$(SRCDIR)/equilibration_without_constraint.f90 \
-	$(SRCDIR)/equilibration_new.f90\
+	$(SRCDIR)/equilibration.f90\
 	$(SRCDIR)/module_io.f90 \
 	$(SRCDIR)/init_simu.f90 \
 	$(SRCDIR)/just_eq_smolu.f90 \

@@ -75,7 +75,7 @@ CONTAINS
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  FUNCTION input_int (tag, defaultValue)
+  PURE FUNCTION input_int (tag, defaultValue)
     IMPLICIT NONE
     INTEGER(I2B) :: input_int
     CHARACTER(*), INTENT(IN) :: tag
@@ -91,12 +91,7 @@ CONTAINS
         exit
       end if
     END DO
-    if (ifoundtag.eqv..false. .and. present(defaultValue)) then
-      input_int = defaultValue
-    else if( ifoundtag.eqv..false. .and. .not.present(defaultValue) ) then
-      print*, "ERROR: Can't find tag",trim(adjustl(tag))," in input files"
-      stop
-    end if
+    if (ifoundtag.eqv..false. .and. present(defaultValue)) input_int = defaultValue
   END FUNCTION input_int
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -143,57 +138,68 @@ CONTAINS
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  FUNCTION input_log (tag,defaultValue)
+  FUNCTION input_log (tag, defaultValue)
     IMPLICIT NONE
     logical :: input_log
     CHARACTER(*), INTENT(IN) :: tag
-    logical, optional, intent(in) :: defaultValue
-    logical :: ifoundtag
+    logical, intent(in), optional :: defaultValue
     CHARACTER :: text
-    INTEGER(i2b) :: i, j
-    j=LEN(tag)
-    DO i =1,SIZE( input_line)
-      IF( input_line(i)(1:j)==tag .AND. input_line(i)(j+1:j+1)==' ' ) then
-        READ( input_line (i) (j+4:j+50) , * ) text
-        ifoundtag = .true.
+    INTEGER(i2b) :: i, j, lentag
+    logical :: found
+    found = .false.
+    IF (tag=='point_charge_electrostatic') THEN
+      STOP 'The tag point_charge_electrostatic in dft.in must be renamed direct_sum since July 27th, 2014'
+    END IF
+    lentag = LEN(tag)
+    DO i =1, SIZE( input_line)
+      IF( input_line(i)(1:lentag)==tag .AND. input_line(i)(lentag+1:lentag+1)==' ' ) then
+        READ( input_line(i)(lentag+4:lentag+50) ,*) text
+        found = .true.
         exit
       end if
     END DO
+    if( .not.found .and. present(defaultValue) ) then
+      input_log = defaultValue
+      return
+    else if( .not.found ) then
+      print*, "I could not find keyword '", tag,"' in ./input/dft.in"
+      print*, "It should have been there associated to logical T or F"
+      stop
+    end if
     j = 999 ! means error in reading
     IF( text(1:1) == 'T' ) j = 1 ! means true, 2 means false
     IF( text(1:1) == 't' ) j = 1
     IF( text(1:1) == 'F' ) j = 2
     IF( text(1:1) == 'f' ) j = 2
-    IF( j == 1 ) then
-      input_log = .TRUE.
-    else IF( j == 2 ) then
-      input_log = .FALSE.
-    else if ( present(defaultValue) .and. (.not.ifoundtag .or. j==999)) then
-      input_log = defaultValue
-    else
-      print*, "bug in input_log while looking at tag",tag
-      print*,"default, optional, value is present",present(defaultvalue)
-      print*,"I found the tag",ifoundtag
-      print*,"j=",j
-      print*,"at the end input_log is",input_log
-      stop
-    end if
+    IF( j == 999 ) THEN
+      PRINT*, 'Problem with logical tag "', tag,' in ./input/dft.in'
+      print*, "It is here but is not logical. I read from it: '",text
+      STOP
+    END IF
+    IF( j == 1 ) input_log = .TRUE.
+    IF( j == 2 ) input_log = .FALSE.
   END FUNCTION input_log
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  FUNCTION input_char (tag)
+  FUNCTION input_char (tag, defaultvalue)
     IMPLICIT NONE
     CHARACTER(50) :: input_char
     CHARACTER(*), INTENT(IN) :: tag
     INTEGER(i2b) :: i,j,imax,iostatint
+    CHARACTER(*), INTENT(IN), OPTIONAL :: defaultValue
     j=LEN(tag)
     i=0
     imax=SIZE(input_line)
     DO i=1,imax+1
       IF (i==imax+1) THEN
-        PRINT*,"I didnt find keyword '",tag,"' in dft.in"
-        STOP
+        IF( PRESENT(defaultvalue) ) THEN
+            input_char = defaultvalue
+            RETURN
+        ELSE
+            PRINT*,"I didnt find keyword '",tag,"'in input file."
+            ERROR STOP
+        END IF
       END IF
       IF (input_line(i)(1:j)==tag .AND. input_line(i)(j+1:j+1)==' ') THEN
         READ(input_line(i)(j+4:j+50),*,IOSTAT=iostatint) input_char

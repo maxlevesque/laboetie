@@ -4,23 +4,29 @@
 
 SUBROUTINE poisson_nernst_planck
 
-  USE precision_kinds, ONLY: i2b, dp
+  USE precision_kinds, ONLY: dp
   USE system, ONLY: D_equil, sigma, time, elec_slope, lncb_slope, node
   USE input
   USE io, ONLY: print_everything_related_to_charge_equil
 
   IMPLICIT NONE
-  INTEGER(i2b) :: timestep, timestepmax
+
+  INTEGER :: timestep, timestepmax
   LOGICAL :: is_converged = .FALSE.
 
-  sigma = input_dp('sigma')
-  IF (sigma==0.0_dp) PRINT*,'salt free system.' ! sigma has already been read in charge initialisation
+  !
+  ! If sigma is 0, salf free system, and thus no need to go continue here
+  !
+  sigma = input_dp('sigma',0._dp)
+  IF ( ABS(sigma) <= EPSILON(1._dp) ) RETURN
 
-  ! I THINK it remains important to go through all next steps in order to insure the reading of everything, etc.
+  PRINT*
+  PRINT*,'Poisson + Nernst-Planck'
+  PRINT*,'======================='
 
   ! read the number of iterations one does for the first step of equilibration (D_iter)
 
-  IF (D_equil<0) STOP "D_equil should be >= 0"
+  IF (D_equil<0) STOP "D_equil in input file should be >= 0"
 
   CALL get_timestepmax (timestepmax)
 
@@ -56,7 +62,8 @@ SUBROUTINE poisson_nernst_planck
     CONTAINS
 
         SUBROUTINE get_timestepmax (a)
-            INTEGER(i2b) :: a
+            IMPLICIT NONE
+            INTEGER :: a
             a = input_int("timestepmax_for_PoissonNernstPlanck")
             IF (a<=0) STOP "timestepmax_for_PoissonNernstPlanck must be >=1"
         END SUBROUTINE

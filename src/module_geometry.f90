@@ -1,12 +1,14 @@
 module geometry
+
     use precision_kinds ! all precision kinds defined in the dedicated module
     use system, only: fluid, solid, supercell, node
     use constants, only: x, y, z
+    
     implicit none
-    !  private
-    !  public construct_slit, construct_cylinder, construct_cc, construct_disc_benichou
-    contains
-        subroutine CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
+
+contains
+    
+subroutine CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
             real(dp), dimension(1:2, 1:4) :: r ! there are 7 cylinders in the supercell, whose only x and y (1:2) coordinates are important
             ! lx is the half of the big size of the hexagon == length/2
             ! ly is the small size of the hexagone = length*sqrt(3)/2 = lx*sqrt(3)
@@ -44,7 +46,8 @@ module geometry
             end do
             node(:,:,1)%nature = solid
             node(:,:,lz)%nature = solid
-        end subroutine CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
+end subroutine CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
+
 
 SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
 ! construct the system described in Makhnovskii et al., Chem. Phys. 367, 110 (2010)
@@ -152,14 +155,15 @@ END SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
 
 
 
-SUBROUTINE CONSTRUCT_SLIT
-  integer(i2b) :: mi, ma
-  mi = lbound(node%nature,3)
-  ma = ubound(node%nature,3)
-  node%nature = fluid
-  node( :, :, mi)%nature = solid ! the lower bound of the thrid dimension of inside is solid
-  node( :, :, ma)%nature = solid ! so is the upper bound
-END SUBROUTINE CONSTRUCT_SLIT
+SUBROUTINE construct_slit
+    IMPLICIT NONE
+    INTEGER(i2b) :: i, j
+    i = LBOUND( node%nature, 3)
+    j = UBOUND( node%nature, 3)
+    node%nature = fluid
+    node(:,:,i)%nature = solid ! the lower bound of the thrid dimension of inside is solid
+    node(:,:,j)%nature = solid ! so is the upper bound
+END SUBROUTINE 
 
 
 
@@ -420,5 +424,81 @@ END SUBROUTINE CONSTRUCT_DISC_BENICHOU
         end do
         close(u)
     end subroutine
+!
+!
+!
+SUBROUTINE construct_pbm
+
+    use system, only: node, supercell
+
+    IMPLICIT NONE
+    
+    CHARACTER(2) :: magic_number
+    CHARACTER(1) :: pix
+    integer, parameter :: ncolumnmax=280
+    CHARACTER(ncolumnmax) :: line
+    INTEGER :: nline, ncolumn, i, j, nx, ny, nz
+    nx = supercell%geometry%dimensions%indiceMax(x)
+    ny = supercell%geometry%dimensions%indiceMax(y)
+    nz = supercell%geometry%dimensions%indiceMax(z)
+    if( nx/=1 ) error stop "lx must be 1 if geom.pbm is used"
+    !
+    ! pbm images are 2D.
+    ! I chose arbitrarily that nx=1 (in fact, openmp parallelization is sometimes over z so bad idea to have nz=1)
+    !
+    OPEN(36, FILE="geom.pbm")
+    READ(36,*) magic_number
+    IF( magic_number /= "P1" ) THEN
+        PRINT*, "geom.pbm doesnt seem to be valid. It's magic number (first line) is not P1 but",magic_number
+        ERROR STOP
+    END IF
+    READ(36,*) ncolumn, nline
+
+    if( ncolumn > ncolumnmax) then
+        print*,"ncolumn from geom.pbm =",ncolumn
+        print*,"maximum ncolumn implemented in construct_pbm =",ncolumnmax
+        print*,"it is easy to implement higher numbers !"
+        error stop "nevertheless it is not now. stop"
+    end if
+    
+    if( ncolumn /= ny) then
+        print*,"ncolumn from geom.pbm =",ncolumn
+        print*,"ny in lb.in =",ny
+        error stop "ncolumn /= ny in geom.pbm"
+    end if
+    
+    if( nline /= nz) then
+        print*,"nline from geom.pbm = ",nline
+        print*,"nz in lb.in =",nz
+        error stop "nline /= nz in geom.pbm"
+    end if
+
+    !
+    ! init to fluid everywhere
+    !
+    node%nature = fluid
+
+    !
+    ! then find the solid nodes
+    !
+    do j=1,nline
+        line=""
+        read(36,*) line(1  :min(ncolumn, 70))
+        if(ncolumn>70)  read(36,*) line(71 :min(ncolumn,140))
+        if(ncolumn>140) read(36,*) line(141:min(ncolumn,210))
+        if(ncolumn>210) read(36,*) line(211:min(ncolumn,280))
+        do i=1,ncolumn
+            select case (line(i:i))
+            case("1")
+                node(1,i,j)%nature = solid
+            case("0")
+            case default
+                error stop "only 0 or 1 allowed in pbm file"
+            end select
+        end do
+    end do
+    close(36)
+END SUBROUTINE
+
 
 end module geometry

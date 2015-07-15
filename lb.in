@@ -1,57 +1,34 @@
 ################################################################################
-# LaBo INPUT FILE
+# laboetie INPUT FILE
 ################################################################################
+# lines starting with # are comments
 
-lx = 41
-ly = 41
-lz = 41
-print_frequency = 100
-target_error = 1.e-12
-lbmodel = D3Q19
+lx = 1
+ly = 1
+lz = 100
 
-timestepmax_for_PoissonNernstPlanck = 100
-D_equil = 10 # number of steps for equilibrating charges (finding PB solution). 1 if charge (salt) free fluid.
-t_equil = 20 # number of steps for equilibrating the flux without constraints
-tmom = 200 # between t_equil and tmom, constraints are applieds (pression, electric field,...)
-tmax = 5000000 # between tmom and tmax, moment propagation is done
+f_ext = 0.0  0.00001  0.0
 
-geometryLabel = -1  # -1 for free cell, ie fluid everywhere 
-	 	# 0 for a custom cell (written in geom.in)
-	          # 1 for a slit, i.e. two walls at z=zmin and z=zmax
-                  # 2 for a cylinder along Z. lx have to be equal to ly.
-                  # 3 for a body centered cubic cell with solid spheres in contact
-                  # 4 for disc benichou with exists at 0, 3, 6 and 9 oclock
-                  # 5 for corrugated wall (sinusoidal and mirored wrt to y=ly/2.
-                  # 6 for a slit with various diameter (2D)
-                  # 7 for a tube with various diameter (3D)
-                  # 8 for a spherical cavity (3D)
-                  # 9 for sphere with 6 exits as asked by benichou
-                  # 10 for the supercell given by Xudong, Vincent, Marie and Benjamin from COMSOL
+write_total_mass_flow = T
 
-stripes = 0.0 0.0 0.0
-initialSolventDensity = 1.0 # fluid density in LB units
+#print_frequency = 1
+#print_velocities_frequency = 1000
 
-f_ext = 0.0   0.0   0.00001
-
-dominika_particle_diameter = 1
+geometryLabel = 1
 
 
-
-
-
-compensate_f_ext = F
 
 ################################################################################
 # charge of the solid
 ################################################################################
-charge_distrib = int # sol) charge distributed in the whole solid. int) charge distributed on interfacial nodes only
-sigma = 0.0 # charge distributed in solid
-bjl = 0.4 # bjerum length
-lambda_D = -2.0 # old debye_l
-
-D_plus = 0.05
-D_minus = 0.05
-D_iter = 1
+#charge_distrib = int # sol) charge distributed in the whole solid. int) charge distributed on interfacial nodes only
+#sigma = 0.0 # charge distributed in solid
+#bjl = 0.4 # bjerum length
+#lambda_D = -2.0 # old debye_l
+#
+#D_plus = 0.05
+#D_minus = 0.05
+#D_iter = 1
 
 
 ################################################################################
@@ -60,7 +37,7 @@ D_iter = 1
 tracer_Db = 0.01   # bulk diffusion coefficient of the tracer
 tracer_Ds = 0.0   # surface diffusion coefficient of the tracer
 tracer_z = 0.0     # charge of the tracer
-tracer_ka = 0.1    # adsorption coefficient of the tracer
+tracer_ka = 0.0    # adsorption coefficient of the tracer
 tracer_kd = 0.01    # desorption coefficient of the tracer
 
 
@@ -68,11 +45,11 @@ tracer_kd = 0.01    # desorption coefficient of the tracer
 ################################################################################
 # Useless for now
 ################################################################################
-c_tracer_0 = 0.1
-left wall vel = 0.0
-right wall vel = 0.0
-Tprint_eq = 1000
-Tprint_run = 10000
-elec_slope = 0.0 0.0 0.0 # external electric field
-lncb_slope = 0.0 0.0 0.0 # external gradient of salt concentration 
-f_gen = 0.0 0.0 0.0
+#c_tracer_0 = 0.1
+#left wall vel = 0.0
+#right wall vel = 0.0
+#Tprint_eq = 1000
+#Tprint_run = 10000
+#elec_slope = 0.0 0.0 0.0 # external electric field
+#lncb_slope = 0.0 0.0 0.0 # external gradient of salt concentration 
+#f_gen = 0.0 0.0 0.0

@@ -24,102 +24,98 @@ module mod_lbmodel
 
 !===================================================================================================================================
 
-        subroutine initialize
-            use input
-            implicit none
-            lbm%name = input_char("lbmodel")
-            if (lbm%name(1:1)/="D") then
-                stop "critical error. LB model name should begin by D"
-            else if (lbm%name(2:2)/="3") then
-                stop "critical error. LB model name should have dimension 3"
-            else if (lbm%name(3:3)/="Q") then
-                stop "critical error. LB model should be of the form D3Q.."
-            end if
-            read(lbm%name(2:2),'(I4)') lbm%dimension
-            read(lbm%name(4:10),'(I4)') lbm%nvel
-            lbm%lmin = 1 ! fortran style
-            lbm%lmax = lbm%lmin + lbm%nvel -1
-            call init_velocities
-            call init_weight_factors
-            call determine_velocity_inverse
-        end subroutine
+    SUBROUTINE initialize
+        USE input
+        IMPLICIT NONE
+        lbm%name = input_char("lbmodel", "D3Q19")
+        IF( lbm%name(1:3) /= "D3Q" ) THEN
+            ERROR STOP "I dont understand your lbmodel"
+        END IF
+        READ( lbm%name(2:2),'(I4)')  lbm%dimension
+        READ( lbm%name(4:10),'(I4)') lbm%nvel
+        lbm%lmin = 1 
+        lbm%lmax = lbm%lmin + lbm%nvel -1
+        call init_velocities
+        call init_weight_factors
+        call determine_velocity_inverse
+    END SUBROUTINE
 
 !===================================================================================================================================
 
-        subroutine init_velocities
-            implicit none
-            allocate (lbm%vel(lbm%lmin:lbm%lmax))
-            select case (lbm%nvel)
-            case (15) ! D3Q15
-                lbm%vel(lbm%lmin+0)%coo = [0,0,0]
-                lbm%vel(lbm%lmin+1)%coo = [1,0,0]
-                lbm%vel(lbm%lmin+2)%coo = [-1,0,0]
-                lbm%vel(lbm%lmin+3)%coo = [0,1,0]
-                lbm%vel(lbm%lmin+4)%coo = [0,-1,0]
-                lbm%vel(lbm%lmin+5)%coo = [0,0,1]
-                lbm%vel(lbm%lmin+6)%coo = [0,0,-1]
-                lbm%vel(lbm%lmin+7)%coo = [1,1,1]
-                lbm%vel(lbm%lmin+8)%coo = [-1,1,1]
-                lbm%vel(lbm%lmin+9)%coo = [1,-1,1]
-                lbm%vel(lbm%lmin+10)%coo = [1,1,-1]
-                lbm%vel(lbm%lmin+11)%coo = [-1,-1,1]
-                lbm%vel(lbm%lmin+12)%coo = [-1,1,-1]
-                lbm%vel(lbm%lmin+13)%coo = [1,-1,-1]
-                lbm%vel(lbm%lmin+14)%coo = [-1,-1,-1]
-            case (19) ! D3Q19
-                lbm%vel(lbm%lmin+0)%coo = [0,0,0]
-                lbm%vel(lbm%lmin+1)%coo = [1,0,0]
-                lbm%vel(lbm%lmin+2)%coo = [-1,0,0]
-                lbm%vel(lbm%lmin+3)%coo = [0,1,0]
-                lbm%vel(lbm%lmin+4)%coo = [0,-1,0]
-                lbm%vel(lbm%lmin+5)%coo = [0,0,1]
-                lbm%vel(lbm%lmin+6)%coo = [0,0,-1]
-                lbm%vel(lbm%lmin+7)%coo = [1,1,0]
-                lbm%vel(lbm%lmin+8)%coo = [-1,1,0]
-                lbm%vel(lbm%lmin+9)%coo = [1,-1,0]
-                lbm%vel(lbm%lmin+10)%coo = [-1,-1,0]
-                lbm%vel(lbm%lmin+11)%coo = [1,0,1]
-                lbm%vel(lbm%lmin+12)%coo = [-1,0,1]
-                lbm%vel(lbm%lmin+13)%coo = [1,0,-1]
-                lbm%vel(lbm%lmin+14)%coo = [-1,0,-1]
-                lbm%vel(lbm%lmin+15)%coo = [0,1,1]
-                lbm%vel(lbm%lmin+16)%coo = [0,-1,1]
-                lbm%vel(lbm%lmin+17)%coo = [0,1,-1]
-                lbm%vel(lbm%lmin+18)%coo = [0,-1,-1]
-            case (27) ! D3Q27
-                lbm%vel(lbm%lmin+0)%coo = [0,0,0]
-                lbm%vel(lbm%lmin+1)%coo = [1,0,0]
-                lbm%vel(lbm%lmin+2)%coo = [-1,0,0]
-                lbm%vel(lbm%lmin+3)%coo = [0,1,0]
-                lbm%vel(lbm%lmin+4)%coo = [0,-1,0]
-                lbm%vel(lbm%lmin+5)%coo = [0,0,1]
-                lbm%vel(lbm%lmin+6)%coo = [0,0,-1]
-                lbm%vel(lbm%lmin+7)%coo = [1,1,0]
-                lbm%vel(lbm%lmin+8)%coo = [-1,1,0]
-                lbm%vel(lbm%lmin+9)%coo = [1,-1,0]
-                lbm%vel(lbm%lmin+10)%coo = [-1,-1,0]
-                lbm%vel(lbm%lmin+11)%coo = [1,0,1]
-                lbm%vel(lbm%lmin+12)%coo = [-1,0,1]
-                lbm%vel(lbm%lmin+13)%coo = [1,0,-1]
-                lbm%vel(lbm%lmin+14)%coo = [-1,0,-1]
-                lbm%vel(lbm%lmin+15)%coo = [0,1,1]
-                lbm%vel(lbm%lmin+16)%coo = [0,-1,1]
-                lbm%vel(lbm%lmin+17)%coo = [0,1,-1]
-                lbm%vel(lbm%lmin+18)%coo = [0,-1,-1]
-                lbm%vel(lbm%lmin+19)%coo = [1,1,1]
-                lbm%vel(lbm%lmin+20)%coo = [-1,1,1]
-                lbm%vel(lbm%lmin+21)%coo = [1,-1,1]
-                lbm%vel(lbm%lmin+22)%coo = [1,1,-1]
-                lbm%vel(lbm%lmin+23)%coo = [-1,-1,1]
-                lbm%vel(lbm%lmin+24)%coo = [-1,1,-1]
-                lbm%vel(lbm%lmin+25)%coo = [1,-1,-1]
-                lbm%vel(lbm%lmin+26)%coo = [-1,-1,-1]
-            case default
-                stop "You ask for a DnQm lattice that is not implemented"
-            end select
-        end subroutine
+    SUBROUTINE init_velocities
+        implicit none
+        allocate (lbm%vel(lbm%lmin:lbm%lmax))
+        select case (lbm%nvel)
+        case (15) ! D3Q15
+            lbm%vel(lbm%lmin+0)%coo = [0,0,0]
+            lbm%vel(lbm%lmin+1)%coo = [1,0,0]
+            lbm%vel(lbm%lmin+2)%coo = [-1,0,0]
+            lbm%vel(lbm%lmin+3)%coo = [0,1,0]
+            lbm%vel(lbm%lmin+4)%coo = [0,-1,0]
+            lbm%vel(lbm%lmin+5)%coo = [0,0,1]
+            lbm%vel(lbm%lmin+6)%coo = [0,0,-1]
+            lbm%vel(lbm%lmin+7)%coo = [1,1,1]
+            lbm%vel(lbm%lmin+8)%coo = [-1,1,1]
+            lbm%vel(lbm%lmin+9)%coo = [1,-1,1]
+            lbm%vel(lbm%lmin+10)%coo = [1,1,-1]
+            lbm%vel(lbm%lmin+11)%coo = [-1,-1,1]
+            lbm%vel(lbm%lmin+12)%coo = [-1,1,-1]
+            lbm%vel(lbm%lmin+13)%coo = [1,-1,-1]
+            lbm%vel(lbm%lmin+14)%coo = [-1,-1,-1]
+        case (19) ! D3Q19
+            lbm%vel(lbm%lmin+0)%coo = [0,0,0]
+            lbm%vel(lbm%lmin+1)%coo = [1,0,0]
+            lbm%vel(lbm%lmin+2)%coo = [-1,0,0]
+            lbm%vel(lbm%lmin+3)%coo = [0,1,0]
+            lbm%vel(lbm%lmin+4)%coo = [0,-1,0]
+            lbm%vel(lbm%lmin+5)%coo = [0,0,1]
+            lbm%vel(lbm%lmin+6)%coo = [0,0,-1]
+            lbm%vel(lbm%lmin+7)%coo = [1,1,0]
+            lbm%vel(lbm%lmin+8)%coo = [-1,1,0]
+            lbm%vel(lbm%lmin+9)%coo = [1,-1,0]
+            lbm%vel(lbm%lmin+10)%coo = [-1,-1,0]
+            lbm%vel(lbm%lmin+11)%coo = [1,0,1]
+            lbm%vel(lbm%lmin+12)%coo = [-1,0,1]
+            lbm%vel(lbm%lmin+13)%coo = [1,0,-1]
+            lbm%vel(lbm%lmin+14)%coo = [-1,0,-1]
+            lbm%vel(lbm%lmin+15)%coo = [0,1,1]
+            lbm%vel(lbm%lmin+16)%coo = [0,-1,1]
+            lbm%vel(lbm%lmin+17)%coo = [0,1,-1]
+            lbm%vel(lbm%lmin+18)%coo = [0,-1,-1]
+        case (27) ! D3Q27
+            lbm%vel(lbm%lmin+0)%coo = [0,0,0]
+            lbm%vel(lbm%lmin+1)%coo = [1,0,0]
+            lbm%vel(lbm%lmin+2)%coo = [-1,0,0]
+            lbm%vel(lbm%lmin+3)%coo = [0,1,0]
+            lbm%vel(lbm%lmin+4)%coo = [0,-1,0]
+            lbm%vel(lbm%lmin+5)%coo = [0,0,1]
+            lbm%vel(lbm%lmin+6)%coo = [0,0,-1]
+            lbm%vel(lbm%lmin+7)%coo = [1,1,0]
+            lbm%vel(lbm%lmin+8)%coo = [-1,1,0]
+            lbm%vel(lbm%lmin+9)%coo = [1,-1,0]
+            lbm%vel(lbm%lmin+10)%coo = [-1,-1,0]
+            lbm%vel(lbm%lmin+11)%coo = [1,0,1]
+            lbm%vel(lbm%lmin+12)%coo = [-1,0,1]
+            lbm%vel(lbm%lmin+13)%coo = [1,0,-1]
+            lbm%vel(lbm%lmin+14)%coo = [-1,0,-1]
+            lbm%vel(lbm%lmin+15)%coo = [0,1,1]
+            lbm%vel(lbm%lmin+16)%coo = [0,-1,1]
+            lbm%vel(lbm%lmin+17)%coo = [0,1,-1]
+            lbm%vel(lbm%lmin+18)%coo = [0,-1,-1]
+            lbm%vel(lbm%lmin+19)%coo = [1,1,1]
+            lbm%vel(lbm%lmin+20)%coo = [-1,1,1]
+            lbm%vel(lbm%lmin+21)%coo = [1,-1,1]
+            lbm%vel(lbm%lmin+22)%coo = [1,1,-1]
+            lbm%vel(lbm%lmin+23)%coo = [-1,-1,1]
+            lbm%vel(lbm%lmin+24)%coo = [-1,1,-1]
+            lbm%vel(lbm%lmin+25)%coo = [1,-1,-1]
+            lbm%vel(lbm%lmin+26)%coo = [-1,-1,-1]
+        case default
+            stop "You ask for a DnQm lattice that is not implemented"
+        end select
+    end subroutine
 
-!===================================================================================================================================
+!============================================================================================================================
 
         subroutine init_weight_factors
             implicit none
@@ -144,7 +140,7 @@ module mod_lbmodel
             if ( abs(sum(lbm%vel%a0))-1._dp > epsilon(1.0)) stop "The sum of the weights of the velocities (a0) must be 1."
         end subroutine
 
-!===================================================================================================================================
+!=============================================================================================================================
 
         subroutine determine_velocity_inverse
             implicit none
@@ -154,6 +150,6 @@ module mod_lbmodel
             end do
         end subroutine
 
-!===================================================================================================================================
+!=============================================================================================================================
 
 end module
