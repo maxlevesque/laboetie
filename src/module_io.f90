@@ -37,9 +37,12 @@ module io
         end subroutine
 
         !
-        ! In this subroutine, one prints a header to stdout.
+        !
         !
         subroutine print_header
+            !
+            ! In this subroutine, one prints a header to stdout.
+            !
             character(8)  :: date
             character(10) :: time
             call date_and_time ( DATE=date,TIME=time)
@@ -51,6 +54,22 @@ module io
             print*,'=================================================='
             print*,
         end subroutine
+
+        !
+        !
+        !
+        SUBROUTINE print_tail
+            !
+            ! Prints the tail of the program to stdout
+            !
+            character(8)  :: date
+            character(10) :: time
+            call date_and_time ( DATE=date,TIME=time)
+            print*,
+            print*,
+            print*,date(1:4),'/',date(5:6),'/',date(7:8),', ',time(1:2),'h',time(3:4),'m',time(5:6)
+            print*,'=================================================='
+        END SUBROUTINE
 
         ! this subroutine prints all the input parameters in output/input.out
         ! so that all files needed to understand the outputs are in the output folder.

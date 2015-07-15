@@ -19,91 +19,124 @@ MODULE moment_propagation
     END TYPE
     TYPE(type_tracer) :: tracer
     INTEGER, PRIVATE :: lx, ly, lz
-    logical :: considerAdsorption
+    LOGICAL :: considerAdsorption, tracer_is_neutral
+    REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
 
     CONTAINS
     
     !
     !
     !
-    SUBROUTINE init
+SUBROUTINE init
 
-      USE system, ONLY: phi, fluid, solid, n, node
-      USE input, ONLY: input_dp, input_log
+    USE system, ONLY: phi, fluid, solid, n, node
+    USE input, ONLY: input_dp, input_log
 
-      IMPLICIT NONE
+    IMPLICIT NONE
 
-      real(dp) :: boltz_weight, Pstat, scattprop, scattprop_p, fermi, exp_dphi, exp_min_dphi, sum_of_boltz_weight, rho
-      real(dp) :: n_loc(lbm%lmin:lbm%lmax)
-      integer :: i, j, k, l, l_inv, ip, jp, kp, i_sum
-      REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
-stop "mama"
-      tracer%ka = input_dp('tracer_ka', 0._dp) ! Adsorption coefficient of the tracer
-      tracer%kd = input_dp('tracer_kd', 0._dp) ! Desorption coefficient of the tracer
-      IF (tracer%ka < -eps) ERROR STOP 'I detected tracer%ka to be <0 in module moment_propagation. STOP.'
-      IF (tracer%kd < -eps) ERROR STOP 'I detected tracer%kd to be <0 in module moment_propagation. STOP.'
+    real(dp) :: boltz_weight, Pstat, scattprop, scattprop_p, fermi, exp_dphi, exp_min_dphi, sum_of_boltz_weight, rho
+    real(dp) :: n_loc(lbm%lmin:lbm%lmax)
+    integer :: i, j, k, l, l_inv, ip, jp, kp, i_sum
 
-      if ( abs(tracer%kd)<= eps ) then ! if kd=0
-        tracer%K = 0.0_dp
-      else
-        tracer%K = tracer%ka / tracer%kd
-      end if
+    tracer%ka = input_dp('tracer_ka', 0._dp) ! Adsorption coefficient of the tracer
+    tracer%kd = input_dp('tracer_kd', 0._dp) ! Desorption coefficient of the tracer
+    IF (tracer%ka < -eps) ERROR STOP 'I detected tracer%ka to be <0 in module moment_propagation. STOP.'
+    IF (tracer%kd < -eps) ERROR STOP 'I detected tracer%kd to be <0 in module moment_propagation. STOP.'
 
-      if ( abs(tracer%K) > eps ) then
-        considerAdsorption = .true.
-      else
-        considerAdsorption = .false.
-      end if
+    if ( abs(tracer%kd)<= eps ) then ! if kd=0
+      tracer%K = 0.0_dp
+    else
+      tracer%K = tracer%ka / tracer%kd
+    end if
 
-      tracer%z = input_dp('tracer_z', 0._dp) ! tracer's charge
-      tracer%Db = input_dp('tracer_Db') ! bulk diffusion coefficient of tracer, i.e. the molecular diffusion coefficient
-      tracer%Ds = input_dp('tracer_Ds') ! surface diffusion coefficient of tracer
-      IF (tracer%Db <= 0.0_dp ) STOP 'tracer_Db as readen in input is invalid'
-      IF (tracer%Ds /= 0.0_dp ) STOP "I've found a non-zero Ds (surface diffusion coefficient) in input file. Not implemented yet"
+    if ( abs(tracer%K) > eps ) then
+      considerAdsorption = .true.
+    else
+      considerAdsorption = .false.
+    end if
 
-      lambda = calc_lambda(tracer%Db)      ! bulk diffusion
-      lambda_s = calc_lambda(tracer%Ds)  ! surface diffusion. is 0 for Ds=0
+    tracer%Db = input_dp('tracer_Db', 0._dp) ! bulk diffusion coefficient of tracer, i.e. the molecular diffusion coefficient
 
-      vacf = 0.0_dp ! vacf(x:z, past:next)
+    tracer%Ds = input_dp('tracer_Ds', 0._dp) ! surface diffusion coefficient of tracer
 
-      lx = supercell%geometry%dimensions%indiceMax(x)
-      ly = supercell%geometry%dimensions%indiceMax(y)
-      lz = supercell%geometry%dimensions%indiceMax(z)
-      call test_and_allocate_what_is_needed_for_moment_propagation
+    IF ( ABS(tracer%Ds) > eps ) THEN
+        PRINT*,"Tracers you defined have non-zero surface diffusion coefficient"
+        PRINT*,"This is not implemented yet"
+        ERROR STOP
+    END IF
 
-      ! the sum of all boltzman weights is the sum over all exp(-z*phi) where node%nature == fluid. Note that is_interfacial == fluid + at interface
-      Pstat = sum(exp(-tracer%z*phi), mask=(node%nature==fluid))&
-             +sum(exp(-tracer%z*phi)*tracer%K, mask=node%nature==fluid .and. node%isInterfacial)
+    lambda = calc_lambda(tracer%Db)      ! bulk diffusion
+    lambda_s = calc_lambda(tracer%Ds)    ! surface diffusion. is 0 for Ds=0
 
-      do concurrent (i=1:lx, j=1:ly, k=1:lz, node(i,j,k)%nature==fluid )
-        boltz_weight = exp(-tracer%z*phi(i,j,k))/Pstat
+    tracer%z = input_dp('tracer_z', 0._dp) ! tracer's charge
+    IF( ABS(tracer%z)>eps ) THEN
+        IF( ALLOCATED(phi) ) THEN
+            PRINT*,"Something is wrong (buuuug) line 79 of module_moment_propagation.f90"
+            ERROR STOP
+        END IF
+        tracer_is_neutral = .FALSE.
+        PRINT*,"charged tracers are not implemented"
+        ERROR STOP "line 85 of module_moment_propagation.f90"
+    ELSE
+        tracer_is_neutral = .TRUE.
+    END IF
+
+
+    vacf = 0.0_dp ! vacf(x:z, past:next)
+
+    lx = supercell%geometry%dimensions%indiceMax(x)
+    ly = supercell%geometry%dimensions%indiceMax(y)
+    lz = supercell%geometry%dimensions%indiceMax(z)
+    call test_and_allocate_what_is_needed_for_moment_propagation
+
+
+
+    ! the sum of all boltzman weights is the sum over all exp(-z*phi) where node%nature == fluid. Note that is_interfacial == fluid + at interface
+
+    IF( tracer_is_neutral ) THEN
+        Pstat = COUNT( node%nature == fluid ) + tracer%K*COUNT(node%nature==fluid .AND. node%isinterfacial)
+    ELSE
+        Pstat = sum(exp(-tracer%z*phi), mask=(node%nature==fluid))&
+           +sum(exp(-tracer%z*phi)*tracer%K, mask=node%nature==fluid .and. node%isInterfacial)
+    END IF
+
+    sum_of_boltz_weight = 0
+
+    DO CONCURRENT (i=1:lx, j=1:ly, k=1:lz, node(i,j,k)%nature==fluid )
+
+        IF( tracer_is_neutral ) THEN
+            boltz_weight = 1._dp/Pstat
+        ELSE
+            boltz_weight = exp(-tracer%z*phi(i,j,k))/Pstat
+        END IF
+
         n_loc(:) = n(:,i,j,k)
         rho = node(i,j,k)%solventDensity
 
         sum_of_boltz_weight = sum_of_boltz_weight + boltz_weight
         i_sum = i_sum +1
 
-        do concurrent (l=lbm%lmin+1:lbm%lmax)
-          ip = pbc (i+lbm%vel(l)%coo(x) ,x)
-          jp = pbc (j+lbm%vel(l)%coo(y) ,y)
-          kp = pbc (k+lbm%vel(l)%coo(z) ,z)
+        DO CONCURRENT (l=lbm%lmin+1:lbm%lmax)
+            ip = pbc (i+lbm%vel(l)%coo(x) ,x)
+            jp = pbc (j+lbm%vel(l)%coo(y) ,y)
+            kp = pbc (k+lbm%vel(l)%coo(z) ,z)
 
-          if (node(ip,jp,kp)%nature==solid) cycle
-          exp_dphi = calc_exp_dphi( i, j, k, ip, jp, kp)
-          exp_min_dphi = 1.0_dp/exp_dphi ! =1 if tracer%z=0
-          fermi = 1.0_dp/(1.0_dp + exp_dphi) ! =0.5 if tracer%z=0
-          scattprop = calc_scattprop( n_loc(l), rho, lbm%vel(l)%a0, lambda, fermi)
-          vacf(:,tini) = vacf(:,tini) + boltz_weight *scattprop *lbm%vel(l)%coo(:)**2
+            if (node(ip,jp,kp)%nature==solid) cycle
+            exp_dphi = calc_exp_dphi( i, j, k, ip, jp, kp)
+            exp_min_dphi = 1.0_dp/exp_dphi ! =1 if tracer%z=0
+            fermi = 1.0_dp/(1.0_dp + exp_dphi) ! =0.5 if tracer%z=0
+            scattprop = calc_scattprop( n_loc(l), rho, lbm%vel(l)%a0, lambda, fermi)
+            vacf(:,tini) = vacf(:,tini) + boltz_weight *scattprop *lbm%vel(l)%coo(:)**2
 
-          l_inv = lbm%vel(l)%inv ! comes to r
-          scattprop_p = calc_scattprop( &
-            n(l_inv,ip,jp,kp), node(ip,jp,kp)%solventDensity, lbm%vel(l_inv)%a0, lambda, 1.0_dp-fermi)
-          Propagated_Quantity(:,i,j,k,tini+1) = Propagated_Quantity(:,i,j,k,tini+1) &
-            + exp_min_dphi * scattprop_p * lbm%vel(l_inv)%coo(:) * boltz_weight
+            l_inv = lbm%vel(l)%inv ! comes to r
+            scattprop_p = calc_scattprop( &
+              n(l_inv,ip,jp,kp), node(ip,jp,kp)%solventDensity, lbm%vel(l_inv)%a0, lambda, 1.0_dp-fermi)
+            Propagated_Quantity(:,i,j,k,tini+1) = Propagated_Quantity(:,i,j,k,tini+1) &
+              + exp_min_dphi * scattprop_p * lbm%vel(l_inv)%coo(:) * boltz_weight
         end do
-      end do
+    end do
 
-      PRINT*, 0, REAL(vacf(:,tini),sp)
+    PRINT*, 0, REAL(vacf(:,tini),sp)
 
 
       if (input_log("print_vacf",.true.)) then
@@ -263,7 +296,7 @@ stop "mama"
     implicit none
     REAL(DP) :: CALC_EXP_DPHI
     INTEGER(i2b), INTENT(IN) :: i, j, k, ip, jp, kp
-    IF( abs(tracer%z) <= epsilon(1._dp) ) THEN
+    IF( tracer_is_neutral ) THEN
       calc_exp_dphi = 1.0_dp
     ELSE
       calc_exp_dphi = EXP( tracer%z * dphi(i,j,k,ip,jp,kp) )

@@ -1,10 +1,13 @@
 PROGRAM main
 
   use mod_time, only: tick, tock
+  use io, ONLY: print_tail
 
   IMPLICIT NONE
   
   INTEGER :: t
+  character(8)  :: date
+  character(10) :: time
 
   CALL tick(t)
 
@@ -26,7 +29,7 @@ PROGRAM main
   CALL equilibration
 
   CALL drop_tracers
-  PRINT*
 
+  CALL print_tail
   print*,"Execution time:", real(tock(t),4),"sec"
 END PROGRAM main
