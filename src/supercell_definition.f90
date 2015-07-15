@@ -10,7 +10,8 @@ subroutine supercell_definition
                       CONSTRUCT_TUBE_WITH_VARYING_DIAMETER, CONSTRUCT_SPHERICAL_CAVITY,&
                       CONSTRUCT_SPHERE_BENICHOU,&
                       CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS,&
-                      construct_custom
+                      construct_custom,&
+                      CONSTRUCT_PBM
   use io, only: print_supercell_xsf
   use mod_lbmodel, only: lbm
 
@@ -71,6 +72,8 @@ subroutine supercell_definition
     call CONSTRUCT_SPHERE_BENICHOU
   case (10)
     call CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
+  case (11)
+    call CONSTRUCT_PBM
   case default
     stop 'supercell%geometry%label tag in input file is invalid'
   end select
@@ -79,17 +82,17 @@ subroutine supercell_definition
 
   call print_supercell_xsf
 
-  !
-  ! check that at least one node (!!) is of fluid type
-  ! 
-  IF( ALL(node%nature == solid )) THEN
-      ERROR STOP "All nodes are solid: no fluid, no fluid dynamics!"
-  END IF
+    !
+    ! check that at least one node (!!) is of fluid type
+    ! 
+    IF( ALL(node%nature == solid )) THEN
+        ERROR STOP "All nodes are solid: no fluid, no fluid dynamics!"
+    END IF
 
-  ! give a table that tells if you're interfacial or not
-!  call where_is_it_fluid_and_interfacial
 
-    contains
+
+    CONTAINS
+
     ! here we define the normal to the surface. It is not obvious to me (Maximilien Levesque) what it is useful for. I even suspect it to be tricky if you're a single node vacancy, for instance, where normal will be zero but you're still in an interfacial node.
 !        subroutine defineNormalToSurface
 !            integer(i2b) :: i, j, k, l, iNext, jNext, kNext
@@ -108,13 +111,15 @@ subroutine supercell_definition
 !            end do
 !        end subroutine
 
+
 SUBROUTINE detectInterfacialNodes
     !
     ! interfaces are here defined when one of two neighboring nodes is fluid when the other is solid
+    ! interfacial nodes can be fluid or solid
     !
     IMPLICIT NONE
 
-    integer(i2b) :: i, j, k, l, iNext, jNext, kNext
+    integer :: i, j, k, l, iNext, jNext, kNext
     
     !
     ! Init all nodes to non-interfacial
@@ -124,18 +129,22 @@ SUBROUTINE detectInterfacialNodes
     !
     ! Check every pair of nodes: two different nodes in a pair mean the fluid one is interfacial
     !
-    do concurrent( i=1:lx, j=1:ly, k=1:lz )
-        velocityloop: do l = lbm%lmin+1, lbm%lmax ! skip zero velocity: arrival and departure cant be different
-            iNext = pbc( i + lbm%vel(l)%coo(x), x)
-            jNext = pbc( j + lbm%vel(l)%coo(y), y)
-            kNext = pbc( k + lbm%vel(l)%coo(z), z)
-            if( node(i,j,k)%nature /= node(iNext,jNext,kNext)%nature ) then
-                node(i,j,k)%isInterfacial = .true.
-                exit velocityloop
-            end if
-        end do velocityloop
+    do i=1,lx
+        do j=1,ly
+            do k=1,lz
+                do l = lbm%lmin+1, lbm%lmax ! skip zero velocity: arrival and departure cant be different
+                    iNext = pbc( i + lbm%vel(l)%coo(x), x)
+                    jNext = pbc( j + lbm%vel(l)%coo(y), y)
+                    kNext = pbc( k + lbm%vel(l)%coo(z), z)
+                    if( node(i,j,k)%nature /= node(iNext,jNext,kNext)%nature ) then
+                        node(i,j,k)%isInterfacial = .true.
+                        exit
+                    end if
+                end do
+            end do
+        end do
     end do
-end subroutine
+END SUBROUTINE
 !
 !
 !

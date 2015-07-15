@@ -28,12 +28,17 @@ module io
             close(99)
         end subroutine
 
+        !
+        !
+        !
         subroutine print_everything_related_to_charge_equil
             use system, only: phi
             call print4darray(ubound(phi,1),ubound(phi,2),ubound(phi,3),phi,'output/phi_of_x_y_z.dat') ! print internal potential
         end subroutine
 
-        ! In this subroutine, one prints the first lines of codes to stdout.
+        !
+        ! In this subroutine, one prints a header to stdout.
+        !
         subroutine print_header
             character(8)  :: date
             character(10) :: time
@@ -60,7 +65,7 @@ module io
             end do
         end subroutine
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! Print an XSF file of the supercell for visualisation in VMD for instance.
         ! Type vmd --xsf output/supercell.xsf to visualise it.
@@ -128,13 +133,13 @@ module io
 
                             IF      ( nature == solid )                            THEN
                                 WRITE(5,*) VMDpink,coo
-                                ! PRINT*,coo,"solid"
+                            !    PRINT*,int(coo+1),"solid"
                             ELSE IF ( nature == fluid .AND. isInterfacial )        THEN
                                 WRITE(5,*) VMDgreen,coo
-                                ! PRINT*,coo,"fluid interfacial"
+                            !    PRINT*,int(coo+1),"fluid interfacial"
                             ELSE IF ( nature == fluid .AND. (.NOT.isInterfacial) ) THEN
                                 WRITE(5,*) VMDwhite,coo
-                                ! PRINT*,coo,"fluid NOT interfacial"
+                            !    PRINT*,int(coo+1),"fluid NOT interfacial"
                             ELSE
                                 STOP 'While writing supercell.xsf, I found a node that has undocumented nature'
                             END IF
