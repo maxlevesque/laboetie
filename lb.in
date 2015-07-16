@@ -5,7 +5,7 @@
 
 lx = 1
 ly = 1
-lz = 101
+lz = 102
 
 geometryLabel = 1  # 1 => slit pore; 0 => geom.in; 11 => geom.pbm
 
