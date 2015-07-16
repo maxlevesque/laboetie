@@ -10,14 +10,24 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[    179144,       2913]
-NotebookOptionsPosition[    178681,       2892]
-NotebookOutlinePosition[    179018,       2907]
-CellTagsIndexPosition[    178975,       2904]
+NotebookDataLength[    179545,       2924]
+NotebookOptionsPosition[    179045,       2902]
+NotebookOutlinePosition[    179382,       2917]
+CellTagsIndexPosition[    179339,       2914]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
 Notebook[{
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{
+   "listvectorplot", " ", "and", " ", "liststreamplot", " ", "are", " ", 
+    "excessively", " ", "slow", " ", "as", " ", "soon", " ", "as", " ", 
+    "several", " ", "tens", " ", "of", " ", "points"}], "..."}], " ", 
+  "*)"}]], "Input",
+ CellChangeTimes->{{3.646026002346607*^9, 3.646026044452199*^9}}],
+
 Cell[BoxData[
  RowBox[{
   RowBox[{"data", "=", 
@@ -2891,7 +2901,7 @@ Cell[BoxData[
 }, Open  ]]
 },
 WindowSize->{938, 1028},
-WindowMargins->{{Automatic, 88}, {Automatic, -10}},
+WindowMargins->{{Automatic, 317}, {Automatic, -6}},
 FrontEndVersion->"10.1 for Linux x86 (64-bit) (March 23, 2015)",
 StyleDefinitions->"Default.nb"
 ]
@@ -2906,14 +2916,15 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[558, 20, 161, 5, 32, "Input"],
+Cell[558, 20, 361, 8, 55, "Input"],
+Cell[922, 30, 161, 5, 32, "Input"],
 Cell[CellGroupData[{
-Cell[744, 29, 257, 4, 32, "Input"],
-Cell[1004, 35, 36083, 695, 372, "Output"]
+Cell[1108, 39, 257, 4, 32, "Input"],
+Cell[1368, 45, 36083, 695, 372, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[37124, 735, 380, 7, 32, "Input"],
-Cell[37507, 744, 141158, 2145, 372, "Output"]
+Cell[37488, 745, 380, 7, 32, "Input"],
+Cell[37871, 754, 141158, 2145, 372, "Output"]
 }, Open  ]]
 }
 ]
