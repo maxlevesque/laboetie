@@ -8,7 +8,7 @@ SUBROUTINE equilibration
     USE mod_time, only: tick, tock
 
     implicit none
-    integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3,lmax,tmax,l_inv,timer(100),g,ng,pdr,pd
+    integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3,lmax,l_inv,timer(100),g,ng,pdr,pd
     integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
     real(dp) :: n_loc, f_ext_loc(3), l2err, target_error
@@ -49,10 +49,9 @@ SUBROUTINE equilibration
     print_files_frequency = input_int("print_files_frequency", HUGE(1))
 
     fluid_nodes = count( node%nature==fluid )
-    tmax = input_int("tmax", HUGE(1)) ! maximum number of iterations
 
     target_error = input_dp("target_error", 1.D-10)
-    
+     
     n1 = supercell%geometry%dimensions%indicemax(1)
     n2 = supercell%geometry%dimensions%indicemax(2)
     n3 = supercell%geometry%dimensions%indicemax(3)
@@ -81,7 +80,7 @@ SUBROUTINE equilibration
     OPEN(56, FILE="output/mean-density_profile_along_z.dat")
     OPEN(57, FILE="output/mean-density_profile_along_y.dat")
     OPEN(58, FILE="output/mean-density_profile_along_x.dat")
-    
+
     allocate( nature (n1,n2,n3), source=node%nature)
     allocate( f_ext_x(n1,n2,n3), source=zerodp)
     allocate( f_ext_y(n1,n2,n3), source=zerodp)
@@ -102,7 +101,7 @@ SUBROUTINE equilibration
     if(compensate_f_ext) open(79,file="./output/v_centralnode.dat")
 
     write_total_mass_flow = input_log("write_total_mass_flow", .FALSE.)
-    IF( WRITE_total_mass_flow ) THEN
+    IF( write_total_mass_flow ) THEN
         OPEN( 65, FILE="output/total_mass_flow.dat" )
     END IF
 
@@ -254,7 +253,7 @@ SUBROUTINE equilibration
         !
         ! WRITE the total density
         !
-        IF( WRITE_total_mass_flow ) THEN
+        IF( write_total_mass_flow ) THEN
             WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ]) 
         END IF
 
