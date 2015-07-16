@@ -9,7 +9,7 @@ SUBROUTINE equilibration
 
     implicit none
     integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3,lmax,tmax,l_inv,timer(100),g,ng,pdr,pd
-    integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_velocities_frequency
+    integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
     real(dp) :: n_loc, f_ext_loc(3), l2err, target_error
     REAL(dp) :: vmaxx, vmaxy, vmaxz, vmax
@@ -46,7 +46,7 @@ SUBROUTINE equilibration
     !
     ! WRITE velocity profiles to terminal every that number of steps
     !
-    print_velocities_frequency = input_int("print_velocities_frequency", HUGE(1))
+    print_files_frequency = input_int("print_files_frequency", HUGE(1))
 
     fluid_nodes = count( node%nature==fluid )
     tmax = input_int("tmax", HUGE(1)) ! maximum number of iterations
@@ -134,7 +134,7 @@ SUBROUTINE equilibration
         !
         ! WRITE velocity profiles
         !
-        IF( MODULO(t, print_velocities_frequency) == 0 .OR. t==1) THEN
+        IF( MODULO(t, print_files_frequency) == 0 .OR. t==1) THEN
             WRITE(66,*)"# timestep",t
             WRITE(67,*)"# timestep",t
             WRITE(68,*)"# timestep",t
@@ -477,7 +477,7 @@ SUBROUTINE equilibration
   !
   ! Print velocity 2D profilew
   !
-  OPEN(69, FILE="output/velocity_field_2d_at_x.eq.1.dat")
+  OPEN(69, FILE="output/mass-flow_field_2d_at_x.eq.1.dat")
   DO j=1,ly
       DO k=1,lz
           WRITE(69,*) j, k, jy(1,j,k), jz(1,j,k)
