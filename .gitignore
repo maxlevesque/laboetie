@@ -8,3 +8,5 @@ laboetie
 *.o
 src/.sconsign.dblite
 output
+chromato_generator
+vmdscenes*
