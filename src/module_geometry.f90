@@ -435,7 +435,7 @@ SUBROUTINE construct_pbm
     
     CHARACTER(2) :: magic_number
     CHARACTER(1) :: pix
-    integer, parameter :: ncolumnmax=280
+    integer, parameter :: ncolumnmax=350
     CHARACTER(ncolumnmax) :: line
     INTEGER :: nline, ncolumn, i, j, nx, ny, nz
     nx = supercell%geometry%dimensions%indiceMax(x)
@@ -487,6 +487,8 @@ SUBROUTINE construct_pbm
         if(ncolumn>70)  read(36,*) line(71 :min(ncolumn,140))
         if(ncolumn>140) read(36,*) line(141:min(ncolumn,210))
         if(ncolumn>210) read(36,*) line(211:min(ncolumn,280))
+        if(ncolumn>280) read(36,*) line(281:min(ncolumn,350))
+        if(ncolumn>350) error stop "look at module_geometry.f90 ncolumn>350 not implemented"
         do i=1,ncolumn
             select case (line(i:i))
             case("1")
