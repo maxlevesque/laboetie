@@ -40,7 +40,7 @@ SUBROUTINE equilibration
     !
     ! Print info to terminal every that number of steps 
     !
-    print_frequency = input_int('print_frequency', INT(100000/(lx*ly*lz)) )
+    print_frequency = input_int('print_frequency', INT(50000/(lx*ly*lz)) )
     IF( print_frequency==0) print_frequency=1
 
     !
