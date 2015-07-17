@@ -20,7 +20,7 @@ SUBROUTINE equilibration
     logical :: convergence_reached, compensate_f_ext, convergence_reached_without_fext, convergence_reached_with_fext, err
     INTEGER :: lx, ly, lz
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
-    LOGICAL :: write_total_mass_flow
+    LOGICAL :: write_total_mass_flux
 
     !
     ! laboetie doesnt work for charged solutes
@@ -70,9 +70,9 @@ SUBROUTINE equilibration
     jy_old = 0
     jz_old = 0
 
-    OPEN(66, FILE="output/mass-flow_profile_along_z.dat")
-    OPEN(67, FILE="output/mass-flow_profile_along_y.dat")
-    OPEN(68, FILE="output/mass-flow_profile_along_x.dat")
+    OPEN(66, FILE="output/mass-flux_profile_along_z.dat")
+    OPEN(67, FILE="output/mass-flux_profile_along_y.dat")
+    OPEN(68, FILE="output/mass-flux_profile_along_x.dat")
     WRITE(66,*) "# z, <ρ.v_x>_{x,y}, <ρ.v_y>_{x,y}, <ρ.v_z>_{x,y}"
     WRITE(67,*) "# y, <ρ.v_x>_{x,z}, <ρ.v_y>_{x,z}, <ρ.v_z>_{x,z}"
     WRITE(68,*) "# x, <ρ.v_x>_{y,z}, <ρ.v_y>_{y,z}, <ρ.v_z>_{y,z}"
@@ -100,9 +100,9 @@ SUBROUTINE equilibration
     compensate_f_ext = input_log("compensate_f_ext",.false.)
     if(compensate_f_ext) open(79,file="./output/v_centralnode.dat")
 
-    write_total_mass_flow = input_log("write_total_mass_flow", .FALSE.)
-    IF( write_total_mass_flow ) THEN
-        OPEN( 65, FILE="output/total_mass_flow.dat" )
+    write_total_mass_flux = input_log("write_total_mass_flux", .FALSE.)
+    IF( write_total_mass_flux ) THEN
+        OPEN( 65, FILE="output/total_mass_flux.dat" )
     END IF
 
 
@@ -253,7 +253,7 @@ SUBROUTINE equilibration
         !
         ! WRITE the total density
         !
-        IF( write_total_mass_flow ) THEN
+        IF( write_total_mass_flux ) THEN
             WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ]) 
         END IF
 
@@ -443,7 +443,7 @@ SUBROUTINE equilibration
   end do
 
   close(79)
-  CLOSE(65) ! output/total_mass_flow.dat
+  CLOSE(65) 
 
   !
   ! Print velocity 1D velocity field
@@ -476,7 +476,7 @@ SUBROUTINE equilibration
   !
   ! Print velocity 2D profilew
   !
-  OPEN(69, FILE="output/mass-flow_field_2d_at_x.eq.1.dat")
+  OPEN(69, FILE="output/mass-flux_field_2d_at_x.eq.1.dat")
   DO j=1,ly
       DO k=1,lz
           WRITE(69,*) j, k, jy(1,j,k), jz(1,j,k)
