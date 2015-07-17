@@ -50,7 +50,7 @@ SUBROUTINE equilibration
 
     fluid_nodes = count( node%nature==fluid )
 
-    target_error = input_dp("target_error", 1.D-10)
+    target_error = input_dp("target_error", 1.D-8)
      
     n1 = supercell%geometry%dimensions%indicemax(1)
     n2 = supercell%geometry%dimensions%indicemax(2)
