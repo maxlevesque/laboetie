@@ -8,19 +8,19 @@ SUBROUTINE equilibration
     USE mod_time, only: tick, tock
 
     implicit none
-    integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3,lmax,l_inv,timer(100),g,ng,pdr,pd
+    integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3, lmin, lmax, timer(100), g, ng, pdr, pd, ios
     integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
     real(dp) :: n_loc, f_ext_loc(3), l2err, target_error
     REAL(dp) :: vmaxx, vmaxy, vmaxz, vmax
     REAL(dp) :: vmaxx_old, vmaxy_old, vmaxz_old, vmax_old
-    real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, old_n, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z
+    real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, n_old, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z
     real(dp), allocatable, dimension(:) :: a0, a1
     integer, allocatable, dimension(:) :: cx, cy, cz
     logical :: convergence_reached, compensate_f_ext, convergence_reached_without_fext, convergence_reached_with_fext, err
-    INTEGER :: lx, ly, lz
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
     LOGICAL :: write_total_mass_flux
+    integer, allocatable :: il(:,:), jl(:,:), kl(:,:), l_inv(:)
 
     !
     ! laboetie doesnt work for charged solutes
@@ -32,15 +32,15 @@ SUBROUTINE equilibration
         ERROR STOP
     END IF
 
+    lmin = lbm%lmin
+    lmax = lbm%lmax
+
     supercellgeometrylabel = supercell%geometry%label ! -1 for solid free cell
-    lx = input_int( "lx" )
-    ly = input_int( "ly" )
-    lz = input_int( "lz" )
 
     !
-    ! Print info to terminal every that number of steps 
+    ! Print info to terminal every that number of steps
     !
-    print_frequency = input_int('print_frequency', INT(50000/(lx*ly*lz)) )
+    print_frequency = input_int('print_frequency', INT(50000/(n1*n2*n3)) ) ! this number is my own optimal. To be generalized on strong criteria some day.
     IF( print_frequency==0) print_frequency=1
 
     !
@@ -51,11 +51,20 @@ SUBROUTINE equilibration
     fluid_nodes = count( node%nature==fluid )
 
     target_error = input_dp("target_error", 1.D-8)
-     
+
     n1 = supercell%geometry%dimensions%indicemax(1)
     n2 = supercell%geometry%dimensions%indicemax(2)
     n3 = supercell%geometry%dimensions%indicemax(3)
-    allocate( density(n1,n2,n3), source=node%solventdensity )
+
+    allocate( density(n1,n2,n3), source=node%solventdensity, stat=ios)
+    if (ios /= 0) stop "density: Allocation request denied"
+
+    allocate( l_inv(lmin:lmax) , stat=ios)
+    if (ios /= 0) stop "l_inv: Allocation request denied"
+    do l = lmin, lmax
+        l_inv(l) = lbm%vel(l)%inv
+    end do
+
 
     allocate( jx     (n1,n2,n3), source=node%solventflux(x))
     allocate( jx_old (n1,n2,n3) )
@@ -86,14 +95,28 @@ SUBROUTINE equilibration
     allocate( f_ext_y(n1,n2,n3), source=zerodp)
     allocate( f_ext_z(n1,n2,n3), source=zerodp)
 
-    f_ext_loc = zerodp ! this is important and spagetty like... please read carefully before modifying this line
-    If( lbm%lmin /= 1) error stop "lbm%lmin expected to be 1"
-    lmax = lbm%lmax
+    f_ext_loc = zerodp ! this is important and spagetty like... please read carefuln2 before modifying this line
     allocate( cx(lmax), source=lbm%vel(:)%coo(1))
     allocate( cy(lmax), source=lbm%vel(:)%coo(2))
     allocate( cz(lmax), source=lbm%vel(:)%coo(3))
     allocate( a0(lmax), source=lbm%vel(:)%a0)
     allocate( a1(lmax), source=lbm%vel(:)%a1)
+
+    !
+    ! Tabulate the index of the node one finishes if one starts from a node and a velocity index l
+    ! per direction
+    !
+    allocate( il(lbm%lmin:lbm%lmax, 1:n1), stat=ios)
+    if (ios /= 0) stop "il: Allocation request denied"
+    allocate( jl(lbm%lmin:lbm%lmax, 1:n2), stat=ios)
+    if (ios /= 0) stop "jl: Allocation request denied"
+    allocate( kl(lbm%lmin:lbm%lmax, 1:n3), stat=ios)
+    if (ios /= 0) stop "kl: Allocation request denied"
+    do l= lmin, lmax
+        il(l,:) = [( pbc(i+cx(l),x) ,i=1,n1 )]
+        jl(l,:) = [( pbc(j+cy(l),y) ,j=1,n2 )]
+        kl(l,:) = [( pbc(k+cz(l),z) ,k=1,n3 )]
+    end do
 
     convergence_reached_without_fext = .false.
     convergence_reached_with_fext = .false.
@@ -107,11 +130,11 @@ SUBROUTINE equilibration
 
 
 
-  PRINT*
-  PRINT*,'Lattice Boltzmann'
-  PRINT*,'================='
-  PRINT*,'       step     flux max           error         target error'
-  PRINT*,'       ----------------------------------------------------------------------------------'
+    PRINT*
+    PRINT*,'Lattice Boltzmann'
+    PRINT*,'================='
+    PRINT*,'       step     flux max           error         target error'
+    PRINT*,'       ----------------------------------------------------------------------------------'
 
 
     !
@@ -120,8 +143,8 @@ SUBROUTINE equilibration
     do t=1,HUGE(t)
 
         !
-        ! Print sdtout timestep, etc 
-        ! 
+        ! Print sdtout timestep, etc
+        !
         IF( MODULO(t, print_frequency) == 0) THEN
             vmaxx = MAXVAL( ABS(jx)/density, density>eps)
             vmaxy = MAXVAL( ABS(jy)/density, density>eps)
@@ -140,15 +163,15 @@ SUBROUTINE equilibration
             WRITE(56,*)"# timestep",t
             WRITE(57,*)"# timestep",t
             WRITE(58,*)"# timestep",t
-            DO k=1,lz
+            DO k=1,n3
                 WRITE(56,*) k, SUM(density(:,:,k))/ MAX( COUNT(density(:,:,k)>eps)  ,1)
                 WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
             END DO
-            DO k=1,ly
+            DO k=1,n2
                 WRITE(57,*) k, SUM(density(:,k,:))/ MAX( COUNT(density(:,k,:)>eps)  ,1)
                 WRITE(67,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
             END DO
-            DO k=1,lx
+            DO k=1,n1
                 WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps)  ,1)
                 WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
             END DO
@@ -177,15 +200,14 @@ SUBROUTINE equilibration
         ! Collision step
         !
         !$OMP PARALLEL DO DEFAULT(NONE) &
-        !$OMP SHARED(n,lmax,cx,jx,f_ext_x,cy,jy,f_ext_y,cz,jz,f_ext_z,a0,density,a1)&
+        !$OMP SHARED(n,lmin,lmax,cx,jx,f_ext_x,cy,jy,f_ext_y,cz,jz,f_ext_z,a0,density,a1)&
         !$OMP PRIVATE(l)
-        do l=1,lmax
-            n(:,:,:,l) = a0(l)*density &
-                + a1(l)*(cx(l)*(jx+f_ext_x)+cy(l)*(jy+f_ext_y)+cz(l)*(jz+f_ext_z))
+        do l=lmin,lmax
+            n(:,:,:,l) = a0(l)*density(:,:,:) + a1(l)*(cx(l)*(jx+f_ext_x)+cy(l)*(jy+f_ext_y)+cz(l)*(jz+f_ext_z))
         end do
         !$OMP END PARALLEL DO
 
-        ! do concurrent(i=1:n1, j=1:n2, k=1:n3, l=1:lmax)
+        ! do concurrent(i=1:n1, j=1:n2, k=1:n3, l=lmin:lmax)
         !   n(i,j,k,l) = a0(l)*density(i,j,k) +a1(l)*(&
         !     cx(l)*(jx(i,j,k)+f_ext_x(i,j,k)) + cy(l)*(jy(i,j,k)+f_ext_y(i,j,k)) + cz(l)*(jz(i,j,k)+f_ext_z(i,j,k)))
         ! end do
@@ -200,19 +222,21 @@ SUBROUTINE equilibration
         !
         ! Bounce back (boundpm) to simplify propagation step
         !
-        do concurrent(l=1:lmax:2)
-            l_inv = lbm%vel(l)%inv
+        do concurrent(l=lmin:lmax:2)
             do concurrent(k=1:n3)
-                kp=pbc(k+cz(l),z)
+                kp = kl(l,k)
+                !kp=pbc(k+cz(l),z)
                 do concurrent(j=1:n2)
-                    jp=pbc(j+cy(l),y)
+                    jp = jl(l,j)
+                    !jp=pbc(j+cy(l),y)
                     do concurrent(i=1:n1)
-                       ip=pbc(i+cx(l),x)
-                       if( nature(i,j,k) /= nature(ip,jp,kp) ) then
-                           n_loc = n(i,j,k,l)
-                           n(i,j,k,l) = n(ip,jp,kp,l_inv)
-                           n(ip,jp,kp,l_inv) = n_loc
-                       end if
+                        ip = il(l,i)
+                        !ip=pbc(i+cx(l),x)
+                        if( nature(i,j,k) /= nature(ip,jp,kp) ) then
+                            n_loc = n(i,j,k,l)
+                            n(i,j,k,l) = n(ip,jp,kp,l_inv(l))
+                            n(ip,jp,kp,l_inv(l)) = n_loc
+                        end if
                     end do
                 end do
             end do
@@ -222,20 +246,20 @@ SUBROUTINE equilibration
         ! propagation
         !
         !$OMP PARALLEL DO DEFAULT(NONE) &
-        !$OMP SHARED(n,n3,n2,n1,lmax,cz,cy,cx) &
-        !$OMP PRIVATE(l,k,j,i,ip,jp,kp,old_n)
-        do l=1,lmax
-          old_n = n(:,:,:,l)
-          do k=1,n3
-            kp=pbc(k+cz(l),z)
-            do j=1,n2
-              jp=pbc(j+cy(l),y)
-              do i=1,n1
-                ip=pbc(i+cx(l),x)
-                n(ip,jp,kp,l) = old_n(i,j,k)
-              end do
+        !$OMP SHARED(n,n3,n2,n1,lmin,lmax,cz,cy,cx,il,jl,kl) &
+        !$OMP PRIVATE(l,k,j,i,ip,jp,kp,n_old)
+        do l=lmin,lmax
+            n_old = n(:,:,:,l)
+            do k=1,n3
+                kp = kl(l,k)
+                do j=1,n2
+                    jp = jl(l,j)
+                    do i=1,n1
+                        ip = il(l,i)
+                        n(ip,jp,kp,l) = n_old(i,j,k)
+                    end do
+                end do
             end do
-          end do
         end do
         !$OMP END PARALLEL DO
 
@@ -244,7 +268,7 @@ SUBROUTINE equilibration
         !
         IF( ANY(n<0) ) ERROR STOP "In equilibration_new, the population n(x,y,z,vel) < 0"
 
-        ! 
+        !
         ! Update densities after the propagation and check it
         ! Densities are the sum of all velocities of a local population
         !
@@ -254,7 +278,7 @@ SUBROUTINE equilibration
         ! WRITE the total density
         !
         IF( write_total_mass_flux ) THEN
-            WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ]) 
+            WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ])
         END IF
 
 
@@ -269,11 +293,11 @@ SUBROUTINE equilibration
         ! this is completely local in space and my be parallelized very well
         !$OMP PARALLEL DO DEFAULT(NONE)&
         !$OMP PRIVATE(l)&
-        !$OMP SHARED(lmax,n,cx,cy,cz)&
+        !$OMP SHARED(lmin,lmax,n,cx,cy,cz)&
         !$OMP REDUCTION(+:jx)&
         !$OMP REDUCTION(+:jy)&
         !$OMP REDUCTION(+:jz)
-        do l=1,lmax
+        do l=lmin,lmax
             jx = jx +n(:,:,:,l)*cx(l)
             jy = jy +n(:,:,:,l)*cy(l)
             jz = jz +n(:,:,:,l)*cz(l)
@@ -443,7 +467,7 @@ SUBROUTINE equilibration
   end do
 
   close(79)
-  CLOSE(65) 
+  CLOSE(65)
 
   !
   ! Print velocity 1D velocity field
@@ -454,15 +478,15 @@ SUBROUTINE equilibration
   WRITE(56,*)"# Steady state with convergence criteria", REAL(target_error)
   WRITE(57,*)"# Steady state with convergence criteria", REAL(target_error)
   WRITE(58,*)"# Steady state with convergence criteria", REAL(target_error)
-  DO k=1,lz
+  DO k=1,n3
       WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
       WRITE(56,*) k, SUM(density(:,:,k))/ MAX( COUNT(density(:,:,k)>eps) ,1)
   END DO
-  DO k=1,ly
+  DO k=1,n2
       WRITE(67,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
       WRITE(57,*) k, SUM(density(:,k,:))/ MAX( COUNT(density(:,k,:)>eps) ,1)
   END DO
-  DO k=1,lx
+  DO k=1,n1
       WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
       WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps) ,1)
   END DO
@@ -477,8 +501,8 @@ SUBROUTINE equilibration
   ! Print velocity 2D profilew
   !
   OPEN(69, FILE="output/mass-flux_field_2d_at_x.eq.1.dat")
-  DO j=1,ly
-      DO k=1,lz
+  DO j=1,n2
+      DO k=1,n3
           WRITE(69,*) j, k, jy(1,j,k), jz(1,j,k)
       END DO
   END DO
