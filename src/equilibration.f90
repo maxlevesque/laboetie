@@ -52,9 +52,12 @@ SUBROUTINE equilibration
 
     target_error = input_dp("target_error", 1.D-8)
 
-    n1 = supercell%geometry%dimensions%indicemax(1)
-    n2 = supercell%geometry%dimensions%indicemax(2)
-    n3 = supercell%geometry%dimensions%indicemax(3)
+    !n1 = supercell%geometry%dimensions%indicemax(1)
+    !n2 = supercell%geometry%dimensions%indicemax(2)
+    !n3 = supercell%geometry%dimensions%indicemax(3)
+n1 = input_int("lx")
+n2 = input_int("ly")
+n3 = input_int("lz")
 
     allocate( density(n1,n2,n3), source=node%solventdensity, stat=ios)
     if (ios /= 0) stop "density: Allocation request denied"
