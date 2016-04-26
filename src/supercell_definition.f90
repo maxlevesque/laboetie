@@ -4,7 +4,7 @@ subroutine supercell_definition
   use precision_kinds!, only: i2b, dp
   use constants, only: x, y, z
   use system, only: fluid, solid, pbc, supercell, node
-  use input, only: input_int
+  use module_input, only: getinput
   use geometry, only: construct_slit, construct_cylinder, construct_cc, construct_disc_benichou,&
                       construct_sinusoidal_walls_2d, CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D,&
                       CONSTRUCT_TUBE_WITH_VARYING_DIAMETER, CONSTRUCT_SPHERICAL_CAVITY,&
@@ -25,14 +25,14 @@ subroutine supercell_definition
   ! Use the geometry builder ?
   ! 0 means no builder, we will be reading geom.in
   !
-  supercell%geometry%label = input_int("geometryLabel", 0)
+  supercell%geometry%label = getinput%int("geometryLabel", defaultvalue=0)
 
   !
   ! Define the length of the cartesian grid in each direction
   !
-  lx = input_int("lx")
-  ly = input_int("ly")
-  lz = input_int("lz")
+  lx = getinput%int("lx")
+  ly = getinput%int("ly")
+  lz = getinput%int("lz")
   nx = lx
   ny = ly
   nz = lz
@@ -42,7 +42,7 @@ subroutine supercell_definition
 
   !
   ! Where are the solid/fluid nodes
-  ! begins with fluid everywhere. 
+  ! begins with fluid everywhere.
   !
   node%nature = fluid
 
@@ -84,7 +84,7 @@ subroutine supercell_definition
 
     !
     ! check that at least one node (!!) is of fluid type
-    ! 
+    !
     IF( ALL(node%nature == solid )) THEN
         ERROR STOP "All nodes are solid: no fluid, no fluid dynamics!"
     END IF
@@ -120,7 +120,7 @@ SUBROUTINE detectInterfacialNodes
     IMPLICIT NONE
 
     integer :: i, j, k, l, iNext, jNext, kNext
-    
+
     !
     ! Init all nodes to non-interfacial
     !

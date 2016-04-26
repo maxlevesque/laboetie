@@ -23,14 +23,14 @@ MODULE moment_propagation
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
 
     CONTAINS
-    
+
     !
     !
     !
 SUBROUTINE init
 
     USE system, ONLY: phi, fluid, solid, n, node
-    USE input, ONLY: input_dp, input_log
+    use module_input, ONLY: getinput
 
     IMPLICIT NONE
 
@@ -38,8 +38,8 @@ SUBROUTINE init
     real(dp) :: n_loc(lbm%lmin:lbm%lmax)
     integer :: i, j, k, l, l_inv, ip, jp, kp, i_sum
 
-    tracer%ka = input_dp('tracer_ka', 0._dp) ! Adsorption coefficient of the tracer
-    tracer%kd = input_dp('tracer_kd', 0._dp) ! Desorption coefficient of the tracer
+    tracer%ka = getinput%dp('tracer_ka', 0._dp) ! Adsorption coefficient of the tracer
+    tracer%kd = getinput%dp('tracer_kd', 0._dp) ! Desorption coefficient of the tracer
     IF (tracer%ka < -eps) ERROR STOP 'I detected tracer%ka to be <0 in module moment_propagation. STOP.'
     IF (tracer%kd < -eps) ERROR STOP 'I detected tracer%kd to be <0 in module moment_propagation. STOP.'
 
@@ -55,9 +55,9 @@ SUBROUTINE init
       considerAdsorption = .false.
     end if
 
-    tracer%Db = input_dp('tracer_Db', 0._dp) ! bulk diffusion coefficient of tracer, i.e. the molecular diffusion coefficient
+    tracer%Db = getinput%dp('tracer_Db', 0._dp) ! bulk diffusion coefficient of tracer, i.e. the molecular diffusion coefficient
 
-    tracer%Ds = input_dp('tracer_Ds', 0._dp) ! surface diffusion coefficient of tracer
+    tracer%Ds = getinput%dp('tracer_Ds', 0._dp) ! surface diffusion coefficient of tracer
 
     IF ( ABS(tracer%Ds) > eps ) THEN
         PRINT*,"Tracers you defined have non-zero surface diffusion coefficient"
@@ -68,7 +68,7 @@ SUBROUTINE init
     lambda = calc_lambda(tracer%Db)      ! bulk diffusion
     lambda_s = calc_lambda(tracer%Ds)    ! surface diffusion. is 0 for Ds=0
 
-    tracer%z = input_dp('tracer_z', 0._dp) ! tracer's charge
+    tracer%z = getinput%dp('tracer_z', 0._dp) ! tracer's charge
     IF( ABS(tracer%z)>eps ) THEN
         IF( ALLOCATED(phi) ) THEN
             PRINT*,"Something is wrong (buuuug) line 79 of module_moment_propagation.f90"
@@ -139,7 +139,7 @@ SUBROUTINE init
     PRINT*, 0, REAL(vacf(:,tini),sp)
 
 
-      if (input_log("print_vacf",.true.)) then
+      if (getinput%log("print_vacf",.true.)) then
           OPEN(99, file='output/vacf.dat')
           WRITE(99,*)'# time t, VACF_x(t), VACF_y(t), VACF_z(t)'
           WRITE(99,*) 0, vacf(:,tini)
@@ -164,7 +164,7 @@ SUBROUTINE init
     SUBROUTINE PROPAGATE(it, is_converged)
 
       use system, only: fluid, solid, n, node
-      use input, only: input_char, input_log
+      use module_input, only: getinput
       implicit none
       integer(i2b), intent(in) :: it
       real(dp) :: fermi, fractionOfParticleRemaining, scattprop, scattprop_p, exp_dphi, rho, n_loc(lbm%lmin:lbm%lmax)
@@ -266,7 +266,7 @@ SUBROUTINE init
         Propagated_Quantity_Adsorbed(:,:,:,:,next) = 0.0_dp
       end if
 
-      if (input_log("print_vacf",.true.)) write(99,*) it, vacf(:,now)
+      if (getinput%log("print_vacf",.true.)) write(99,*) it, vacf(:,now)
 
       !~     OPEN(100, FILE='output/adsorbed_density.dat', ACCESS='append')
       !~         WRITE(100,*)

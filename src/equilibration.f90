@@ -3,7 +3,7 @@ SUBROUTINE equilibration
     USE precision_kinds, only: i2b, dp, sp
     USE system, only: fluid, supercell, node, lbm, n, pbc
     USE populations, only: update_populations
-    USE input, only: input_dp3, input_dp, input_int, input_log
+    use module_input, only: getinput
     USE constants, only: x, y, z, zerodp
     USE mod_time, only: tick, tock
 
@@ -25,7 +25,7 @@ SUBROUTINE equilibration
     !
     ! laboetie doesnt work for charged solutes
     !
-    IF( ABS(input_dp('sigma', zerodp)) > eps ) THEN
+    IF( ABS(getinput%dp('sigma', zerodp)) > eps ) THEN
         print*,"ERROR: laboetie can only consider uncharged systems."
         print*,"===== Dont tell Benjamin you'd like to see such feature in Laboetie :)"
         print*,"Hi Benjamin. I'm sure it is you testing this! grrrr :))"
@@ -37,27 +37,24 @@ SUBROUTINE equilibration
 
     supercellgeometrylabel = supercell%geometry%label ! -1 for solid free cell
 
+    n1 = getinput%int("lx")
+    n2 = getinput%int("ly")
+    n3 = getinput%int("lz")
+
     !
     ! Print info to terminal every that number of steps
     !
-    print_frequency = input_int('print_frequency', INT(50000/(n1*n2*n3)) ) ! this number is my own optimal. To be generalized on strong criteria some day.
+    print_frequency = getinput%int('print_frequency', max(int(50000/(n1*n2*n3)),1) ) ! this number is my own optimal. To be generalized on strong criteria some day.
     IF( print_frequency==0) print_frequency=1
 
     !
     ! WRITE velocity profiles to terminal every that number of steps
     !
-    print_files_frequency = input_int("print_files_frequency", HUGE(1))
+    print_files_frequency = getinput%int("print_files_frequency", HUGE(1))
 
     fluid_nodes = count( node%nature==fluid )
 
-    target_error = input_dp("target_error", 1.D-8)
-
-    !n1 = supercell%geometry%dimensions%indicemax(1)
-    !n2 = supercell%geometry%dimensions%indicemax(2)
-    !n3 = supercell%geometry%dimensions%indicemax(3)
-n1 = input_int("lx")
-n2 = input_int("ly")
-n3 = input_int("lz")
+    target_error = getinput%dp("target_error", 1.D-8)
 
     allocate( density(n1,n2,n3), source=node%solventdensity, stat=ios)
     if (ios /= 0) stop "density: Allocation request denied"
@@ -123,10 +120,10 @@ n3 = input_int("lz")
 
     convergence_reached_without_fext = .false.
     convergence_reached_with_fext = .false.
-    compensate_f_ext = input_log("compensate_f_ext",.false.)
+    compensate_f_ext = getinput%log("compensate_f_ext",.false.)
     if(compensate_f_ext) open(79,file="./output/v_centralnode.dat")
 
-    write_total_mass_flux = input_log("write_total_mass_flux", .FALSE.)
+    write_total_mass_flux = getinput%log("write_total_mass_flux", .FALSE.)
     IF( write_total_mass_flux ) THEN
         OPEN( 65, FILE="output/total_mass_flux.dat" )
     END IF
@@ -384,7 +381,7 @@ n3 = input_int("lz")
           ! if you have already converged without fext, but not yet with fext, then enable fext
           else if(convergence_reached_without_fext .and. .not.convergence_reached_with_fext) then
             tfext=t+1
-            f_ext_loc = input_dp3("f_ext", [0._dp,0._dp,0._dp] )
+            f_ext_loc = getinput%dp3("f_ext", [0._dp,0._dp,0._dp] )
 
             if(.not.compensate_f_ext) then ! the force is exerced everywhere with same intensity
               where(nature==fluid)
@@ -394,7 +391,7 @@ n3 = input_int("lz")
               end where
 
             else if(compensate_f_ext) then ! force applied to a central particle only
-                pd = input_int("dominika_particle_diameter",1)
+                pd = getinput%int("dominika_particle_diameter",1)
                 print*,"       Dominika's particle has diameter (lb units)", pd
                 if( modulo(pd,2)==0 ) then
                   print*,"ERROR: l. 285 particle diameter must be odd"

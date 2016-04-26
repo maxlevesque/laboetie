@@ -25,15 +25,15 @@ module mod_lbmodel
 !===================================================================================================================================
 
     SUBROUTINE initialize
-        USE input
+        use module_input, only: getinput
         IMPLICIT NONE
-        lbm%name = input_char("lbmodel", "D3Q19")
+        lbm%name = getinput%char("lbmodel", defaultvalue="D3Q19")
         IF( lbm%name(1:3) /= "D3Q" ) THEN
             ERROR STOP "I dont understand your lbmodel"
         END IF
         READ( lbm%name(2:2),'(I4)')  lbm%dimension
         READ( lbm%name(4:10),'(I4)') lbm%nvel
-        lbm%lmin = 1 
+        lbm%lmin = 1
         lbm%lmax = lbm%lmin + lbm%nvel -1
         call init_velocities
         call init_weight_factors
