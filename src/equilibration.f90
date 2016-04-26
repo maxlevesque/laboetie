@@ -37,14 +37,14 @@ SUBROUTINE equilibration
 
     supercellgeometrylabel = supercell%geometry%label ! -1 for solid free cell
 
-    n1 = getinput%int("lx")
-    n2 = getinput%int("ly")
-    n3 = getinput%int("lz")
+    n1 = getinput%int("lx", assert=">0")
+    n2 = getinput%int("ly", assert=">0")
+    n3 = getinput%int("lz", assert=">0")
 
     !
     ! Print info to terminal every that number of steps
     !
-    print_frequency = getinput%int('print_frequency', max(int(50000/(n1*n2*n3)),1) ) ! this number is my own optimal. To be generalized on strong criteria some day.
+    print_frequency = getinput%int('print_frequency', defaultvalue=max(int(50000/(n1*n2*n3)),1), assert=">0" ) ! this number is my own optimal. To be generalized on strong criteria some day.
     IF( print_frequency==0) print_frequency=1
 
     !
