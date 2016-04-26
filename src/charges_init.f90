@@ -6,11 +6,11 @@ subroutine charges_init
     use system, only: lambda_D, c_plus, c_minus, phi, charge_distrib, sigma, node,&
                        fluid, solid, anormf0, bjl, kBT, rho_ch, D_plus, D_minus, supercell
     use constants, only: pi, x, y, z
-    use input
+    use module_input, only: getinput
     use myallocations
-  
+
     implicit none
-    
+
     integer  :: count_solid, count_fluid, count_solid_int
     real(dp) :: sigma_solid, sigma_fluid
     real(dp) :: in_c_plus_solid, in_c_plus_fluid, in_c_minus_solid, in_c_minus_fluid
@@ -20,13 +20,13 @@ subroutine charges_init
     !
     ! Is there any charge into the solute ?
     !
-    bjl = input_dp('bjl',0._dp)
+    bjl = getinput%dp('bjl',0._dp)
 
     IF( bjl <= eps ) RETURN
 
-    sigma = input_dp('sigma',0._dp)
-    lambda_d = input_dp('lambda_D',0._dp)
-  
+    sigma = getinput%dp('sigma',0._dp)
+    lambda_d = getinput%dp('lambda_D',0._dp)
+
     if( abs(lambda_D) <= epsilon(1._dp) ) then
       print*, 'salt free fluid'
       rho_0 = 0.0_dp
@@ -34,12 +34,12 @@ subroutine charges_init
       rho_0 = 1.0_dp / (4.0_dp*pi*bjl*lambda_D**2)
     end if
     rho_ch = 1.0_dp / (4.0_dp*pi*bjl*lambda_D**2) ! DONT UNDERSTAND AWFULL THING WHAT IS THE F* DIFFERENCE BETWEEN RHO_0 AND CH.RHO_0 IN C CODE?
-  
+
     ! count of solid, fluid and interfacial nodes
     count_solid = count(node%nature==solid)
     count_solid_int = count( node%nature == solid .and. node%isInterfacial )
     count_fluid = count(node%nature==fluid)
-  
+
     ! read where are distributed the charges
     ! call read_charge_distrib
 
@@ -49,11 +49,11 @@ subroutine charges_init
         ! init ion (solute) concentrations
         if (.not. allocated(c_plus)) call allocateReal3D(c_plus)
         if (.not. allocated(c_minus)) call allocateReal3D( c_minus)
-  
+
         ! init potential
         call allocateReal3D( phi) !allocate( phi(lx,ly,lz), source=0.0_dp )
         phi = 0._dp
-        charge_distrib = input_char("charge_distrib")
+        charge_distrib = getinput%char("charge_distrib")
         if( charge_distrib(1:3) /= 'int' .and. charge_distrib(1:3)/='sol') stop 'charge_distrib can only be int or sol for now'
 
         ! distribute charge, depending on where user asked
@@ -129,9 +129,9 @@ subroutine charges_init
         ! TODO call charge_test
 
         ! read diffusion coefficients of solute + and solute -
-        d_plus = input_dp('D_plus',0._dp)
+        d_plus = getinput%dp('D_plus',0._dp)
         if( D_plus < 0.0_dp ) stop 'D_plus <0. critical.'
-        d_minus = input_dp('D_minus',0._dp)
+        d_minus = getinput%dp('D_minus',0._dp)
         if( D_minus < 0.0_dp ) stop 'D_minus <0. critical.'
     END IF
 end subroutine charges_init

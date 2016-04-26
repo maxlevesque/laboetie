@@ -6,7 +6,7 @@ SUBROUTINE poisson_nernst_planck
 
   USE precision_kinds, ONLY: dp
   USE system, ONLY: D_equil, sigma, time, elec_slope, lncb_slope, node
-  USE input
+  use module_input, only: getinput
   USE io, ONLY: print_everything_related_to_charge_equil
 
   IMPLICIT NONE
@@ -17,7 +17,7 @@ SUBROUTINE poisson_nernst_planck
   !
   ! If sigma is 0, salf free system, and thus no need to go continue here
   !
-  sigma = input_dp('sigma',0._dp)
+  sigma = getinput%dp('sigma',0._dp)
   IF ( ABS(sigma) <= EPSILON(1._dp) ) RETURN
 
   PRINT*
@@ -31,8 +31,8 @@ SUBROUTINE poisson_nernst_planck
   CALL get_timestepmax (timestepmax)
 
   ! read electrostatic related stuff
-  lncb_slope = input_dp3("lncb_slope")
-  elec_slope = input_dp3("elec_slope")
+  lncb_slope = getinput%dp3("lncb_slope")
+  elec_slope = getinput%dp3("elec_slope")
 
   ! iterate until charges are equilibrated
     timestep = 0
@@ -64,7 +64,7 @@ SUBROUTINE poisson_nernst_planck
         SUBROUTINE get_timestepmax (a)
             IMPLICIT NONE
             INTEGER :: a
-            a = input_int("timestepmax_for_PoissonNernstPlanck")
+            a = getinput%int("timestepmax_for_PoissonNernstPlanck")
             IF (a<=0) STOP "timestepmax_for_PoissonNernstPlanck must be >=1"
         END SUBROUTINE
 

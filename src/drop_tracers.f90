@@ -10,14 +10,14 @@ SUBROUTINE drop_tracers
     use precision_kinds, only: dp
     USE system, only: n, elec_slope
     USE moment_propagation, only: init, propagate, deallocate_propagated_quantity!, print_vacf, integrate_vacf!, not_yet_converged
-    USE input, ONLY: input_int
-  
+    use module_input, ONLY: getinput
+
     IMPLICIT NONE
-    integer :: it, maximum_moment_propagation_steps 
+    integer :: it, maximum_moment_propagation_steps
     logical :: is_converged
     ! real(dp), allocatable, dimension(:,:,:,:), contiguous :: n
 
-    maximum_moment_propagation_steps = input_int("maximum_moment_propagation_steps", 0) ! negative value means make it converge
+    maximum_moment_propagation_steps = getinput%int("maximum_moment_propagation_steps", 0) ! negative value means make it converge
     IF( maximum_moment_propagation_steps == 0) RETURN
 
     PRINT*
@@ -25,15 +25,15 @@ SUBROUTINE drop_tracers
     PRINT*,'=================='
     PRINT*,'       step           VACF(x)                   VACF(y)                   VACF(z)'
     PRINT*,'       ----------------------------------------------------------------------------------'
-  
+
     CALL update_tracer_population ! include elec_slope in population n
     elec_slope = 0.0_dp ! turn the electric field off for the rest of mom_prop (included in n)
-  
+
     ! add electrostatic potential computed by the SOR routine an external contribution
     ! elec_pot(singlx,ly,lz, ch, phi, phi2, t, t_equil);
     ! call elec_pot
     CALL init ! init moment propagation
- 
+
     !
     ! Propagation in time
     !
@@ -47,9 +47,9 @@ SUBROUTINE drop_tracers
       !    it = it + 1
       IF( is_converged ) exit
     END DO
-  
+
     PRINT*,
-  
+
     !  CALL integrate_vacf ! compute the integral over time of vacf in each direction
     !  CALL print_vacf ! print vacf to file vacf.dat
     CALL deallocate_propagated_quantity
@@ -65,7 +65,7 @@ contains
     use precision_kinds, only: dp, i2b
     use system, only: f_ext, fluid, elec_slope, supercell, lbm, x, y, z, node
     use populations, only: check_population
-    use input, only: input_dp, input_dp3
+    use module_input, only: input_dp, input_dp3
 
     implicit none
 

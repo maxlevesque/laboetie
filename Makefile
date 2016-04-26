@@ -6,7 +6,7 @@ FCFLAGS = -J $(MODDIR)
 # libraries needed for linking, unused in the examples
 LDFLAGS =
 
-DEBUG = -g -Wall -Wno-unused -fimplicit-none #-fbacktrace -std=f2008 -fbounds-check -fcheck=all -pg -Wno-unused
+DEBUG = -g -fbacktrace -pedantic -fwhole-file -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -fbounds-check -pg -frecursive -fcheck=all -Wall -ffpe-trap=zero,underflow,overflow
 #-g turns on debugging
 #-p turns on profiling
 
