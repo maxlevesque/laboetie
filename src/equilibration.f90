@@ -46,7 +46,7 @@ SUBROUTINE equilibration
     ! Print info to terminal every that number of steps
     !
     print_frequency = getinput%int('print_frequency', defaultvalue=max(int(50000/(n1*n2*n3)),1), assert=">0" ) ! this number is my own optimal. To be generalized on strong criteria some day.
-    IF( print_frequency==0) print_frequency=1
+
 
     !
     ! WRITE velocity profiles to terminal every that number of steps
