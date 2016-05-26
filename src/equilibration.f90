@@ -12,15 +12,16 @@ SUBROUTINE equilibration
     integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
     real(dp) :: n_loc, f_ext_loc(3), l2err, target_error
-    REAL(dp) :: vmaxx, vmaxy, vmaxz, vmax
-    REAL(dp) :: vmaxx_old, vmaxy_old, vmaxz_old, vmax_old
+    real(dp) :: vmaxx, vmaxy, vmaxz, vmax
+    real(dp) :: vmaxx_old, vmaxy_old, vmaxz_old, vmax_old
     real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, n_old, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z
     real(dp), allocatable, dimension(:) :: a0, a1
     integer, allocatable, dimension(:) :: cx, cy, cz
     logical :: convergence_reached, compensate_f_ext, convergence_reached_without_fext, convergence_reached_with_fext, err
-    REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
-    LOGICAL :: write_total_mass_flux
+    real(dp), PARAMETER :: eps=EPSILON(1._dp)
+    logical :: write_total_mass_flux
     integer, allocatable :: il(:,:), jl(:,:), kl(:,:), l_inv(:)
+    integer :: px, py, pz, pCoord(3)
 
     !
     ! laboetie doesnt work for charged solutes
@@ -188,13 +189,12 @@ SUBROUTINE equilibration
         ! the particle in the output file v_centralnode.dat.
         !
         if( compensate_f_ext .and. convergence_reached_without_fext) then
-          block
-            integer :: px, py, pz
-            px = n1/2+1 ! this is a restriction of Max's implementation: the force can only be at the central node.
-            py = n2/2+1 ! Ade has ongoing work on generalizing this to arbitrary px, py and pz
-            pz = n3/2+1
-            write(79,*) t-tfext, jx(px,py,pz), jy(px,py,pz), jz(px,py,pz)
-          end block
+          ! We read the particle coordinates from lb.in
+          pCoord = getinput%int3( "particle_coordinates", defaultvalue=[n1/2+1,n2/2+1,n3/2+1] )
+          px = pCoord(1)
+          py = pCoord(2)
+          pz = pCoord(3)
+          write(79,*) t-tfext, jx(px,py,pz), jy(px,py,pz), jz(px,py,pz)
         end if
 
         !
@@ -425,35 +425,46 @@ SUBROUTINE equilibration
                 l=0
                 err=.false.
                 open(47,file="output/dominika_particle_shape.xyz")
-                do i=n1/2+1-pdr,n1/2+1+pdr
-                  do j=n2/2+1-pdr,n2/2+1+pdr
-                    do k=n3/2+1-pdr,n3/2+1+pdr
-                      if( norm2(real([ i-(n1/2+1), j-(n2/2+1), k-(n3/2+1) ],dp)) > real(pd,dp)/2._dp ) cycle
+                open(14,file="output/NodesInParticle.dat")
+                do i= px-pdr, px+pdr
+                  do j= py-pdr, py+pdr
+                    do k= pz-pdr, pz+pdr
+                      if( norm2(real([ i-px, j-py, k-pz ],dp)) > real(pd,dp)/2._dp ) cycle
                       if (nature(i,j,k)/=fluid) err=.true.
                       f_ext_x(i,j,k) = f_ext_loc(1)
                       f_ext_y(i,j,k) = f_ext_loc(2)
                       f_ext_z(i,j,k) = f_ext_loc(3)
-                      l=l+1
-                      WRITE(47,*)i,j,k ! use ListPointPlot3D[data,BoxRatios->{1,1,1}] in Mathematica to read this file
+                      l=l+1 ! One more point within the particle
+                      write(47,*) i,j,k ! use ListPointPlot3D[data,BoxRatios->{1,1,1}]
+                                        ! in Mathematica to read this file
+                      write(14,*) l ! We write the number of lattice points occupied by the so-called particle
                     end do
                   end do
                 end do
                 close(47)
                 if(err.eqv..true.) then
-                  print*,"ERROR: l306 of equilibration_new.f90. Dominika's particle at a solid node"
+                  print*,"ERROR: l306 of equilibration_new.f90."
+                  print*,"=====  The particle is on top of a solid node"
                   stop
                 end if
 
+                !
+                ! We distribute the total force upon the particle evenly throughout the various nodes.
+                ! The so-called particle is sensitive to the total number of nodes in the physical system.
+                !
                 where(f_ext_x==f_ext_loc(1) .and. f_ext_y==f_ext_loc(2) .and. f_ext_z==f_ext_loc(3) )
-                  f_ext_x = f_ext_x/l
-                  f_ext_y = f_ext_y/l
-                  f_ext_z = f_ext_z/l
+                  f_ext_x = -f_ext_loc(1)/(fluid_nodes) +f_ext_x/l
+                  f_ext_y = -f_ext_loc(2)/(fluid_nodes) +f_ext_y/l
+                  f_ext_z = -f_ext_loc(3)/(fluid_nodes) +f_ext_z/l
                 else where
-                  f_ext_x = -f_ext_loc(1)/(fluid_nodes-l)
-                  f_ext_y = -f_ext_loc(2)/(fluid_nodes-l)
-                  f_ext_z = -f_ext_loc(3)/(fluid_nodes-l)
+                  f_ext_x = -f_ext_loc(1)/(fluid_nodes)
+                  f_ext_y = -f_ext_loc(2)/(fluid_nodes)
+                  f_ext_z = -f_ext_loc(3)/(fluid_nodes)
                 end where
 
+                !
+                ! Be sure you don't apply a force on a solid node
+                !
                 where(nature/=fluid)
                   f_ext_x = zerodp
                   f_ext_y = zerodp
