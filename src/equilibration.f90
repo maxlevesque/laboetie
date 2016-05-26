@@ -181,10 +181,20 @@ SUBROUTINE equilibration
         END IF
 
         !
-        ! Dominika
+        ! Compensate_f_ext is an option to have a local force one could apply on a given node (only the central node for now)
+        ! compensated by a continuum background force, a little bit like a compensating electric field in a charged supercell.
+        !
+        ! Ade: By doing so, we can apply a force fx or fy in order to analyse and observe the velocity streamlines around
+        ! the particle in the output file v_centralnode.dat.
         !
         if( compensate_f_ext .and. convergence_reached_without_fext) then
-          WRITE(79,*)t-tfext, jz(n1/2+1,n2/2+1,n3/2+1)
+          block
+            integer :: px, py, pz
+            px = n1/2+1 ! this is a restriction of Max's implementation: the force can only be at the central node.
+            py = n2/2+1 ! Ade has ongoing work on generalizing this to arbitrary px, py and pz
+            pz = n3/2+1
+            write(79,*) t-tfext, jx(px,py,pz), jy(px,py,pz), jz(px,py,pz)
+          end block
         end if
 
         !
@@ -348,6 +358,7 @@ SUBROUTINE equilibration
         ! check convergence
         !
         l2err = norm2(jx-jx_old+jy-jy_old+jz-jz_old)
+        l2err = sqrt(  norm2(jx-jx_old)**2  +  norm2(jy-jy_old)**2  +  norm2(jz-jz_old)**2  )/fluid_nodes
         if( l2err <= target_error .and. t>2 ) then
           convergence_reached = .true.
         else
