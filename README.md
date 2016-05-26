@@ -4,14 +4,14 @@ laboetie is the fluid dynamics code for chemical applications.
 It is based on the Lattice-Boltzmann algorithm to solve fluid dynamics equations.  
 [more to come]
 
-It is written by Maximilien Levesque [1] and Benjamin Rotenberg [2]  
-[1] École Normale Supérieure, PSL Research University, Département de Chimie, Sorbonne Universités – UPMC Univ Paris 06, CNRS UMR 8640 PASTEUR, 24 rue Lhomond, 75005 Paris, France  
-[2] Sorbonne Universités, UPMC Univ. Paris 06, CNRS, UMR 8234, PHENIX, F-75005 Paris, France
+It is written by Maximilien Levesque¹ and Benjamin Rotenberg²  
+¹ École Normale Supérieure and CNRS, Paris, France  
+² Sorbonne Universités, UPMC Univ. Paris 06, CNRS, UMR 8234, PHENIX, F-75005 Paris, France
 
 # Please cite us!
 
-We are academics. If you use Laboetie for one of your publication, could you please cite:  
-TODO
+We are academics: our work is evaluated on its citations. If you use Laboetie, please cite us:  
+[doi: 10.1103/PhysRevE.88.013308](http://dx.doi.org/10.1103/PhysRevE.88.013308)
 
 ## Installation instructions
 
