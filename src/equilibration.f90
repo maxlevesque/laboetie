@@ -357,7 +357,6 @@ SUBROUTINE equilibration
         !
         ! check convergence
         !
-        l2err = norm2(jx-jx_old+jy-jy_old+jz-jz_old)
         l2err = sqrt(  norm2(jx-jx_old)**2  +  norm2(jy-jy_old)**2  +  norm2(jz-jz_old)**2  )/fluid_nodes
         if( l2err <= target_error .and. t>2 ) then
           convergence_reached = .true.
