@@ -13,6 +13,17 @@ It is written by Maximilien Levesque¹ and Benjamin Rotenberg²
 We are academics: our work is evaluated on its citations. If you use Laboetie, please cite us:  
 [doi: 10.1103/PhysRevE.88.013308](http://dx.doi.org/10.1103/PhysRevE.88.013308)
 
+
+## Our git workflow
+
+[A successful git branching model](http://nvie.com/posts/a-successful-git-branching-model/)
+
+## How to Report Bugs Effectively
+
+[A blogpost by Simon Tatham](http://www.chiark.greenend.org.uk/~sgtatham/bugs.html)
+
+
+
 ## Installation instructions
 
 ```
