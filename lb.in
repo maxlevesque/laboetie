@@ -10,6 +10,8 @@ lz = 102
 geometryLabel = 1  # 1 => slit pore; 0 => geom.in; 11 => geom.pbm
 
 f_ext = 0.0  0.00001  0.0
+relaxation_time = 3.0
+
 #write_total_mass_flux = T
 #print_fequency = 1000
 #print_files_frequency = 1000

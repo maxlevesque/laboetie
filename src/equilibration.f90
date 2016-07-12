@@ -292,6 +292,7 @@ SUBROUTINE equilibration
         jx=jx/2
         jy=jy/2
         jz=jz/2
+
         ! do concurrent (i=1:n1, j=1:n2, k=1:n3)
         !   jx(i,j,k) = (jx(i,j,k) + sum(n(i,j,k,:)*cx(:)))/2._dp
         !   jy(i,j,k) = (jy(i,j,k) + sum(n(i,j,k,:)*cy(:)))/2._dp
