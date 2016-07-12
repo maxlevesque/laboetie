@@ -352,11 +352,12 @@ SUBROUTINE equilibration
         !
         ! check convergence
         !
-        ! ADE : the convergence criterion l2err was slightly changed in order to improve accuracy
-        !
         open(13,file="./output/l2err.dat")
-        l2err =  sqrt( (norm2(jx-jx_old)**2 + norm2(jy-jy_old)**2 + norm2(jz-jz_old)**2)/fluid_nodes ) ! ADE : I modified
-        write(13,*) t, (norm2(jx-jx_old))**2, (norm2(jy-jy_old))**2, (norm2(jz-jz_old))**2, l2err      ! these lines
+        l2err = maxval([maxval(abs(jx-jx_old)), &
+                        maxval(abs(jy-jy_old)), &
+                        maxval(abs(jz-jz_old)) &
+                       ])
+        write(13,*) t, l2err
 
         if( l2err <= target_error .and. t>2 ) then
           convergence_reached = .true.
