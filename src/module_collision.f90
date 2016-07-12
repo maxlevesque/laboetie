@@ -17,10 +17,13 @@ contains
     real(dp), intent(in) :: f_ext_x(:,:,:), f_ext_y(:,:,:), f_ext_z(:,:,:)
     real(dp), intent(inout) :: n(:,:,:,:)
     integer :: l, lmin, lmax
-    real(dp), allocatable, dimension(:) :: a0, a1, cx, cy, cz
+    real(dp), allocatable, dimension(:) :: a0, a1, a2, cx, cy, cz
     logical, save :: i_know_the_relaxation_time = .false.
     real(dp), save :: relaxation_time
-    real(dp), allocatable :: neq(:,:,:)
+    real(dp), allocatable, dimension(:,:,:) :: neq, ux, uy, uz
+    real(dp), parameter :: csq=1.0_dp/3._dp
+    logical, save :: i_know_i_want_first_order_only = .false.
+    logical, save :: first_order_only = .false.
 
     ! With a relaxation time of 1, the population relaxes to Boltzmann distribution
     ! at each timestep.
@@ -32,6 +35,12 @@ contains
       if( relaxation_time < 0.5_dp) error stop "relaxation_time must be > 0.5"
       i_know_the_relaxation_time = .true.
     end if
+
+    if(.not. i_know_i_want_first_order_only) then
+      first_order_only = getinput%log('first_order_only', defaultvalue=.false.)
+      i_know_i_want_first_order_only = .true.
+    end if
+
 
     lmin=lbm%lmin
     lmax=lbm%lmax
@@ -50,17 +59,70 @@ contains
     ! then update the populations according to the relaxation time.
     allocate( neq, mold=jx )
 
-    ! we do the collision even on solid nodes, where density=0
-    ! since it does not cost much in cputime and help the compiler to vectorize the (implicit) loops.
-    do concurrent( l=lmin:lmax )
-      neq(:,:,:) = a0(l)*density + a1(l)*( cx(l)*jx + cy(l)*jy + cz(l)*jz )
-      n(:,:,:,l) = (1._dp-1._dp/relaxation_time)*n(:,:,:,l) &
-                  + (1._dp/relaxation_time)*neq &
-                  + a1(l)*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z )
-    end do
+    if(.not.first_order_only) then
+      allocate( a2(lmin:lmax) )
+      a2(lmin:lmax) = lbm%vel(lmin:lmax)%a2
+
+      allocate( ux, uy, uz, mold=jx )
+
+      where(node%nature==fluid)
+        ux=jx/density
+        uy=jy/density
+        uz=jz/density
+      else where
+        ux=0
+        uy=0
+        uz=0
+      end where
+
+      do l=lmin,lmax
+        where(node%nature==fluid)
+
+          neq(:,:,:) = &
+            a0(l)*density &
+          + a1(l)*( cx(l)*jx + cy(l)*jy + cz(l)*jz ) &
+          + a2(l)*( &
+                     jx*ux*(cx(l)**2-csq) + jx*uy*cx(l)*cy(l)    + jx*uz*cx(l)*cz(l) &
+                   + jy*ux*cy(l)*cx(l)    + jy*uy*(cy(l)**2-csq) + jy*uz*cy(l)*cz(l) &
+                   + jz*ux*cz(l)*cx(l)    + jz*uy*cz(l)*cy(l)    + jz*uz*(cz(l)**2-csq) &
+                   )
+
+          n(:,:,:,l) = (1._dp-1._dp/relaxation_time)*n(:,:,:,l) &
+          + (1._dp/relaxation_time)*neq &
+          + a1(l)*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z )
+          ! here we could add the second order also for f_ext
+        end where
+      end do
+
+    else ! default: go to second order
+
+      do l=lmin,lmax
+        where(node%nature==fluid)
+
+          neq(:,:,:) = &
+          a0(l)*density &
+          + a1(l)*( cx(l)*jx + cy(l)*jy + cz(l)*jz )
+          n(:,:,:,l) = (1._dp-1._dp/relaxation_time)*n(:,:,:,l) &
+          + (1._dp/relaxation_time)*neq &
+          + a1(l)*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z )
+        end where
+      end do
+
+    end if
 
     ! call check_population (n) ! check that no population n < 0
   end subroutine collide
+
+
+
+
+
+
+
+
+
+
+
 
   subroutine check_population (arrayin)
     implicit none

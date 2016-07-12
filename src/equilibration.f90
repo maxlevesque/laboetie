@@ -133,8 +133,8 @@ SUBROUTINE equilibration
     PRINT*
     PRINT*,'Lattice Boltzmann'
     PRINT*,'================='
-    PRINT*,'       step     flux max           error         target error'
-    PRINT*,'       ----------------------------------------------------------------------------------'
+    PRINT*,'       step     error   '
+    PRINT*,'       -----------------'
 
 
     !
@@ -186,14 +186,6 @@ SUBROUTINE equilibration
             write(79,*)t-tfext, jx(px,py,pz), jy(px,py,pz), jz(px,py,pz)
         end if
 
-        !
-        ! backup moment density (velocities) to test convergence at the end of the timestep
-        !
-        jx_old = jx
-        jy_old = jy
-        jz_old = jz
-
-        !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !3
 
         !
         ! Collision step
@@ -267,6 +259,12 @@ SUBROUTINE equilibration
             WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ])
         END IF
 
+        !
+        ! backup moment density (velocities) to test convergence at the end of the timestep
+        !
+        jx_old = jx
+        jy_old = jy
+        jz_old = jz
 
         ! update momentum densities after the propagation
         ! this is completely local in space and my be parallelized very well
