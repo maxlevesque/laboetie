@@ -2,7 +2,7 @@ SUBROUTINE equilibration
 
     USE precision_kinds, only: i2b, dp, sp
     USE system, only: fluid, supercell, node, lbm, n, pbc
-    USE populations, only: update_populations
+    use module_collision, only: collide
     use module_input, only: getinput
     USE constants, only: x, y, z, zerodp
     USE mod_time, only: tick, tock
@@ -145,13 +145,7 @@ SUBROUTINE equilibration
         !
         ! Print sdtout timestep, etc
         !
-        IF( MODULO(t, print_frequency) == 0) THEN
-            vmaxx = MAXVAL( ABS(jx)/density, density>eps)
-            vmaxy = MAXVAL( ABS(jy)/density, density>eps)
-            vmaxz = MAXVAL( ABS(jz)/density, density>eps)
-            vmax  = MAX( vmaxx, vmaxy, vmaxz )
-            PRINT*, t, real( [vmax, l2err, target_error] ,sp)
-        END IF
+        IF( MODULO(t, print_frequency) == 0) PRINT*, t, real( [l2err, target_error] ,sp)
 
         !
         ! WRITE velocity profiles
@@ -204,25 +198,12 @@ SUBROUTINE equilibration
         !
         ! Collision step
         !
-        !$OMP PARALLEL DO DEFAULT(NONE) &
-        !$OMP SHARED(n,lmin,lmax,cx,jx,f_ext_x,cy,jy,f_ext_y,cz,jz,f_ext_z,a0,density,a1)&
-        !$OMP PRIVATE(l)
-        do l=lmin,lmax
-            n(:,:,:,l) = a0(l)*density(:,:,:) + a1(l)*(cx(l)*(jx+f_ext_x)+cy(l)*(jy+f_ext_y)+cz(l)*(jz+f_ext_z))
-        end do
-        !$OMP END PARALLEL DO
-
-        ! do concurrent(i=1:n1, j=1:n2, k=1:n3, l=lmin:lmax)
-        !   n(i,j,k,l) = a0(l)*density(i,j,k) +a1(l)*(&
-        !     cx(l)*(jx(i,j,k)+f_ext_x(i,j,k)) + cy(l)*(jy(i,j,k)+f_ext_y(i,j,k)) + cz(l)*(jz(i,j,k)+f_ext_z(i,j,k)))
-        ! end do
+        call collide(n, density, jx, jy, jz, f_ext_x, f_ext_y, f_ext_z)
 
         ! print velocity profile if you need/want it
         ! if( modulo(t, print_frequency) == 0) then
         !    call velocity_profiles(t) ! print velocity profiles
         ! end if
-
-        !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !5
 
         !
         ! Bounce back (boundpm) to simplify propagation step

@@ -24,7 +24,7 @@ OBJS = 	$(SRCDIR)/module_precision_kinds.f90 \
 	$(SRCDIR)/module_geometry.f90 \
 	$(SRCDIR)/module_moment_propagation.f90 \
 	$(SRCDIR)/module_myallocations.f90 \
-	$(SRCDIR)/module_populations.f90 \
+	$(SRCDIR)/module_collision.f90 \
 	$(SRCDIR)/module_time.f90 \
 	$(SRCDIR)/backup_phi_c_plus_c_minus.f90 \
 	$(SRCDIR)/advect.f90 \
