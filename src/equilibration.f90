@@ -145,7 +145,7 @@ SUBROUTINE equilibration
         !
         ! Print sdtout timestep, etc
         !
-        IF( MODULO(t, print_frequency) == 0) PRINT*, t, real( [l2err, target_error] ,sp)
+        IF( MODULO(t, print_frequency) == 0) PRINT*, t, real(l2err),"(target",real(target_error,4),")"
 
         !
         ! WRITE velocity profiles
@@ -268,36 +268,32 @@ SUBROUTINE equilibration
         END IF
 
 
-        ! print*,sum(density)
-        ! if( abs(sum(density)/real(n1*n2*n3,kind(density)) -1._dp) > epsilon(1._dp) ) then
-        !   stop "otto"
-        ! end if
-
-        !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !9
-
         ! update momentum densities after the propagation
         ! this is completely local in space and my be parallelized very well
-        !$OMP PARALLEL DO DEFAULT(NONE)&
-        !$OMP PRIVATE(l)&
-        !$OMP SHARED(lmin,lmax,n,cx,cy,cz)&
-        !$OMP REDUCTION(+:jx)&
-        !$OMP REDUCTION(+:jy)&
-        !$OMP REDUCTION(+:jz)
+        ! !$OMP PARALLEL DO DEFAULT(NONE)&
+        ! !$OMP PRIVATE(l)&
+        ! !$OMP SHARED(lmin,lmax,n,cx,cy,cz)&
+        ! !$OMP REDUCTION(+:jx)&
+        ! !$OMP REDUCTION(+:jy)&
+        ! !$OMP REDUCTION(+:jz)
+        ! do l=lmin,lmax
+        !     jx = jx +n(:,:,:,l)*cx(l)
+        !     jy = jy +n(:,:,:,l)*cy(l)
+        !     jz = jz +n(:,:,:,l)*cz(l)
+        ! end do
+        ! !$OMP END PARALLEL DO
+        ! jx=jx/2
+        ! jy=jy/2
+        ! jz=jz/2
+        ! BEN+MAX: 12/07/2016 change the way we integrate n_l*c_l
+        jx=0
+        jy=0
+        jz=0
         do l=lmin,lmax
             jx = jx +n(:,:,:,l)*cx(l)
             jy = jy +n(:,:,:,l)*cy(l)
             jz = jz +n(:,:,:,l)*cz(l)
         end do
-        !$OMP END PARALLEL DO
-        jx=jx/2
-        jy=jy/2
-        jz=jz/2
-
-        ! do concurrent (i=1:n1, j=1:n2, k=1:n3)
-        !   jx(i,j,k) = (jx(i,j,k) + sum(n(i,j,k,:)*cx(:)))/2._dp
-        !   jy(i,j,k) = (jy(i,j,k) + sum(n(i,j,k,:)*cy(:)))/2._dp
-        !   jz(i,j,k) = (jz(i,j,k) + sum(n(i,j,k,:)*cz(:)))/2._dp
-        ! end do
 
         !
         ! Dominika

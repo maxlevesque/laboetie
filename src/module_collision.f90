@@ -53,8 +53,10 @@ contains
     ! we do the collision even on solid nodes, where density=0
     ! since it does not cost much in cputime and help the compiler to vectorize the (implicit) loops.
     do concurrent( l=lmin:lmax )
-      neq(:,:,:) = a0(l)*density + a1(l)*( cx(l)*(jx+f_ext_x) + cy(l)*(jy+f_ext_y) + cz(l)*(jz+f_ext_z) )
-      n(:,:,:,l) = (1._dp-1._dp/relaxation_time)*n(:,:,:,l) + (1._dp/relaxation_time)*neq
+      neq(:,:,:) = a0(l)*density + a1(l)*( cx(l)*jx + cy(l)*jy + cz(l)*jz )
+      n(:,:,:,l) = (1._dp-1._dp/relaxation_time)*n(:,:,:,l) &
+                  + (1._dp/relaxation_time)*neq &
+                  + a1(l)*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z )
     end do
 
     ! call check_population (n) ! check that no population n < 0
