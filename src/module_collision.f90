@@ -16,7 +16,7 @@ contains
     real(dp), intent(in) :: density(:,:,:), jx(:,:,:), jy(:,:,:), jz(:,:,:)
     real(dp), intent(in) :: f_ext_x(:,:,:), f_ext_y(:,:,:), f_ext_z(:,:,:)
     real(dp), intent(inout) :: n(:,:,:,:)
-    integer :: l, lmin, lmax
+    integer :: l, lmin, lmax, nx, ny, nz
     real(dp), allocatable, dimension(:) :: a0, a1, a2, cx, cy, cz
     logical, save :: i_know_the_relaxation_time = .false.
     real(dp), save :: relaxation_time
@@ -57,13 +57,18 @@ contains
 
     ! First compute the Boltzmann (equilibrium) distribution,
     ! then update the populations according to the relaxation time.
-    allocate( neq, mold=jx )
+    nx = ubound(jx,1)
+    ny = ubound(jx,2)
+    nz = ubound(jx,3)
+    allocate( neq(nx,ny,nz) ,source=0._dp)
 
     if(.not.first_order_only) then
       allocate( a2(lmin:lmax) )
       a2(lmin:lmax) = lbm%vel(lmin:lmax)%a2
 
-      allocate( ux, uy, uz, mold=jx )
+      allocate( ux(nx,ny,nz) ,source=0._dp)
+      allocate( uy(nx,ny,nz) ,source=0._dp)
+      allocate( uz(nx,ny,nz) ,source=0._dp)
 
       where(node%nature==fluid)
         ux=jx/density
