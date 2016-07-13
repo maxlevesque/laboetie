@@ -10,3 +10,4 @@ src/.sconsign.dblite
 output
 chromato_generator
 vmdscenes*
+build

@@ -64,7 +64,7 @@ contains
 
     use precision_kinds, only: dp, i2b
     use system, only: f_ext, fluid, elec_slope, supercell, lbm, x, y, z, node
-    use populations, only: check_population
+    use module_collision, only: check_population
     use module_input, only: input_dp, input_dp3
 
     implicit none

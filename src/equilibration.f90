@@ -2,7 +2,7 @@ SUBROUTINE equilibration
 
     USE precision_kinds, only: i2b, dp, sp
     USE system, only: fluid, supercell, node, lbm, n, pbc
-    USE populations, only: update_populations
+    use module_collision, only: collide
     use module_input, only: getinput
     USE constants, only: x, y, z, zerodp
     USE mod_time, only: tick, tock
@@ -133,8 +133,8 @@ SUBROUTINE equilibration
     PRINT*
     PRINT*,'Lattice Boltzmann'
     PRINT*,'================='
-    PRINT*,'       step     flux max           error         target error'
-    PRINT*,'       ----------------------------------------------------------------------------------'
+    PRINT*,'       step     error   '
+    PRINT*,'       -----------------'
 
 
     !
@@ -145,13 +145,7 @@ SUBROUTINE equilibration
         !
         ! Print sdtout timestep, etc
         !
-        IF( MODULO(t, print_frequency) == 0) THEN
-            vmaxx = MAXVAL( ABS(jx)/density, density>eps)
-            vmaxy = MAXVAL( ABS(jy)/density, density>eps)
-            vmaxz = MAXVAL( ABS(jz)/density, density>eps)
-            vmax  = MAX( vmaxx, vmaxy, vmaxz )
-            PRINT*, t, real( [vmax, l2err, target_error] ,sp)
-        END IF
+        IF( MODULO(t, print_frequency) == 0) PRINT*, t, real(l2err),"(target",real(target_error,4),")"
 
         !
         ! WRITE velocity profiles
@@ -192,37 +186,16 @@ SUBROUTINE equilibration
             write(79,*)t-tfext, jx(px,py,pz), jy(px,py,pz), jz(px,py,pz)
         end if
 
-        !
-        ! backup moment density (velocities) to test convergence at the end of the timestep
-        !
-        jx_old = jx
-        jy_old = jy
-        jz_old = jz
-
-        !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !3
 
         !
         ! Collision step
         !
-        !$OMP PARALLEL DO DEFAULT(NONE) &
-        !$OMP SHARED(n,lmin,lmax,cx,jx,f_ext_x,cy,jy,f_ext_y,cz,jz,f_ext_z,a0,density,a1)&
-        !$OMP PRIVATE(l)
-        do l=lmin,lmax
-            n(:,:,:,l) = a0(l)*density(:,:,:) + a1(l)*(cx(l)*(jx+f_ext_x)+cy(l)*(jy+f_ext_y)+cz(l)*(jz+f_ext_z))
-        end do
-        !$OMP END PARALLEL DO
-
-        ! do concurrent(i=1:n1, j=1:n2, k=1:n3, l=lmin:lmax)
-        !   n(i,j,k,l) = a0(l)*density(i,j,k) +a1(l)*(&
-        !     cx(l)*(jx(i,j,k)+f_ext_x(i,j,k)) + cy(l)*(jy(i,j,k)+f_ext_y(i,j,k)) + cz(l)*(jz(i,j,k)+f_ext_z(i,j,k)))
-        ! end do
+        call collide(n, density, jx, jy, jz, f_ext_x, f_ext_y, f_ext_z)
 
         ! print velocity profile if you need/want it
         ! if( modulo(t, print_frequency) == 0) then
         !    call velocity_profiles(t) ! print velocity profiles
         ! end if
-
-        !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !5
 
         !
         ! Bounce back (boundpm) to simplify propagation step
@@ -286,36 +259,39 @@ SUBROUTINE equilibration
             WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ])
         END IF
 
-
-        ! print*,sum(density)
-        ! if( abs(sum(density)/real(n1*n2*n3,kind(density)) -1._dp) > epsilon(1._dp) ) then
-        !   stop "otto"
-        ! end if
-
-        !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !9
+        !
+        ! backup moment density (velocities) to test convergence at the end of the timestep
+        !
+        jx_old = jx
+        jy_old = jy
+        jz_old = jz
 
         ! update momentum densities after the propagation
         ! this is completely local in space and my be parallelized very well
-        !$OMP PARALLEL DO DEFAULT(NONE)&
-        !$OMP PRIVATE(l)&
-        !$OMP SHARED(lmin,lmax,n,cx,cy,cz)&
-        !$OMP REDUCTION(+:jx)&
-        !$OMP REDUCTION(+:jy)&
-        !$OMP REDUCTION(+:jz)
+        ! !$OMP PARALLEL DO DEFAULT(NONE)&
+        ! !$OMP PRIVATE(l)&
+        ! !$OMP SHARED(lmin,lmax,n,cx,cy,cz)&
+        ! !$OMP REDUCTION(+:jx)&
+        ! !$OMP REDUCTION(+:jy)&
+        ! !$OMP REDUCTION(+:jz)
+        ! do l=lmin,lmax
+        !     jx = jx +n(:,:,:,l)*cx(l)
+        !     jy = jy +n(:,:,:,l)*cy(l)
+        !     jz = jz +n(:,:,:,l)*cz(l)
+        ! end do
+        ! !$OMP END PARALLEL DO
+        ! jx=jx/2
+        ! jy=jy/2
+        ! jz=jz/2
+        ! BEN+MAX: 12/07/2016 change the way we integrate n_l*c_l
+        jx=0
+        jy=0
+        jz=0
         do l=lmin,lmax
             jx = jx +n(:,:,:,l)*cx(l)
             jy = jy +n(:,:,:,l)*cy(l)
             jz = jz +n(:,:,:,l)*cz(l)
         end do
-        !$OMP END PARALLEL DO
-        jx=jx/2
-        jy=jy/2
-        jz=jz/2
-        ! do concurrent (i=1:n1, j=1:n2, k=1:n3)
-        !   jx(i,j,k) = (jx(i,j,k) + sum(n(i,j,k,:)*cx(:)))/2._dp
-        !   jy(i,j,k) = (jy(i,j,k) + sum(n(i,j,k,:)*cy(:)))/2._dp
-        !   jz(i,j,k) = (jz(i,j,k) + sum(n(i,j,k,:)*cz(:)))/2._dp
-        ! end do
 
         !
         ! Dominika
@@ -352,11 +328,12 @@ SUBROUTINE equilibration
         !
         ! check convergence
         !
-        ! ADE : the convergence criterion l2err was slightly changed in order to improve accuracy
-        !
         open(13,file="./output/l2err.dat")
-        l2err =  sqrt( (norm2(jx-jx_old)**2 + norm2(jy-jy_old)**2 + norm2(jz-jz_old)**2)/fluid_nodes ) ! ADE : I modified
-        write(13,*) t, (norm2(jx-jx_old))**2, (norm2(jy-jy_old))**2, (norm2(jz-jz_old))**2, l2err      ! these lines
+        l2err = maxval([maxval(abs(jx-jx_old)), &
+                        maxval(abs(jy-jy_old)), &
+                        maxval(abs(jz-jz_old)) &
+                       ])
+        write(13,*) t, l2err
 
         if( l2err <= target_error .and. t>2 ) then
           convergence_reached = .true.
