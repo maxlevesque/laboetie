@@ -14,7 +14,7 @@ It is written by Maximilien Levesque¹ and Benjamin Rotenberg²
 
 ## Please cite us!
 
-We are academics: our work is evaluated on its citations. If you use Laboetie, please cite us:  
+We are researchers: our work is evaluated on the basis of citations to our publications. If you use Laboetie, please cite us:  
 [doi: 10.1103/PhysRevE.88.013308](http://dx.doi.org/10.1103/PhysRevE.88.013308)
 
 ------
@@ -34,12 +34,9 @@ We are academics: our work is evaluated on its citations. If you use Laboetie, p
 
 ## Installation instructions
 
-```
+```sh
 git clone https://github.com/maxlevesque/laboetie
 cd laboetie
-mkdir build
-cd build
-cmake ..
 make
 ```
 
