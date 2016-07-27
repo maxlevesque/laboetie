@@ -268,30 +268,30 @@ SUBROUTINE equilibration
 
         ! update momentum densities after the propagation
         ! this is completely local in space and my be parallelized very well
-        ! !$OMP PARALLEL DO DEFAULT(NONE)&
-        ! !$OMP PRIVATE(l)&
-        ! !$OMP SHARED(lmin,lmax,n,cx,cy,cz)&
-        ! !$OMP REDUCTION(+:jx)&
-        ! !$OMP REDUCTION(+:jy)&
-        ! !$OMP REDUCTION(+:jz)
-        ! do l=lmin,lmax
-        !     jx = jx +n(:,:,:,l)*cx(l)
-        !     jy = jy +n(:,:,:,l)*cy(l)
-        !     jz = jz +n(:,:,:,l)*cz(l)
-        ! end do
-        ! !$OMP END PARALLEL DO
-        ! jx=jx/2
-        ! jy=jy/2
-        ! jz=jz/2
-        ! BEN+MAX: 12/07/2016 change the way we integrate n_l*c_l
-        jx=0
-        jy=0
-        jz=0
+        !$OMP PARALLEL DO DEFAULT(NONE)&
+        !$OMP PRIVATE(l)&
+        !$OMP SHARED(lmin,lmax,n,cx,cy,cz)&
+        !$OMP REDUCTION(+:jx)&
+        !$OMP REDUCTION(+:jy)&
+        !$OMP REDUCTION(+:jz)
         do l=lmin,lmax
             jx = jx +n(:,:,:,l)*cx(l)
             jy = jy +n(:,:,:,l)*cy(l)
             jz = jz +n(:,:,:,l)*cz(l)
         end do
+        !$OMP END PARALLEL DO
+        jx=jx/2
+        jy=jy/2
+        jz=jz/2
+        ! ! BEN+MAX: 12/07/2016 change the way we integrate n_l*c_l
+        ! jx=0
+        ! jy=0
+        ! jz=0
+        ! do l=lmin,lmax
+        !     jx = jx +n(:,:,:,l)*cx(l)
+        !     jy = jy +n(:,:,:,l)*cy(l)
+        !     jz = jz +n(:,:,:,l)*cz(l)
+        ! end do
 
         !
         ! Dominika
