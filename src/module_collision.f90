@@ -62,7 +62,7 @@ contains
     nz = ubound(jx,3)
     allocate( neq(nx,ny,nz) ,source=0._dp)
 
-    if(.not.first_order_only) then
+    if(.not.first_order_only) then    ! default: use second order
       allocate( a2(lmin:lmax) )
       a2(lmin:lmax) = lbm%vel(lmin:lmax)%a2
 
@@ -99,7 +99,7 @@ contains
         end where
       end do
 
-    else ! default: go to second order
+    else
 
       do l=lmin,lmax
         where(node%nature==fluid)
