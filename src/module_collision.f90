@@ -17,7 +17,8 @@ contains
     use mod_lbmodel, only: lbm
     use module_input, only: getinput
     implicit none
-    real(dp), intent(in) :: density(:,:,:), jx(:,:,:), jy(:,:,:), jz(:,:,:)
+    real(dp), intent(in) :: density(:,:,:)
+    real(dp), intent(in) :: jx(:,:,:), jy(:,:,:), jz(:,:,:)
     real(dp), intent(in) :: f_ext_x(:,:,:), f_ext_y(:,:,:), f_ext_z(:,:,:)
     real(dp), intent(inout) :: n(:,:,:,:)
     integer :: l, lmin, lmax, nx, ny, nz
@@ -28,6 +29,7 @@ contains
     real(dp), parameter :: csq=1.0_dp/3._dp
     logical, save :: i_know_i_want_first_order_only = .false.
     logical, save :: first_order_only = .false.
+    integer, save :: collision_order
 
     ! With a relaxation time of 1, the population relaxes to Boltzmann distribution
     ! at each timestep.
@@ -43,8 +45,12 @@ contains
     if(.not. i_know_i_want_first_order_only) then
       first_order_only = getinput%log('first_order_only', defaultvalue=.false.)
       i_know_i_want_first_order_only = .true.
+      if( first_order_only ) then
+          collision_order = 1
+      else
+          collision_order = 2
+      end if
     end if
-
 
     lmin=lbm%lmin
     lmax=lbm%lmax
@@ -65,25 +71,23 @@ contains
     ny = ubound(jx,2)
     nz = ubound(jx,3)
     allocate( neq(nx,ny,nz) ,source=0._dp)
+    allocate( ux(nx,ny,nz) ,source=0._dp)
+    allocate( uy(nx,ny,nz) ,source=0._dp)
+    allocate( uz(nx,ny,nz) ,source=0._dp)
 
-    if(.not.first_order_only) then
-      allocate( a2(lmin:lmax) )
-      a2(lmin:lmax) = lbm%vel(lmin:lmax)%a2
+    where(node%nature==fluid)
+      ux=jx/density
+      uy=jy/density
+      uz=jz/density
+    else where
+      ux=0
+      uy=0
+      uz=0
+    end where
 
-      allocate( ux(nx,ny,nz) ,source=0._dp)
-      allocate( uy(nx,ny,nz) ,source=0._dp)
-      allocate( uz(nx,ny,nz) ,source=0._dp)
-
-      where(node%nature==fluid)
-        ux=jx/density
-        uy=jy/density
-        uz=jz/density
-      else where
-        ux=0
-        uy=0
-        uz=0
-      end where
-
+    select case (collision_order)
+    case(2)
+      allocate( a2(lmin:lmax) , source=lbm%vel(lmin:lmax)%a2)
       do l=lmin,lmax
         where(node%nature==fluid)
 
@@ -100,33 +104,27 @@ contains
           + (1._dp/relaxation_time)*neq &
           + (1._dp-1._dp/(2._dp*relaxation_time))*( &
                 a1(l)*( (cx(l)-ux)*f_ext_x + (cy(l)-uy)*f_ext_y + (cz(l)-uz)*f_ext_z ) &
-              + 2._dp*a2(l)*( cx(l)*ux + cy(l)*uy + cz(l)*uz )*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z ) &
-                                                   )
-          !+ a1(l)*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z )
+              + 2._dp*a2(l)*( cx(l)*ux + cy(l)*uy + cz(l)*uz )*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z ))
           ! here we could add the second order also for f_ext
         end where
       end do
 
-    else ! default: go to second order
+    case(1)
 
       do l=lmin,lmax
         where(node%nature==fluid)
 
-          neq(:,:,:) = &
-          a0(l)*density &
-          + a1(l)*( cx(l)*jx + cy(l)*jy + cz(l)*jz )
+          neq(:,:,:) = a0(l)*density + a1(l)*( cx(l)*jx + cy(l)*jy + cz(l)*jz )
           n(:,:,:,l) = (1._dp-1._dp/relaxation_time)*n(:,:,:,l) &
           + (1._dp/relaxation_time)*neq &
           + (1._dp-1._dp/(2._dp*relaxation_time))*( &
-                a1(l)*( (cx(l)-ux)*f_ext_x + (cy(l)-uy)*f_ext_y + (cz(l)-uz)*f_ext_z ) &
-                                                  )
-          !+ a1(l)*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z )
+                a1(l)*( (cx(l)-ux)*f_ext_x + (cy(l)-uy)*f_ext_y + (cz(l)-uz)*f_ext_z ) )
+
         end where
       end do
 
-    end if
+    end select
 
-    ! call check_population (n) ! check that no population n < 0
   end subroutine collide
 
 

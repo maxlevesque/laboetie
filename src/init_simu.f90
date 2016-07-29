@@ -1,15 +1,30 @@
-SUBROUTINE init_simu
+module module_init_simu
+    implicit none
+    private
+    public :: init_simu
+contains
 
-    USE precision_kinds
+SUBROUTINE init_simu(n)
+
+    USE precision_kinds, only: dp
     USE mod_lbmodel, ONLY: init_everything_related_to_lb_model => initialize
-    USE system, ONLY: node, n, solid
+    USE system, ONLY: node, solid
     USE io, ONLY: print_header, print_input_in_output_folder, inquireNecessaryFilesExistence
     USE myallocations
     use module_input, ONLY: getinput
-
     IMPLICIT NONE
+    real(dp), allocatable, intent(inout) :: n(:,:,:,:) ! xyz;l
+    integer :: l
 
-    REAL(dp) :: svden
+    !
+    ! laboetie doesnt work for charged solutes
+    !
+    IF( ABS(getinput%dp('sigma', defaultvalue=0._dp)) > 0._dp ) THEN
+        print*,"ERROR: laboetie can only consider uncharged systems."
+        print*,"===== Dont tell Benjamin you'd like to see such feature in Laboetie :)"
+        print*,"Hi Benjamin. I'm sure it is you testing this! grrrr :))"
+        ERROR STOP
+      END IF
 
     CALL print_header
     CALL inquireNecessaryFilesExistence  ! check that input, output folder and file ./lb.in exist
@@ -20,19 +35,33 @@ SUBROUTINE init_simu
     !
     ! Init solvent populations
     !
-    IF( .NOT. ALLOCATED(n)) CALL allocatereal4D(n)
-    n = 0
+    if(allocated(n)) then
+        error stop "n is already alloc in init_simu"
+    else
+        if(lbm%lmin/=1) error stop "lmin is not 1 in init_simu"
+        associate( nx => getinput%int("lx", assert='>0') ,&
+                   ny => getinput%int("ly", assert='>0') ,&
+                   nz => getinput%int("lz", assert='>0') )
+        allocate( n(nx,ny,nz,lbm%lmax), source=0._dp )
+        end associate
+    end if
 
     !
     ! Init Solvent density
-    ! but in the solid, where it is 0
+    ! It is 0. at the solid nodes where solvent cannot penetrate.
     !
-    svden = getinput%dp("initialSolventDensity", 1._dp)
-    WHERE( node%nature /= solid )
-        node%solventdensity = svden
-    ELSEWHERE
-        node%solventdensity = 0
-    END WHERE
+    block
+        real(dp) :: initialSolventDensity
+        initialSolventDensity = getinput%dp("initialSolventDensity", 1._dp, assert=">=0")
+        WHERE( node%nature /= solid )
+            node%solventdensity = initialSolventDensity
+        ELSEWHERE
+            node%solventdensity = 0
+        END WHERE
+    end block
+    do l= lbm%lmin, lbm%lmax
+        n(:,:,:,l) = node%solventdensity * lbm%vel(l)%a0
+    end do
 
     CALL charges_init    ! init charge distribution
 
@@ -55,20 +84,9 @@ SUBROUTINE scheduler
         tmom = getinput%int('tmom',-1)
         t_equil = getinput%int('t_equil',-1)
 
-        !! check coherence
-        !if( tmax <= 0 .or. tmom <= 0 .or. t_equil <= 0 ) then
-        !    stop 'in scheduler. no time should be negative or zero'
-        !end if
-        !! check tmax is last
-        !if( tmom > tmax .or. t_equil > tmax ) then
-        !    stop 'equilibration and moment propagation cannot start after simulation end. check input.'
-        !end if
-        !! tracer moment preparation should come after equilibration
-        !if( tmom < t_equil ) then
-        !    stop 'tracer moment propagation should come after equilibration.tmom should be >= t_equil. check input file.'
-        !end if
 end subroutine
     !
     !
     !
 end subroutine
+end module module_init_simu

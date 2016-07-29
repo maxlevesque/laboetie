@@ -1,83 +1,61 @@
-SUBROUTINE equilibration
+module module_equilibration
+    implicit none
+    private
+    public :: equilibration
+contains
+    subroutine equilibration(n)
 
-    USE precision_kinds, only: i2b, dp, sp
-    USE system, only: fluid, supercell, node, lbm, n, pbc
+    USE precision_kinds, only: dp
+    USE system, only: fluid, supercell, node, lbm, pbc
     use module_collision, only: collide
     use module_input, only: getinput
-    USE constants, only: x, y, z, zerodp
     USE mod_time, only: tick, tock
 
     implicit none
-    integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3, lmin, lmax, timer(100), g, ng, pdr, pd, ios, px, py, pz, pCoord(3)
-    integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency, GL
+    real(dp), intent(inout), contiguous :: n(:,:,:,:) ! xyz;l
+    integer :: t,i,j,k,l,ip,jp,kp,nx,ny,nz, lmin, lmax, timer(100), g, ng, pdr, pd, ios, px, py, pz
+    integer :: nfluid, print_frequency, tfext, print_files_frequency, GL
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
     real(dp) :: n_loc, f_ext_loc(3), l2err, target_error
     REAL(dp) :: vmaxx, vmaxy, vmaxz, vmax
     REAL(dp) :: vmaxx_old, vmaxy_old, vmaxz_old, vmax_old
     real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, n_old, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z
-    real(dp), allocatable, dimension(:) :: a0, a1
     integer, allocatable, dimension(:) :: cx, cy, cz
     logical :: convergence_reached, compensate_f_ext, convergence_reached_without_fext, convergence_reached_with_fext, err
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
     LOGICAL :: write_total_mass_flux
     integer, allocatable :: il(:,:), jl(:,:), kl(:,:), l_inv(:)
-
-    !
-    ! laboetie doesnt work for charged solutes
-    !
-    IF( ABS(getinput%dp('sigma', zerodp)) > eps ) THEN
-        print*,"ERROR: laboetie can only consider uncharged systems."
-        print*,"===== Dont tell Benjamin you'd like to see such feature in Laboetie :)"
-        print*,"Hi Benjamin. I'm sure it is you testing this! grrrr :))"
-        ERROR STOP
-    END IF
+    real(dp), parameter :: zerodp=0._dp
 
     lmin = lbm%lmin
     lmax = lbm%lmax
 
-    supercellgeometrylabel = supercell%geometry%label ! -1 for solid free cell
+    nx = getinput%int("lx", assert=">0")
+    ny = getinput%int("ly", assert=">0")
+    nz = getinput%int("lz", assert=">0")
 
-    n1 = getinput%int("lx", assert=">0")
-    n2 = getinput%int("ly", assert=">0")
-    n3 = getinput%int("lz", assert=">0")
-
-    !
     ! Print info to terminal every that number of steps
-    !
-    print_frequency = getinput%int('print_frequency', defaultvalue=max(int(50000/(n1*n2*n3)),1), assert=">0" ) ! this number is my own optimal. To be generalized on strong criteria some day.
+    print_frequency = getinput%int('print_frequency', defaultvalue=max(int(50000/(nx*ny*nz)),1), assert=">0" ) ! this number is my own optimal. To be generalized on strong criteria some day.
 
-    !
-    ! WRITE velocity profiles to terminal every that number of steps
-    !
+    ! Print velocity profiles to terminal every that number of steps
     print_files_frequency = getinput%int("print_files_frequency", HUGE(1))
 
-    fluid_nodes = count( node%nature==fluid )
+    ! number of fluid nodes
+    nfluid = count( node%nature==fluid )
 
-    ! Max : I had 1.D-8 before ADE's modification (June 21)
-    target_error = getinput%dp("target_error", 1.D-10)
+    ! density
+    allocate( density(nx,ny,nz), source=node%solventdensity, stat=ios); if (ios /= 0) stop "density: Allocation request denied"
 
-    allocate( density(n1,n2,n3), source=node%solventdensity, stat=ios)
-    if (ios /= 0) stop "density: Allocation request denied"
+    ! l_inv gives you the inverse of the velocity v_l
+    allocate( l_inv(lmin:lmax), source=lbm%vel(:)%inv, stat=ios); if(ios/=0) error stop "pb alloc l_inv in equilibration.f90"
 
-    allocate( l_inv(lmin:lmax) , stat=ios)
-    if (ios /= 0) stop "l_inv: Allocation request denied"
-    do l = lmin, lmax
-        l_inv(l) = lbm%vel(l)%inv
-    end do
-
-
-    allocate( jx     (n1,n2,n3), source=node%solventflux(x))
-    allocate( jx_old (n1,n2,n3) )
-    allocate( jy     (n1,n2,n3), source=node%solventflux(y))
-    allocate( jy_old (n1,n2,n3) )
-    allocate( jz     (n1,n2,n3), source=node%solventflux(z))
-    allocate( jz_old (n1,n2,n3) )
-    jx = 0
-    jy = 0
-    jz = 0
-    jx_old = 0
-    jy_old = 0
-    jz_old = 0
+    ! jx=ni*ci. j_old are used for checking convergence only
+    allocate( jx     (nx,ny,nz), source=0._dp)
+    allocate( jx_old (nx,ny,nz), source=0._dp)
+    allocate( jy     (nx,ny,nz), source=0._dp)
+    allocate( jy_old (nx,ny,nz), source=0._dp)
+    allocate( jz     (nx,ny,nz), source=0._dp)
+    allocate( jz_old (nx,ny,nz), source=0._dp)
 
     OPEN(66, FILE="output/mass-flux_profile_along_z.dat")
     OPEN(67, FILE="output/mass-flux_profile_along_y.dat")
@@ -90,38 +68,47 @@ SUBROUTINE equilibration
     OPEN(57, FILE="output/mean-density_profile_along_y.dat")
     OPEN(58, FILE="output/mean-density_profile_along_x.dat")
 
-    allocate( nature (n1,n2,n3), source=node%nature)
-    allocate( f_ext_x(n1,n2,n3), source=zerodp)
-    allocate( f_ext_y(n1,n2,n3), source=zerodp)
-    allocate( f_ext_z(n1,n2,n3), source=zerodp)
-
-    f_ext_loc = zerodp ! this is important and spagetty like... please read carefuln2 before modifying this line
     allocate( cx(lmax), source=lbm%vel(:)%coo(1))
     allocate( cy(lmax), source=lbm%vel(:)%coo(2))
     allocate( cz(lmax), source=lbm%vel(:)%coo(3))
-    allocate( a0(lmax), source=lbm%vel(:)%a0)
-    allocate( a1(lmax), source=lbm%vel(:)%a1)
+
+    allocate( nature (nx,ny,nz), source=node%nature)
+    allocate( f_ext_x(nx,ny,nz), source=zerodp)
+    allocate( f_ext_y(nx,ny,nz), source=zerodp)
+    allocate( f_ext_z(nx,ny,nz), source=zerodp)
+
+    ! The force to be applied initialy: 0.
+    f_ext_loc = zerodp
+
 
     !
     ! Tabulate the index of the node one finishes if one starts from a node and a velocity index l
     ! per direction
     !
-    allocate( il(lbm%lmin:lbm%lmax, 1:n1), stat=ios)
-    if (ios /= 0) stop "il: Allocation request denied"
-    allocate( jl(lbm%lmin:lbm%lmax, 1:n2), stat=ios)
-    if (ios /= 0) stop "jl: Allocation request denied"
-    allocate( kl(lbm%lmin:lbm%lmax, 1:n3), stat=ios)
-    if (ios /= 0) stop "kl: Allocation request denied"
+    ! il is the index in x direction to which points a velocity cl from node i.
+    allocate( il(lbm%lmin:lbm%lmax, 1:nx), stat=ios); if (ios /= 0) stop "il: Allocation request denied"
+    allocate( jl(lbm%lmin:lbm%lmax, 1:ny), stat=ios); if (ios /= 0) stop "jl: Allocation request denied"
+    allocate( kl(lbm%lmin:lbm%lmax, 1:nz), stat=ios); if (ios /= 0) stop "kl: Allocation request denied"
     do l= lmin, lmax
-        il(l,:) = [( pbc(i+cx(l),x) ,i=1,n1 )]
-        jl(l,:) = [( pbc(j+cy(l),y) ,j=1,n2 )]
-        kl(l,:) = [( pbc(k+cz(l),z) ,k=1,n3 )]
+        il(l,:) = [( pbc(i+cx(l),1) ,i=1,nx )]
+        jl(l,:) = [( pbc(j+cy(l),2) ,j=1,ny )]
+        kl(l,:) = [( pbc(k+cz(l),3) ,k=1,nz )]
     end do
 
     convergence_reached_without_fext = .false.
     convergence_reached_with_fext = .false.
-    compensate_f_ext = getinput%log("compensate_f_ext",.false.)
-    if(compensate_f_ext) open(79,file="./output/v_centralnode.dat")
+
+    !
+    ! Compensate_f_ext is an option to have a local force one could apply on a given node (only the central node for now)
+    ! compensated by a continuum background force, a little bit like a compensating electric field in a charged supercell.
+    !
+    ! Ade: By doing so, we can apply a force fx or fy in order to analyse and observe the velocity streamlines around
+    ! the particle in the output file v_centralnode.dat.
+    !
+    compensate_f_ext = getinput%log("compensate_f_ext", defaultvalue=.false.)
+    if(compensate_f_ext) then
+      call init_work_for_Adelchi()
+    end if
 
     write_total_mass_flux = getinput%log("write_total_mass_flux", .FALSE.)
     IF( write_total_mass_flux ) THEN
@@ -129,64 +116,19 @@ SUBROUTINE equilibration
     END IF
 
 
-
+    target_error = getinput%dp("target_error", 1.D-10)
     PRINT*
     PRINT*,'Lattice Boltzmann'
     PRINT*,'================='
-    PRINT*,'       step     error   '
-    PRINT*,'       -----------------'
-
+    PRINT*,'       step     error   (target=',real(target_error),')'
+    PRINT*,'       ---------------------------------------------'
 
     !
     ! TIME STEPS (in lb units)
     !
     do t=1,HUGE(t)
 
-
-        !
-        ! Print sdtout timestep, etc
-        !
-        IF( MODULO(t, print_frequency) == 0) PRINT*, t, real(l2err),"(target",real(target_error,4),")"
-
-        !
-        ! WRITE velocity profiles
-        !
-        IF( MODULO(t, print_files_frequency) == 0 .OR. t==1) THEN
-            WRITE(66,*)"# timestep",t
-            WRITE(67,*)"# timestep",t
-            WRITE(68,*)"# timestep",t
-            WRITE(56,*)"# timestep",t
-            WRITE(57,*)"# timestep",t
-            WRITE(58,*)"# timestep",t
-            DO k=1,n3
-                WRITE(56,*) k, SUM(density(:,:,k))/ MAX( COUNT(density(:,:,k)>eps)  ,1)
-                WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
-            END DO
-            DO k=1,n2
-                WRITE(57,*) k, SUM(density(:,k,:))/ MAX( COUNT(density(:,k,:)>eps)  ,1)
-                WRITE(67,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
-            END DO
-            DO k=1,n1
-                WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps)  ,1)
-                WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
-            END DO
-            WRITE(66,*)
-            WRITE(67,*)
-            WRITE(68,*)
-        END IF
-
-        !
-        ! Compensate_f_ext is an option to have a local force one could apply on a given node (only the central node for now)
-        ! compensated by a continuum background force, a little bit like a compensating electric field in a charged supercell.
-        !
-        ! Ade: By doing so, we can apply a force fx or fy in order to analyse and observe the velocity streamlines around
-        ! the particle in the output file v_centralnode.dat.
-        !
-        if( compensate_f_ext .and. convergence_reached_without_fext) then
-            if(px<=0 .or. py<=0 .or. pz<=0) error stop "px, py or pz is not valid in equilibration.f90"
-            write(79,*)t-tfext, jx(px,py,pz), jy(px,py,pz), jz(px,py,pz)
-        end if
-
+        call lots_of_prints()
 
         !
         ! Collision step
@@ -202,13 +144,13 @@ SUBROUTINE equilibration
         ! Bounce back (boundpm) to simplify propagation step
         !
         do concurrent(l=lmin:lmax:2)
-            do concurrent(k=1:n3)
+            do concurrent(k=1:nz)
                 kp = kl(l,k)
                 !kp=pbc(k+cz(l),z)
-                do concurrent(j=1:n2)
+                do concurrent(j=1:ny)
                     jp = jl(l,j)
                     !jp=pbc(j+cy(l),y)
-                    do concurrent(i=1:n1)
+                    do concurrent(i=1:nx)
                         ip = il(l,i)
                         !ip=pbc(i+cx(l),x)
                         if( nature(i,j,k) /= nature(ip,jp,kp) ) then
@@ -224,16 +166,28 @@ SUBROUTINE equilibration
         !
         ! propagation
         !
+        ! call propagate(n)
+        ! subroutine propagate(pop)
+        !   implicit none
+        !   use precision_kinds, only: dp
+        !   real(dp), intent(inout) :: pop(:,:,:,:) ! xyz,l
+        !   real(dp), allocatable :: pop_eq(:,:,:) ! xyz
+        !   integer :: i,j,k,l
+        !   allocate( pop_eq, mold=pop(:,:,:,1))
+        !   do l=lbm%lmin,lbm%lmax
+        !       n_old  =
+        !   end do
+        ! end subroutine propagate
         !$OMP PARALLEL DO DEFAULT(NONE) &
-        !$OMP SHARED(n,n3,n2,n1,lmin,lmax,cz,cy,cx,il,jl,kl) &
+        !$OMP SHARED(n,nz,ny,nx,lmin,lmax,il,jl,kl) &
         !$OMP PRIVATE(l,k,j,i,ip,jp,kp,n_old)
         do l=lmin,lmax
             n_old = n(:,:,:,l)
-            do k=1,n3
+            do k=1,nz
                 kp = kl(l,k)
-                do j=1,n2
+                do j=1,ny
                     jp = jl(l,j)
-                    do i=1,n1
+                    do i=1,nx
                         ip = il(l,i)
                         n(ip,jp,kp,l) = n_old(i,j,k)
                     end do
@@ -277,29 +231,14 @@ SUBROUTINE equilibration
         ! !$OMP REDUCTION(+:jx)&
         ! !$OMP REDUCTION(+:jy)&
         ! !$OMP REDUCTION(+:jz)
-        ! do l=lmin,lmax
-        !     jx = jx +n(:,:,:,l)*cx(l)
-        !     jy = jy +n(:,:,:,l)*cy(l)
-        !     jz = jz +n(:,:,:,l)*cz(l)
-        ! end do
-        ! !$OMP END PARALLEL DO
-        ! jx=jx/2
-        ! jy=jy/2
-        ! jz=jz/2
-        ! BEN+MAX: 12/07/2016 change the way we integrate n_l*c_l
-        !jx=0
-        !jy=0
-        !jz=0
-        jx=f_ext_x/2._dp
-        jy=f_ext_y/2._dp
-        jz=f_ext_z/2._dp
+        jx=f_ext_x/2.
+        jy=f_ext_y/2.
+        jz=f_ext_z/2.
         do l=lmin,lmax
             jx = jx +n(:,:,:,l)*cx(l)
             jy = jy +n(:,:,:,l)*cy(l)
             jz = jz +n(:,:,:,l)*cz(l)
         end do
-        
-        !IF( MODULO(t, print_frequency) == 0) PRINT*,  t, "after ", jz(1,1,1)
 
         !
         ! Dominika
@@ -307,8 +246,8 @@ SUBROUTINE equilibration
         if( compensate_f_ext .and. convergence_reached_without_fext .and. t==tfext) then
             open(90,file="./output/f_ext-field_t0.dat")
             open(91,file="./output/vel-field_central_t0.dat")
-            do i=1,n1
-                do k=1,n3
+            do i=1,nx
+                do k=1,nz
                     WRITE(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
                     WRITE(91,*) i, k, jx(i,py,k), jz(i,py,k)
                 end do
@@ -319,8 +258,8 @@ SUBROUTINE equilibration
         if( compensate_f_ext .and. convergence_reached_without_fext .and. t==tfext+1) then
             open(90,file="./output/f_ext-field_t1.dat")
             open(91,file="./output/vel-field_central_t1.dat")
-            do i=1,n1
-                do k=1,n3
+            do i=1,nx
+                do k=1,nz
                     WRITE(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
                     WRITE(91,*) i, k, jx(i,py,k), jz(i,py,k)
                 end do
@@ -328,10 +267,6 @@ SUBROUTINE equilibration
             close(90)
             close(91)
         end if
-
-
-        ! !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !11
-
 
         !
         ! check convergence
@@ -348,8 +283,6 @@ SUBROUTINE equilibration
         else
           convergence_reached = .false.
         end if
-
-
 
         ! select your branch
         if(convergence_reached) then
@@ -386,22 +319,6 @@ SUBROUTINE equilibration
               end where
 
             else if(compensate_f_ext) then ! force applied to a central particle only
-                pd = getinput%int("dominika_particle_diameter",1)
-                print*,"       Dominika's particle has diameter (lb units)", pd
-                if( modulo(pd,2)==0 ) then
-                  print*,"ERROR: l. 285 particle diameter must be odd"
-                  print*,"-----  It is now",pd
-                  stop
-                end if
-
-                if(modulo(n1,2)==0 .or. modulo(n2,2)==0 .or. modulo(n3,2)==0) then
-                  print*,"ERROR: l.158 of equilibration_new.f90"
-                  print*,"=====  when compensate_f_ext, there should be odd number of nodes in all directions"
-                  print*,"n1, n2, n3 =",n1,n2,n3
-                  stop
-                end if
-                pdr = pd/2 ! nodes of the particle on the right (or left) of the particle center. If particle is diameter 3, we have 1 node on the left and 1 on the right, so pd=3, pdr=3/2=1
-
                 f_ext_x = zerodp
                 f_ext_y = zerodp
                 f_ext_z = zerodp
@@ -410,12 +327,6 @@ SUBROUTINE equilibration
                 err=.false.
                 open(47,file="output/dominika_particle_shape.xyz")
                 open(14,file="output/NodesInParticle.dat")
-                ! ADE : We read the particle coordinates from lb.in
-                pCoord = getinput%int3("particle_coordinates", defaultvalue=[n1/2+1,n2/2+1,n3/2+1] )
-                px = pCoord(1)
-                py = pCoord(2)
-                pz = pCoord(3)
-
                 do i=px-pdr,px+pdr
                   do j=py-pdr,py+pdr
                     do k=pz-pdr,pz+pdr
@@ -448,15 +359,15 @@ SUBROUTINE equilibration
                 ! within the walls
                 if (GL==-1) then
                  where(f_ext_x==f_ext_loc(1) .and. f_ext_y==f_ext_loc(2).and.f_ext_z==f_ext_loc(3) )
-                  f_ext_x = -f_ext_loc(1)/(fluid_nodes) +f_ext_x/l
-                  f_ext_y = -f_ext_loc(2)/(fluid_nodes) +f_ext_y/l
-                  f_ext_z = -f_ext_loc(3)/(fluid_nodes) +f_ext_z/l
+                  f_ext_x = -f_ext_loc(1)/(nfluid) +f_ext_x/l
+                  f_ext_y = -f_ext_loc(2)/(nfluid) +f_ext_y/l
+                  f_ext_z = -f_ext_loc(3)/(nfluid) +f_ext_z/l
                  else where
-                  f_ext_x = -f_ext_loc(1)/(fluid_nodes)
-                  f_ext_y = -f_ext_loc(2)/(fluid_nodes)
-                  f_ext_z = -f_ext_loc(3)/(fluid_nodes)
+                  f_ext_x = -f_ext_loc(1)/(nfluid)
+                  f_ext_y = -f_ext_loc(2)/(nfluid)
+                  f_ext_z = -f_ext_loc(3)/(nfluid)
                  end where
-                   if( any(abs([sum(f_ext_x)/fluid_nodes,sum(f_ext_y)/fluid_nodes,sum(f_ext_z)/fluid_nodes])> eps ) ) then
+                   if( any(abs([sum(f_ext_x)/nfluid,sum(f_ext_y)/nfluid,sum(f_ext_z)/nfluid])> eps ) ) then
                      print*,"ERROR: l.215 of equilibration_new.f90"
                      print*,"=====  The compensation is not well-implemented."
                      print*,"       sum(f_ext_x)=",sum(f_ext_x)
@@ -502,15 +413,15 @@ SUBROUTINE equilibration
   WRITE(56,*)"# Steady state with convergence criteria", REAL(target_error)
   WRITE(57,*)"# Steady state with convergence criteria", REAL(target_error)
   WRITE(58,*)"# Steady state with convergence criteria", REAL(target_error)
-  DO k=1,n3
+  DO k=1,nz
       WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
       WRITE(56,*) k, SUM(density(:,:,k))/ MAX( COUNT(density(:,:,k)>eps) ,1)
   END DO
-  DO k=1,n2
+  DO k=1,ny
       WRITE(67,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
       WRITE(57,*) k, SUM(density(:,k,:))/ MAX( COUNT(density(:,k,:)>eps) ,1)
   END DO
-  DO k=1,n1
+  DO k=1,nx
       WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
       WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps) ,1)
   END DO
@@ -525,8 +436,8 @@ SUBROUTINE equilibration
   ! Print velocity 2D profilew
   !
   OPEN(69, FILE="output/mass-flux_field_2d_at_x.eq.1.dat")
-  DO j=1,n2
-      DO k=1,n3
+  DO j=1,ny
+      DO k=1,nz
           WRITE(69,*) j, k, jy(1,j,k), jz(1,j,k)
       END DO
   END DO
@@ -537,8 +448,8 @@ SUBROUTINE equilibration
     print*,"       The particle is located at ", px,py,pz
     open(90,file="./output/f_ext-field.dat")
     open(91,file="./output/vel-field_central.dat")
-    do i=1,n1
-      do k=1,n3
+    do i=1,nx
+      do k=1,nz
         WRITE(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
         WRITE(91,*) i, k,      jx(i,py,k),      jz(i,py,k)
       end do
@@ -549,9 +460,70 @@ SUBROUTINE equilibration
 
   ! put back arrays into original types
   node%solventdensity = density
-  node%solventflux(x) = jx
-  node%solventflux(y) = jy
-  node%solventflux(z) = jz
+  node%solventflux(1) = jx
+  node%solventflux(2) = jy
+  node%solventflux(3) = jz
   node%nature = nature
 
+contains
+
+subroutine init_work_for_Adelchi()
+  integer(dp) :: pCoord(3)
+  ! We log the velocity of the particle node
+  open(79,file="./output/v_centralnode.dat")
+  pCoord = getinput%int3("particle_coordinates", defaultvalue=[nx/2+1,ny/2+1,nz/2+1], assert=">0" )
+  px = pCoord(1)
+  py = pCoord(2)
+  pz = pCoord(3)
+  if(px<1 .or. py<1 .or. pz<1 .or. px>nx .or. py>ny .or. pz>nz) error stop "Problem in central particle coordinates"
+  pd = getinput%int("dominika_particle_diameter",1)
+  print*,"Dominika's particle has a diameter of ", pd,"lb units"
+  if( modulo(pd,2)==0 ) then
+    print*,"ERROR: l. 285 particle diameter must be odd"
+    print*,"-----  It is now",pd
+    stop
+  end if
+  if(modulo(nx,2)==0 .or. modulo(ny,2)==0 .or. modulo(nz,2)==0) then
+    print*,"ERROR: l.158 of equilibration_new.f90"
+    print*,"=====  when compensate_f_ext, there should be odd number of nodes in all directions"
+    print*,"nx, ny, nz =",nx,ny,nz
+    stop
+  end if
+  pdr = pd/2 ! nodes of the particle on the right (or left) of the particle center. If particle is diameter 3, we have 1 node on the left and 1 on the right, so pd=3, pdr=3/2=1
+end subroutine init_work_for_Adelchi
+
+
+subroutine lots_of_prints
+if( modulo(t, print_frequency) == 0) PRINT*, t, real(l2err)
+if( MODULO(t, print_files_frequency) == 0 .OR. t==1) THEN
+    WRITE(66,*)"# timestep",t
+    WRITE(67,*)"# timestep",t
+    WRITE(68,*)"# timestep",t
+    WRITE(56,*)"# timestep",t
+    WRITE(57,*)"# timestep",t
+    WRITE(58,*)"# timestep",t
+    DO k=1,nz
+        WRITE(56,*) k, SUM(density(:,:,k))/ MAX( COUNT(density(:,:,k)>eps)  ,1)
+        WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
+    END DO
+    DO k=1,ny
+        WRITE(57,*) k, SUM(density(:,k,:))/ MAX( COUNT(density(:,k,:)>eps)  ,1)
+        WRITE(67,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
+    END DO
+    DO k=1,nx
+        WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps)  ,1)
+        WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
+    END DO
+    WRITE(66,*)
+    WRITE(67,*)
+    WRITE(68,*)
+END IF
+
+if( compensate_f_ext .and. convergence_reached_without_fext) then
+    write(79,*)t-tfext, jx(px,py,pz), jy(px,py,pz), jz(px,py,pz)
+end if
+end subroutine lots_of_prints
+
+
 end subroutine equilibration
+end module module_equilibration
