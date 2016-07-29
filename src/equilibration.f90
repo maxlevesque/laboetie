@@ -6,19 +6,17 @@ contains
     subroutine equilibration(n)
 
     USE precision_kinds, only: dp
-    USE system, only: fluid, supercell, node, lbm, pbc
+    USE system, only: fluid, node, lbm, pbc
     use module_collision, only: collide
     use module_input, only: getinput
     USE mod_time, only: tick, tock
 
     implicit none
     real(dp), intent(inout), contiguous :: n(:,:,:,:) ! xyz;l
-    integer :: t,i,j,k,l,ip,jp,kp,nx,ny,nz, lmin, lmax, timer(100), g, ng, pdr, pd, ios, px, py, pz
+    integer :: t,i,j,k,l,ip,jp,kp,nx,ny,nz, lmin, lmax, pdr, pd, ios, px, py, pz
     integer :: nfluid, print_frequency, tfext, print_files_frequency, GL
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
     real(dp) :: n_loc, f_ext_loc(3), l2err, target_error
-    REAL(dp) :: vmaxx, vmaxy, vmaxz, vmax
-    REAL(dp) :: vmaxx_old, vmaxy_old, vmaxz_old, vmax_old
     real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, n_old, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z
     integer, allocatable, dimension(:) :: cx, cy, cz
     logical :: convergence_reached, compensate_f_ext, convergence_reached_without_fext, convergence_reached_with_fext, err
@@ -27,12 +25,19 @@ contains
     integer, allocatable :: il(:,:), jl(:,:), kl(:,:), l_inv(:)
     real(dp), parameter :: zerodp=0._dp
 
-    lmin = lbm%lmin
-    lmax = lbm%lmax
-
+    ! Check system sizes.
     nx = getinput%int("lx", assert=">0")
     ny = getinput%int("ly", assert=">0")
     nz = getinput%int("lz", assert=">0")
+    if( size(n,1)/=nx ) error stop "nx is inconsistant with n in equilibration"
+    if( size(n,2)/=ny ) error stop "ny is inconsistant with n in equilibration"
+    if( size(n,3)/=nz ) error stop "nz is inconsistant with n in equilibration"
+
+    ! check LatticeBoltzmann model (we count velocity indices from 1, Fortran style!)
+    lmin = lbm%lmin
+    lmax = lbm%lmax
+    if( lbound(n,4)/=1 .or. lmin/=1) error stop "lmin is strange and inconsistant in equilibration"
+    if( ubound(n,4)/=lmax ) error stop "lmax is strange and inconsistant in equilibration"
 
     ! Print info to terminal every that number of steps
     print_frequency = getinput%int('print_frequency', defaultvalue=max(int(50000/(nx*ny*nz)),1), assert=">0" ) ! this number is my own optimal. To be generalized on strong criteria some day.
@@ -44,7 +49,7 @@ contains
     nfluid = count( node%nature==fluid )
 
     ! density
-    allocate( density(nx,ny,nz), source=node%solventdensity, stat=ios); if (ios /= 0) stop "density: Allocation request denied"
+    allocate( density(nx,ny,nz), source=sum(n,4), stat=ios); if (ios /= 0) stop "density: Allocation request denied"
 
     ! l_inv gives you the inverse of the velocity v_l
     allocate( l_inv(lmin:lmax), source=lbm%vel(:)%inv, stat=ios); if(ios/=0) error stop "pb alloc l_inv in equilibration.f90"
@@ -63,10 +68,11 @@ contains
     WRITE(66,*) "# z, <ρ.v_x>_{x,y}, <ρ.v_y>_{x,y}, <ρ.v_z>_{x,y}"
     WRITE(67,*) "# y, <ρ.v_x>_{x,z}, <ρ.v_y>_{x,z}, <ρ.v_z>_{x,z}"
     WRITE(68,*) "# x, <ρ.v_x>_{y,z}, <ρ.v_y>_{y,z}, <ρ.v_z>_{y,z}"
-
     OPEN(56, FILE="output/mean-density_profile_along_z.dat")
     OPEN(57, FILE="output/mean-density_profile_along_y.dat")
     OPEN(58, FILE="output/mean-density_profile_along_x.dat")
+    write_total_mass_flux = getinput%log("write_total_mass_flux", .FALSE.)
+    IF( write_total_mass_flux ) OPEN( 65, FILE="output/total_mass_flux.dat" )
 
     allocate( cx(lmax), source=lbm%vel(:)%coo(1))
     allocate( cy(lmax), source=lbm%vel(:)%coo(2))
@@ -79,7 +85,6 @@ contains
 
     ! The force to be applied initialy: 0.
     f_ext_loc = zerodp
-
 
     !
     ! Tabulate the index of the node one finishes if one starts from a node and a velocity index l
@@ -106,15 +111,7 @@ contains
     ! the particle in the output file v_centralnode.dat.
     !
     compensate_f_ext = getinput%log("compensate_f_ext", defaultvalue=.false.)
-    if(compensate_f_ext) then
-      call init_work_for_Adelchi()
-    end if
-
-    write_total_mass_flux = getinput%log("write_total_mass_flux", .FALSE.)
-    IF( write_total_mass_flux ) THEN
-        OPEN( 65, FILE="output/total_mass_flux.dat" )
-    END IF
-
+    if(compensate_f_ext) call init_work_for_Adelchi()
 
     target_error = getinput%dp("target_error", 1.D-10)
     PRINT*
@@ -166,18 +163,6 @@ contains
         !
         ! propagation
         !
-        ! call propagate(n)
-        ! subroutine propagate(pop)
-        !   implicit none
-        !   use precision_kinds, only: dp
-        !   real(dp), intent(inout) :: pop(:,:,:,:) ! xyz,l
-        !   real(dp), allocatable :: pop_eq(:,:,:) ! xyz
-        !   integer :: i,j,k,l
-        !   allocate( pop_eq, mold=pop(:,:,:,1))
-        !   do l=lbm%lmin,lbm%lmax
-        !       n_old  =
-        !   end do
-        ! end subroutine propagate
         !$OMP PARALLEL DO DEFAULT(NONE) &
         !$OMP SHARED(n,nz,ny,nx,lmin,lmax,il,jl,kl) &
         !$OMP PRIVATE(l,k,j,i,ip,jp,kp,n_old)
@@ -197,9 +182,9 @@ contains
         !$OMP END PARALLEL DO
 
         !
-        ! The populations, since they are probabilities, must never be negative
+        ! The populations, that are probabilities, must never be negative
         !
-        IF( ANY(n<0) ) ERROR STOP "In equilibration_new, the population n(x,y,z,vel) < 0"
+        if( any(n<0) ) error stop "In equilibration_new, the population n(x,y,z,vel) < 0"
 
         !
         ! Update densities after the propagation and check it
@@ -210,9 +195,7 @@ contains
         !
         ! WRITE the total density
         !
-        IF( write_total_mass_flux ) THEN
-            WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ])
-        END IF
+        IF( write_total_mass_flux ) WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ])
 
         !
         ! backup moment density (velocities) to test convergence at the end of the timestep
@@ -220,8 +203,6 @@ contains
         jx_old = jx
         jy_old = jy
         jz_old = jz
-
-        !IF( MODULO(t, print_frequency) == 0) PRINT*,  t, "before", jz(1,1,1)
 
         ! update momentum densities after the propagation
         ! this is completely local in space and my be parallelized very well
@@ -269,22 +250,21 @@ contains
         end if
 
         !
-        ! check convergence
+        ! Check convergence
+        ! Note to myself: we store these large arrays jx_old etc just for this!
         !
         open(13,file="./output/l2err.dat")
-        l2err = maxval([maxval(abs(jx-jx_old)), &
-                        maxval(abs(jy-jy_old)), &
-                        maxval(abs(jz-jz_old)) &
-                       ])
+        l2err = maxval(   [  maxval(abs(jx-jx_old)), maxval(abs(jy-jy_old)), maxval(abs(jz-jz_old)) ])
         write(13,*) t, l2err
-
         if( l2err <= target_error .and. t>2 ) then
-          convergence_reached = .true.
+            convergence_reached = .true.
         else
-          convergence_reached = .false.
+            convergence_reached = .false.
         end if
 
-        ! select your branch
+        !
+        ! Applying the forces or not?
+        !
         if(convergence_reached) then
           if( .not.convergence_reached_without_fext ) then
             convergence_reached_without_fext = .true.
@@ -468,7 +448,7 @@ contains
 contains
 
 subroutine init_work_for_Adelchi()
-  integer(dp) :: pCoord(3)
+  integer :: pCoord(3)
   ! We log the velocity of the particle node
   open(79,file="./output/v_centralnode.dat")
   pCoord = getinput%int3("particle_coordinates", defaultvalue=[nx/2+1,ny/2+1,nz/2+1], assert=">0" )

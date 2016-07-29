@@ -12,6 +12,7 @@ program main
     ! The heart of the lattice boltzmann method lies in the populations, n(x,y,z,l).
     ! where l is the index of the discret velocities.
     ! populations evolve with time.
+    ! This variable is the most important want, the one you should follow with great attention.
     !
     real(dp), allocatable :: n(:,:,:,:)
 
