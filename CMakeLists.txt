@@ -73,7 +73,6 @@ set(laboetie_SRCS
   src/charges_init.f90
   src/charge_test.f90
   src/check_charge_distribution_equilibrium.f90
-  src/comp_j.f90
   src/drop_tracers.f90
   src/electrostatic_pot.f90
   src/equilibration.f90
@@ -93,12 +92,10 @@ set(laboetie_SRCS
   src/module_system.f90
   src/module_time.f90
   src/poisson_nernst_planck.f90
-  src/propagation.f90
   src/smolu.f90
   src/sor.f90
   src/supercell_definition.f90
   src/velocity_profiles.f90
-#  src/module_mpi.F90
 )
 
 

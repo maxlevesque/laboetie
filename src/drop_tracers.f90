@@ -32,7 +32,7 @@ SUBROUTINE drop_tracers(n)
     ! add electrostatic potential computed by the SOR routine an external contribution
     ! elec_pot(singlx,ly,lz, ch, phi, phi2, t, t_equil);
     ! call elec_pot
-    CALL init ! init moment propagation
+    CALL init(n) ! init moment propagation
 
     !
     ! Propagation in time
@@ -42,7 +42,7 @@ SUBROUTINE drop_tracers(n)
       !  it=0
       !  do while (not_yet_converged(it))
       !   call elec_pot
-      CALL propagate (it,is_converged) ! propagate the propagated quantity
+      CALL propagate (it,is_converged,n) ! propagate the propagated quantity
       !    if( modulo(it,50000)==0 ) print_vacf
       !    it = it + 1
       IF( is_converged ) exit

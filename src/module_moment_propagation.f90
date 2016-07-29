@@ -27,13 +27,14 @@ MODULE moment_propagation
     !
     !
     !
-SUBROUTINE init
+SUBROUTINE init(n)
 
-    USE system, ONLY: phi, fluid, solid, n, node
+    USE system, ONLY: phi, fluid, solid, node
     use module_input, ONLY: getinput
 
     IMPLICIT NONE
 
+    real(dp), intent(in), contiguous :: n(:,:,:,:)
     real(dp) :: boltz_weight, Pstat, scattprop, scattprop_p, fermi, exp_dphi, exp_min_dphi, sum_of_boltz_weight, rho
     real(dp) :: n_loc(lbm%lmin:lbm%lmax)
     integer :: i, j, k, l, l_inv, ip, jp, kp, i_sum
@@ -161,12 +162,13 @@ SUBROUTINE init
     !
     !
     !
-    SUBROUTINE PROPAGATE(it, is_converged)
+    SUBROUTINE PROPAGATE(it, is_converged, n)
 
-      use system, only: fluid, solid, n, node
+      use system, only: fluid, solid, node
       use module_input, only: getinput
       implicit none
       integer(i2b), intent(in) :: it
+      real(dp), intent(in), contiguous :: n(:,:,:,:)
       real(dp) :: fermi, fractionOfParticleRemaining, scattprop, scattprop_p, exp_dphi, rho, n_loc(lbm%lmin:lbm%lmax)
       integer(i2b), parameter :: now=0, next=1, past=-1
       real(dp) :: u_star(x:z), Propagated_Quantity_loc(x:z)

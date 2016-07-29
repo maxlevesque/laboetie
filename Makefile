@@ -31,7 +31,6 @@ OBJS = 	$(SRCDIR)/module_precision_kinds.f90 \
 	$(SRCDIR)/charges_init.f90 \
 	$(SRCDIR)/charge_test.f90 \
 	$(SRCDIR)/check_charge_distribution_equilibrium.f90 \
-	$(SRCDIR)/comp_j.f90 \
 	$(SRCDIR)/drop_tracers.f90 \
 	$(SRCDIR)/electrostatic_pot.f90 \
 	$(SRCDIR)/equilibration.f90\
@@ -40,7 +39,6 @@ OBJS = 	$(SRCDIR)/module_precision_kinds.f90 \
 	$(SRCDIR)/just_eq_smolu.f90 \
 	$(SRCDIR)/main.f90 \
 	$(SRCDIR)/poisson_nernst_planck.f90 \
-	$(SRCDIR)/propagation.f90 \
 	$(SRCDIR)/smolu.f90 \
 	$(SRCDIR)/sor.f90 \
 	$(SRCDIR)/supercell_definition.f90 \
