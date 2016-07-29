@@ -2,37 +2,34 @@
 
 module mod_lbmodel
 
-    use precision_kinds
-    use constants, only: x, z
-
+    use precision_kinds, only: dp
     implicit none
 
     type type_velocity
-        integer(i2b), dimension(x:z) :: coo
+        integer, dimension(3) :: coo
         real(dp) :: a0, a1, a2, delta
-        integer(i2b) :: inv
+        integer :: inv
     end type
     type type_lbmodel
-        character(len=50) :: name
-        integer(i2b) :: dimension ! e.g. 3 in D3Q19
-        integer(i2b) :: nvel ! number of velocities, e.g. 19 in D3Q19
-        integer(i2b) :: lmin, lmax ! velmin can be 0 or 1, so is velmax 18 or 19 for instance for D3Q19
+        character(len=50) :: name="D3Q19"
+        integer :: dim=3 ! e.g. 3 in D3Q19
+        integer :: nvel=19 ! number of velocities, e.g. 19 in D3Q19
+        integer :: lmin=1, lmax=19 ! velmin can be 0 or 1, so is velmax 18 or 19 for instance for D3Q19
         real(dp) :: csq ! velocity of sound, squared, c²
+        real(dp), allocatable :: a0(:), a1(:), a2(:), delta(:), linv(:), cx(:), cy(:), cz(:)
         type (type_velocity), dimension(:), allocatable :: vel
     end type
     type(type_lbmodel), public :: lbm
-    contains
+
+contains
 
 !===================================================================================================================================
 
-    SUBROUTINE initialize
+    SUBROUTINE init
         use module_input, only: getinput
-        IMPLICIT NONE
         lbm%name = getinput%char("lbmodel", defaultvalue="D3Q19")
-        IF( lbm%name(1:3) /= "D3Q" ) THEN
-            ERROR STOP "I dont understand your lbmodel"
-        END IF
-        READ( lbm%name(2:2),'(I4)')  lbm%dimension
+        IF( lbm%name(1:3) /= "D3Q" ) ERROR STOP "I dont understand your lbmodel"
+        READ( lbm%name(2:2),'(I4)')  lbm%dim
         READ( lbm%name(4:10),'(I4)') lbm%nvel
         lbm%lmin = 1
         lbm%lmax = lbm%lmin + lbm%nvel -1
@@ -46,6 +43,8 @@ module mod_lbmodel
     SUBROUTINE init_velocities
         implicit none
         allocate (lbm%vel(lbm%lmin:lbm%lmax))
+        if(lbm%lmin/=1)error stop "lbm%lmin/=1 in init_velocities in module_lbm"
+
         select case (lbm%nvel)
         case (15) ! D3Q15
             lbm%vel(lbm%lmin+0)%coo = [0,0,0]
@@ -115,6 +114,17 @@ module mod_lbmodel
         case default
             stop "You ask for a DnQm lattice that is not implemented"
         end select
+        allocate(lbm%cx(lbm%lmin:lbm%lmax))
+        allocate(lbm%cy(lbm%lmin:lbm%lmax))
+        allocate(lbm%cz(lbm%lmin:lbm%lmax))
+        block
+            integer :: l
+            do l=lbm%lmin,lbm%lmax
+                lbm%cx(l) = lbm%vel(l)%coo(1)
+                lbm%cy(l) = lbm%vel(l)%coo(2)
+                lbm%cz(l) = lbm%vel(l)%coo(3)
+            end do
+        end block
     end subroutine
 
 !============================================================================================================================
@@ -135,19 +145,35 @@ module mod_lbmodel
             real(dp), parameter :: a_21 = a_01/(2*csq**2)
             real(dp), parameter :: a_22 = a_02/(2*csq**2)
             real(dp), parameter :: itself=0.0_dp, nn=1.0_dp, nnn=sqrt(2.0_dp) ! nearest and next nearest neighbour distance
-            if (lbm%nvel==15) then
+            integer :: l
+
+            select case (lbm%nvel)
+            case (15)
                 stop "lacks weight factors for D3Q15"
 
-            else if (lbm%nvel==19) then
+            case (19)
 
 lbm%vel%a0=[a_00,a_01,a_01,a_01,a_01,a_01,a_01,a_02,a_02,a_02,a_02,a_02,a_02,a_02,a_02,a_02,a_02,a_02,a_02]
 lbm%vel%a1=[a_10,a_11,a_11,a_11,a_11,a_11,a_11,a_12,a_12,a_12,a_12,a_12,a_12,a_12,a_12,a_12,a_12,a_12,a_12]
 lbm%vel%a2=[a_20,a_21,a_21,a_21,a_21,a_21,a_21,a_22,a_22,a_22,a_22,a_22,a_22,a_22,a_22,a_22,a_22,a_22,a_22]
 
 lbm%vel%delta = [ itself, nn, nn, nn, nn, nn, nn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn ]
-            else if (lbm%nvel==27) then
+
+allocate(lbm%a0(lbm%lmin:lbm%lmax))
+allocate(lbm%a1(lbm%lmin:lbm%lmax))
+allocate(lbm%a2(lbm%lmin:lbm%lmax))
+allocate(lbm%delta(lbm%lmin:lbm%lmax))
+do l=1,19
+    lbm%a0(l)=lbm%vel(l)%a0
+    lbm%a1(l)=lbm%vel(l)%a1
+    lbm%a2(l)=lbm%vel(l)%a2
+    lbm%delta(l)=lbm%vel(l)%delta
+end do
+
+            case (27)
                 stop "lacks weight factors for D3Q27"
-            end if
+            end select
+
             if ( abs(sum(lbm%vel%a0))-1._dp > epsilon(1.0)) stop "The sum of the weights of the velocities (a0) must be 1."
         end subroutine
 
@@ -155,9 +181,13 @@ lbm%vel%delta = [ itself, nn, nn, nn, nn, nn, nn, nnn, nnn, nnn, nnn, nnn, nnn, 
 
         subroutine determine_velocity_inverse
             implicit none
-            integer(i2b) :: l, li
+            integer :: l, li
             do concurrent (l=lbm%lmin:lbm%lmax, li=lbm%lmin:lbm%lmax)
                 if (all (lbm%vel(l)%coo == -lbm%vel(li)%coo) ) lbm%vel(l)%inv = li
+            end do
+            allocate(lbm%linv(lbm%lmin:lbm%lmax))
+            do l=lbm%lmin,lbm%lmax
+                lbm%linv(l)=lbm%vel(l)%inv
             end do
         end subroutine
 
