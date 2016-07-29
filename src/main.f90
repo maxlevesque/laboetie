@@ -41,7 +41,10 @@ program main
     !
     call equilibration(n)
 
-  CALL drop_tracers
+    !
+    ! Moment propagation
+    !
+    call drop_tracers(n)
 
-  CALL print_tail
+    CALL print_tail
 END PROGRAM main

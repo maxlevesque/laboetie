@@ -5,17 +5,17 @@
 ! Imagine a very small droplet of radioactive particles, so few they do not change
 ! anything to the system, but numerous enough to be followed and make statistics.
 
-SUBROUTINE drop_tracers
+SUBROUTINE drop_tracers(n)
 
     use precision_kinds, only: dp
-    USE system, only: n, elec_slope
+    USE system, only: elec_slope
     USE moment_propagation, only: init, propagate, deallocate_propagated_quantity!, print_vacf, integrate_vacf!, not_yet_converged
     use module_input, ONLY: getinput
 
     IMPLICIT NONE
+    real(dp), allocatable, intent(inout) :: n(:,:,:,:) ! xyz,l
     integer :: it, maximum_moment_propagation_steps
     logical :: is_converged
-    ! real(dp), allocatable, dimension(:,:,:,:), contiguous :: n
 
     maximum_moment_propagation_steps = getinput%int("maximum_moment_propagation_steps", 0) ! negative value means make it converge
     IF( maximum_moment_propagation_steps == 0) RETURN
