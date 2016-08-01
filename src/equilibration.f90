@@ -190,7 +190,6 @@ CALL CPU_TIME(t1)
             end do
         end select
 
-call cpu_time(t2)
         !
         ! propagation
         !
@@ -211,7 +210,6 @@ call cpu_time(t2)
             end do
         end do
         !$OMP END PARALLEL DO
-call cpu_time(t3)
         !
         ! The populations, that are probabilities, must never be negative
         !
@@ -242,7 +240,6 @@ call cpu_time(t3)
             jy = jy +n(:,:,:,l)*cy(l)
             jz = jz +n(:,:,:,l)*cz(l)
         end do
-call cpu_time(t4)
         !
         ! Dominika
         !
@@ -282,8 +279,7 @@ call cpu_time(t4)
         else
             convergence_reached = .false.
         end if
-call cpu_time(t5)
-print*,t1-t0,t2-t1,t3-t2,t4-t3,t5-t4,t5-t0
+
         !
         ! Applying the forces or not?
         !
