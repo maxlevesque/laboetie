@@ -7,7 +7,7 @@ contains
 SUBROUTINE init_simu(n)
 
     USE precision_kinds, only: dp
-    USE mod_lbmodel, ONLY: init_everything_related_to_lb_model => initialize
+    USE mod_lbmodel, ONLY: init_everything_related_to_lb_model => init
     USE system, ONLY: node, solid
     USE io, ONLY: print_header, print_input_in_output_folder, inquireNecessaryFilesExistence
     USE myallocations
