@@ -48,7 +48,7 @@ subroutine supercell_definition
 
   ! construct medium geometry
   select case (supercell%geometry%label)
-  case (-1) ! free of any solid node
+  case (-1) ! free of any solid node, ie bulk fluid
     ! dont do anything since node%nature has already been init to fluid everywhere
   case (0) ! custom geometry
     call construct_custom
