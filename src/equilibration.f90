@@ -74,9 +74,9 @@ contains
     write_total_mass_flux = getinput%log("write_total_mass_flux", .FALSE.)
     IF( write_total_mass_flux ) OPEN( 65, FILE="output/total_mass_flux.dat" )
 
-    allocate( cx(lmax), source=lbm%vel(:)%coo(1))
-    allocate( cy(lmax), source=lbm%vel(:)%coo(2))
-    allocate( cz(lmax), source=lbm%vel(:)%coo(3))
+    allocate( cx(lmax), source=lbm%cx )
+    allocate( cy(lmax), source=lbm%cy )
+    allocate( cz(lmax), source=lbm%cz )
 
     allocate( nature (nx,ny,nz), source=node%nature)
     allocate( f_ext_x(nx,ny,nz), source=zerodp)
@@ -140,25 +140,52 @@ contains
         !
         ! Bounce back (boundpm) to simplify propagation step
         !
-        do concurrent(l=lmin:lmax:2)
-            do concurrent(k=1:nz)
-                kp = kl(l,k)
-                !kp=pbc(k+cz(l),z)
-                do concurrent(j=1:ny)
-                    jp = jl(l,j)
-                    !jp=pbc(j+cy(l),y)
-                    do concurrent(i=1:nx)
-                        ip = il(l,i)
-                        !ip=pbc(i+cx(l),x)
-                        if( nature(i,j,k) /= nature(ip,jp,kp) ) then
-                            n_loc = n(i,j,k,l)
-                            n(i,j,k,l) = n(ip,jp,kp,l_inv(l))
-                            n(ip,jp,kp,l_inv(l)) = n_loc
-                        end if
+        select case(GL)
+        case(-1) ! bulk fluid, thus no bounce back
+            ! do nothing
+        case(1)! slit normal to z
+            do l=lmin,lmax,2
+                do k=1,nz
+                    if( k/=1 .and. k/=nz) cycle
+                    kp = kl(l,k)
+                    !kp=pbc(k+cz(l),z)
+                    do j=1,ny
+                        jp = jl(l,j)
+                        !jp=pbc(j+cy(l),y)
+                        do i=1,nx
+                            ip = il(l,i)
+                            !ip=pbc(i+cx(l),x)
+                            if( nature(i,j,k) /= nature(ip,jp,kp) ) then
+                                n_loc = n(i,j,k,l)
+                                n(i,j,k,l) = n(ip,jp,kp,l_inv(l))
+                                n(ip,jp,kp,l_inv(l)) = n_loc
+                            end if
+                        end do
                     end do
                 end do
             end do
-        end do
+        case default ! generic case, we know nothing about the geometry a priori
+            do l=lmin,lmax,2
+                do k=1,nz
+                    kp = kl(l,k)
+                    !kp=pbc(k+cz(l),z)
+                    do j=1,ny
+                        jp = jl(l,j)
+                        !jp=pbc(j+cy(l),y)
+                        do i=1,nx
+                            ip = il(l,i)
+                            !ip=pbc(i+cx(l),x)
+                            if( nature(i,j,k) /= nature(ip,jp,kp) ) then
+                                n_loc = n(i,j,k,l)
+                                n(i,j,k,l) = n(ip,jp,kp,l_inv(l))
+                                n(ip,jp,kp,l_inv(l)) = n_loc
+                            end if
+                        end do
+                    end do
+                end do
+            end do
+        end select
+
 
         !
         ! propagation
