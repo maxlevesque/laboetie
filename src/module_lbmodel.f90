@@ -5,6 +5,7 @@ module mod_lbmodel
     use precision_kinds, only: dp
     implicit none
 
+    private
     type type_velocity
         integer, dimension(3) :: coo
         real(dp) :: a0, a1, a2, delta
@@ -15,11 +16,13 @@ module mod_lbmodel
         integer :: dim=3 ! e.g. 3 in D3Q19
         integer :: nvel=19 ! number of velocities, e.g. 19 in D3Q19
         integer :: lmin=1, lmax=19 ! velmin can be 0 or 1, so is velmax 18 or 19 for instance for D3Q19
+        integer, allocatable :: cx(:), cy(:), cz(:), linv(:)
         real(dp) :: csq ! velocity of sound, squared, c²
-        real(dp), allocatable :: a0(:), a1(:), a2(:), delta(:), linv(:), cx(:), cy(:), cz(:)
+        real(dp), allocatable :: a0(:), a1(:), a2(:), delta(:)
         type (type_velocity), dimension(:), allocatable :: vel
     end type
-    type(type_lbmodel), public :: lbm
+    type(type_lbmodel), public, protected :: lbm
+    public :: init
 
 contains
 
@@ -36,7 +39,7 @@ contains
         call init_velocities
         call init_weight_factors
         call determine_velocity_inverse
-    END SUBROUTINE
+    END SUBROUTINE init
 
 !===================================================================================================================================
 
@@ -114,17 +117,9 @@ contains
         case default
             stop "You ask for a DnQm lattice that is not implemented"
         end select
-        allocate(lbm%cx(lbm%lmin:lbm%lmax))
-        allocate(lbm%cy(lbm%lmin:lbm%lmax))
-        allocate(lbm%cz(lbm%lmin:lbm%lmax))
-        block
-            integer :: l
-            do l=lbm%lmin,lbm%lmax
-                lbm%cx(l) = lbm%vel(l)%coo(1)
-                lbm%cy(l) = lbm%vel(l)%coo(2)
-                lbm%cz(l) = lbm%vel(l)%coo(3)
-            end do
-        end block
+        allocate(  lbm%cx(lbm%lmin:lbm%lmax), source=lbm%vel(lbm%lmin:lbm%lmax)%coo(1)   )
+        allocate(  lbm%cy(lbm%lmin:lbm%lmax), source=lbm%vel(lbm%lmin:lbm%lmax)%coo(2)   )
+        allocate(  lbm%cz(lbm%lmin:lbm%lmax), source=lbm%vel(lbm%lmin:lbm%lmax)%coo(3)   )
     end subroutine
 
 !============================================================================================================================
