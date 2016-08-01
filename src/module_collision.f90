@@ -22,7 +22,6 @@ contains
     real(dp), intent(in) :: f_ext_x(:,:,:), f_ext_y(:,:,:), f_ext_z(:,:,:)
     real(dp), intent(inout) :: n(:,:,:,:)
     integer :: l, lmin, lmax, nx, ny, nz
-    real(dp), allocatable, dimension(:) :: a0, a1, a2, cx, cy, cz
     logical, save :: i_know_the_relaxation_time = .false.
     real(dp), save :: relaxation_time
     real(dp), allocatable, dimension(:,:,:) :: neq, ux, uy, uz
@@ -54,16 +53,6 @@ contains
 
     lmin=lbm%lmin
     lmax=lbm%lmax
-    allocate( a0(lmin:lmax) )
-    allocate( a1(lmin:lmax) )
-    allocate( cx(lmin:lmax) )
-    allocate( cy(lmin:lmax) )
-    allocate( cz(lmin:lmax) )
-    a0(lmin:lmax) = lbm%vel(lmin:lmax)%a0
-    a1(lmin:lmax) = lbm%vel(lmin:lmax)%a1
-    cx(lmin:lmax) = lbm%vel(lmin:lmax)%coo(1)
-    cy(lmin:lmax) = lbm%vel(lmin:lmax)%coo(2)
-    cz(lmin:lmax) = lbm%vel(lmin:lmax)%coo(3)
 
     ! First compute the Boltzmann (equilibrium) distribution,
     ! then update the populations according to the relaxation time.
@@ -74,6 +63,8 @@ contains
     allocate( ux(nx,ny,nz) ,source=0._dp)
     allocate( uy(nx,ny,nz) ,source=0._dp)
     allocate( uz(nx,ny,nz) ,source=0._dp)
+
+    associate( cx=>lbm%cx, cy=>lbm%cy, cz=>lbm%cz, a0=>lbm%a0, a1=>lbm%a1, a2=>lbm%a2 )
 
     where(node%nature==fluid)
       ux=jx/density
@@ -87,11 +78,10 @@ contains
 
     select case (collision_order)
     case(2)
-      allocate( a2(lmin:lmax) , source=lbm%vel(lmin:lmax)%a2)
       do l=lmin,lmax
         where(node%nature==fluid)
 
-          neq(:,:,:) = &
+          neq = &
             a0(l)*density &
           + a1(l)*( cx(l)*jx + cy(l)*jy + cz(l)*jz ) &
           + a2(l)*( &
@@ -124,6 +114,8 @@ contains
       end do
 
     end select
+
+    end associate
 
   end subroutine collide
 
