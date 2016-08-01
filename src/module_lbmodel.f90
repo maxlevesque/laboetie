@@ -154,16 +154,10 @@ lbm%vel%a2=[a_20,a_21,a_21,a_21,a_21,a_21,a_21,a_22,a_22,a_22,a_22,a_22,a_22,a_2
 
 lbm%vel%delta = [ itself, nn, nn, nn, nn, nn, nn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn ]
 
-allocate(lbm%a0(lbm%lmin:lbm%lmax))
-allocate(lbm%a1(lbm%lmin:lbm%lmax))
-allocate(lbm%a2(lbm%lmin:lbm%lmax))
-allocate(lbm%delta(lbm%lmin:lbm%lmax))
-do l=1,19
-    lbm%a0(l)=lbm%vel(l)%a0
-    lbm%a1(l)=lbm%vel(l)%a1
-    lbm%a2(l)=lbm%vel(l)%a2
-    lbm%delta(l)=lbm%vel(l)%delta
-end do
+allocate(  lbm%a0(lbm%lmin:lbm%lmax)  , source= lbm%vel(:)%a0  )
+allocate(  lbm%a1(lbm%lmin:lbm%lmax)  , source= lbm%vel(:)%a1  )
+allocate(  lbm%a2(lbm%lmin:lbm%lmax)  , source= lbm%vel(:)%a2  )
+allocate(  lbm%delta(lbm%lmin:lbm%lmax)  , source= lbm%vel(:)%delta  )
 
             case (27)
                 stop "lacks weight factors for D3Q27"
