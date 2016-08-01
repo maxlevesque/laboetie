@@ -24,6 +24,7 @@ contains
     LOGICAL :: write_total_mass_flux
     integer, allocatable :: il(:,:), jl(:,:), kl(:,:), l_inv(:)
     real(dp), parameter :: zerodp=0._dp
+    real(dp) :: t0, t1, t2, t3, t4, t5
 
     ! Check system sizes.
     nx = getinput%int("lx", assert=">0")
@@ -61,6 +62,8 @@ contains
     allocate( jy_old (nx,ny,nz), source=0._dp)
     allocate( jz     (nx,ny,nz), source=0._dp)
     allocate( jz_old (nx,ny,nz), source=0._dp)
+
+    open(13,file="./output/l2err.dat")
 
     OPEN(66, FILE="output/mass-flux_profile_along_z.dat")
     OPEN(67, FILE="output/mass-flux_profile_along_y.dat")
@@ -130,8 +133,9 @@ contains
         !
         ! Collision step
         !
-        call collide(n, density, jx, jy, jz, f_ext_x, f_ext_y, f_ext_z)
-
+CALL CPU_TIME(t0)
+        call collide(n, jx, jy, jz, f_ext_x, f_ext_y, f_ext_z)
+CALL CPU_TIME(t1)
         ! print velocity profile if you need/want it
         ! if( modulo(t, print_frequency) == 0) then
         !    call velocity_profiles(t) ! print velocity profiles
@@ -186,7 +190,7 @@ contains
             end do
         end select
 
-
+call cpu_time(t2)
         !
         ! propagation
         !
@@ -207,25 +211,16 @@ contains
             end do
         end do
         !$OMP END PARALLEL DO
-
+call cpu_time(t3)
         !
         ! The populations, that are probabilities, must never be negative
         !
         if( any(n<0) ) error stop "In equilibration_new, the population n(x,y,z,vel) < 0"
 
-        !
-        ! Update densities after the propagation and check it
-        ! Densities are the sum of all velocities of a local population
-        !
-        density = SUM(n,4)
+        IF( write_total_mass_flux ) WRITE(65,*) t, SUM(jx), SUM(jy), SUM(jz)
 
         !
-        ! WRITE the total density
-        !
-        IF( write_total_mass_flux ) WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ])
-
-        !
-        ! backup moment density (velocities) to test convergence at the end of the timestep
+        ! backup mass flux to test convergence at the end of the timestep
         !
         jx_old = jx
         jy_old = jy
@@ -233,21 +228,21 @@ contains
 
         ! update momentum densities after the propagation
         ! this is completely local in space and my be parallelized very well
+        jx=f_ext_x/2.
+        jy=f_ext_y/2.
+        jz=f_ext_z/2.
         ! !$OMP PARALLEL DO DEFAULT(NONE)&
         ! !$OMP PRIVATE(l)&
         ! !$OMP SHARED(lmin,lmax,n,cx,cy,cz)&
         ! !$OMP REDUCTION(+:jx)&
         ! !$OMP REDUCTION(+:jy)&
         ! !$OMP REDUCTION(+:jz)
-        jx=f_ext_x/2.
-        jy=f_ext_y/2.
-        jz=f_ext_z/2.
         do l=lmin,lmax
             jx = jx +n(:,:,:,l)*cx(l)
             jy = jy +n(:,:,:,l)*cy(l)
             jz = jz +n(:,:,:,l)*cz(l)
         end do
-
+call cpu_time(t4)
         !
         ! Dominika
         !
@@ -280,7 +275,6 @@ contains
         ! Check convergence
         ! Note to myself: we store these large arrays jx_old etc just for this!
         !
-        open(13,file="./output/l2err.dat")
         l2err = maxval(   [  maxval(abs(jx-jx_old)), maxval(abs(jy-jy_old)), maxval(abs(jz-jz_old)) ])
         write(13,*) t, l2err
         if( l2err <= target_error .and. t>2 ) then
@@ -288,7 +282,8 @@ contains
         else
             convergence_reached = .false.
         end if
-
+call cpu_time(t5)
+print*,t1-t0,t2-t1,t3-t2,t4-t3,t5-t4,t5-t0
         !
         ! Applying the forces or not?
         !
@@ -297,10 +292,6 @@ contains
             convergence_reached_without_fext = .true.
           else if( convergence_reached_without_fext ) then
             convergence_reached_with_fext = .true.
-          else
-            print*,"ERROR: l.376 of equilibration_new.f90"
-            print*,"=====  I did not anticipate this possibility. Review your if tree."
-            stop
           end if
         end if
 
@@ -414,6 +405,7 @@ contains
   !
   ! Print velocity 1D velocity field
   !
+  density=sum(n,4)
   WRITE(66,*)"# Steady state with convergence criteria", REAL(target_error)
   WRITE(67,*)"# Steady state with convergence criteria", REAL(target_error)
   WRITE(68,*)"# Steady state with convergence criteria", REAL(target_error)
