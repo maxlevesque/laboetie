@@ -12,19 +12,18 @@ contains
   !     Guo et al. Phys. Rev. E 65, 046308 (2002)
   ! In particular Eqs. 3, 4, 5, 17, 19, 20
 
-  subroutine collide(n, density, jx, jy, jz, f_ext_x, f_ext_y, f_ext_z)
+  subroutine collide(n, jx, jy, jz, f_ext_x, f_ext_y, f_ext_z)
     use system, only: fluid, solid, node
     use mod_lbmodel, only: lbm
     use module_input, only: getinput
     implicit none
-    real(dp), intent(in) :: density(:,:,:)
     real(dp), intent(in) :: jx(:,:,:), jy(:,:,:), jz(:,:,:)
     real(dp), intent(in) :: f_ext_x(:,:,:), f_ext_y(:,:,:), f_ext_z(:,:,:)
     real(dp), intent(inout) :: n(:,:,:,:)
     integer :: l, lmin, lmax, nx, ny, nz
     logical, save :: i_know_the_relaxation_time = .false.
     real(dp), save :: relaxation_time
-    real(dp), allocatable, dimension(:,:,:) :: neq, ux, uy, uz
+    real(dp), allocatable, dimension(:,:,:), save :: neq, ux, uy, uz, density
     real(dp), parameter :: csq=1.0_dp/3._dp
     logical, save :: i_know_i_want_first_order_only = .false.
     logical, save :: first_order_only = .false.
@@ -39,6 +38,15 @@ contains
       relaxation_time = getinput%dp('relaxation_time', defaultvalue=1._dp, assert=">0")
       if( relaxation_time < 0.5_dp) error stop "relaxation_time must be > 0.5"
       i_know_the_relaxation_time = .true.
+      ! do some initialization like allocations you don't want to do each timestep
+      nx = ubound(jx,1)
+      ny = ubound(jx,2)
+      nz = ubound(jx,3)
+      allocate( neq(nx,ny,nz) ,source=0._dp)
+      allocate( ux(nx,ny,nz) ,source=0._dp)
+      allocate( uy(nx,ny,nz) ,source=0._dp)
+      allocate( uz(nx,ny,nz) ,source=0._dp)
+      allocate( density(nx,ny,nz), source=0._dp)
     end if
 
     if(.not. i_know_i_want_first_order_only) then
@@ -56,15 +64,10 @@ contains
 
     ! First compute the Boltzmann (equilibrium) distribution,
     ! then update the populations according to the relaxation time.
-    nx = ubound(jx,1)
-    ny = ubound(jx,2)
-    nz = ubound(jx,3)
-    allocate( neq(nx,ny,nz) ,source=0._dp)
-    allocate( ux(nx,ny,nz) ,source=0._dp)
-    allocate( uy(nx,ny,nz) ,source=0._dp)
-    allocate( uz(nx,ny,nz) ,source=0._dp)
 
     associate( cx=>lbm%cx, cy=>lbm%cy, cz=>lbm%cz, a0=>lbm%a0, a1=>lbm%a1, a2=>lbm%a2 )
+
+    density = sum(n,4)
 
     where(node%nature==fluid)
       ux=jx/density
