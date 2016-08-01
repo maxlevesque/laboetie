@@ -63,6 +63,8 @@ contains
     allocate( jz     (nx,ny,nz), source=0._dp)
     allocate( jz_old (nx,ny,nz), source=0._dp)
 
+
+    l2err = 999.
     open(13,file="./output/l2err.dat")
 
     OPEN(66, FILE="output/mass-flux_profile_along_z.dat")
@@ -127,9 +129,7 @@ contains
     ! TIME STEPS (in lb units)
     !
     do t=1,HUGE(t)
-
         call lots_of_prints()
-
         !
         ! Collision step
         !
@@ -493,7 +493,7 @@ end subroutine init_work_for_Adelchi
 
 
 subroutine lots_of_prints
-if( modulo(t, print_frequency) == 0) PRINT*, t, real(l2err)
+if( modulo(t, print_frequency) == 0) PRINT*, t, l2err
 if( MODULO(t, print_files_frequency) == 0 .OR. t==1) THEN
     WRITE(66,*)"# timestep",t
     WRITE(67,*)"# timestep",t
