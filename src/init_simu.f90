@@ -1,7 +1,7 @@
 SUBROUTINE init_simu
 
     USE precision_kinds
-    USE mod_lbmodel, ONLY: init_everything_related_to_lb_model => initialize
+    USE mod_lbmodel, ONLY: init_everything_related_to_lb_model => initialize, lbm
     USE system, ONLY: node, n, solid
     USE io, ONLY: print_header, print_input_in_output_folder, inquireNecessaryFilesExistence
     USE myallocations
@@ -10,6 +10,7 @@ SUBROUTINE init_simu
     IMPLICIT NONE
 
     REAL(dp) :: svden
+    integer :: l
 
     CALL print_header
     CALL inquireNecessaryFilesExistence  ! check that input, output folder and file ./lb.in exist
@@ -33,6 +34,10 @@ SUBROUTINE init_simu
     ELSEWHERE
         node%solventdensity = 0
     END WHERE
+    do l= lbm%lmin, lbm%lmax
+      n(:,:,:,l) = node%solventdensity * lbm%vel(l)%a0
+    end do
+
 
     CALL charges_init    ! init charge distribution
 

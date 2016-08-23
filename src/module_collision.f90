@@ -8,6 +8,10 @@ module module_collision
 
 contains
 
+  ! for explanation of collision rule, see:
+  !     Guo et al. Phys. Rev. E 65, 046308 (2002)
+  ! In particular Eqs. 3, 4, 5, 17, 19, 20
+
   subroutine collide(n, density, jx, jy, jz, f_ext_x, f_ext_y, f_ext_z)
     use system, only: fluid, solid, node
     use mod_lbmodel, only: lbm
@@ -62,7 +66,7 @@ contains
     nz = ubound(jx,3)
     allocate( neq(nx,ny,nz) ,source=0._dp)
 
-    if(.not.first_order_only) then    ! default: use second order
+    if(.not.first_order_only) then
       allocate( a2(lmin:lmax) )
       a2(lmin:lmax) = lbm%vel(lmin:lmax)%a2
 
@@ -94,12 +98,16 @@ contains
 
           n(:,:,:,l) = (1._dp-1._dp/relaxation_time)*n(:,:,:,l) &
           + (1._dp/relaxation_time)*neq &
-          + a1(l)*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z )
+          + (1._dp-1._dp/(2._dp*relaxation_time))*( &
+                a1(l)*( (cx(l)-ux)*f_ext_x + (cy(l)-uy)*f_ext_y + (cz(l)-uz)*f_ext_z ) &
+              + 2._dp*a2(l)*( cx(l)*ux + cy(l)*uy + cz(l)*uz )*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z ) &
+                                                   )
+          !+ a1(l)*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z )
           ! here we could add the second order also for f_ext
         end where
       end do
 
-    else
+    else ! default: go to second order
 
       do l=lmin,lmax
         where(node%nature==fluid)
@@ -109,7 +117,10 @@ contains
           + a1(l)*( cx(l)*jx + cy(l)*jy + cz(l)*jz )
           n(:,:,:,l) = (1._dp-1._dp/relaxation_time)*n(:,:,:,l) &
           + (1._dp/relaxation_time)*neq &
-          + a1(l)*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z )
+          + (1._dp-1._dp/(2._dp*relaxation_time))*( &
+                a1(l)*( (cx(l)-ux)*f_ext_x + (cy(l)-uy)*f_ext_y + (cz(l)-uz)*f_ext_z ) &
+                                                  )
+          !+ a1(l)*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z )
         end where
       end do
 
