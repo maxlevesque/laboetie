@@ -1,5 +1,7 @@
 # laboetie
 
+---
+
 laboetie is the fluid dynamics code for chemical applications.  
 It is based on the Lattice-Boltzmann algorithm to solve fluid dynamics equations.  
 [more to come]
@@ -8,18 +10,45 @@ It is written by Maximilien Levesque¹ and Benjamin Rotenberg²
 ¹ École Normale Supérieure and CNRS, Paris, France  
 ² Sorbonne Universités, UPMC Univ. Paris 06, CNRS, UMR 8234, PHENIX, F-75005 Paris, France
 
-# Please cite us!
+---
 
-We are academics: our work is evaluated on its citations. If you use Laboetie, please cite us:  
+## Please cite us!
+
+We are researchers: our work is evaluated on the basis of citations to our publications. If you use Laboetie, please cite us:  
 [doi: 10.1103/PhysRevE.88.013308](http://dx.doi.org/10.1103/PhysRevE.88.013308)
+
+------
+
+## Science done with laboetie
+
+  1. **Accounting for adsorption and desorption in lattice Boltzmann simulations**  
+      Maximilien Levesque, Magali Duvail, Ignacio Pagonabarraga, Daan Frenkel and Benjamin Rotenberg  
+      Phys. Rev. B 88, 013308 (2013)  
+      http://sci-hub.cc/10.1103/PhysRevE.88.013308    
+  2. **Unexpected coupling between flow and adsorption in porous media**  
+     Jean-Mathieu Vanson, François-Xavier Coudert, Benjamin Rotenberg, Maximilien Levesque, Caroline Tardivat, Michaela Klotz and Anne Boutin  
+     Soft Matter 11, 6125-6133 (2015)  
+     http://sci-hub.cc/10.1039/C5SM01348H  
+      
+---
 
 ## Installation instructions
 
-```
+```sh
 git clone https://github.com/maxlevesque/laboetie
 cd laboetie
 make
 ```
+
+## How to develop in laboetie or report a bug
+
+### Our git workflow
+
+[A successful git branching model](http://nvie.com/posts/a-successful-git-branching-model/)
+
+### How to Report Bugs Effectively
+
+[A blogpost by Simon Tatham](http://www.chiark.greenend.org.uk/~sgtatham/bugs.html)
 
 ### Parallelism
 
@@ -32,7 +61,6 @@ How do you control the number of threads used by OPENMP?
 You should export OMP_NUM_THREADS=3 in your terminal before executing laboetie if you want laboetie to use 3 threads:  
 Thus, to compile and execute laboetie limited to 8 threads on my computer, I type in my terminal:
 ```bash
-$ make
 $ export OMP_NUM_THREADS=8
 $ ./laboetie
 ```
