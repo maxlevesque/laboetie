@@ -245,7 +245,7 @@ SUBROUTINE equilibration
         !
         ! The populations, since they are probabilities, must never be negative
         !
-        IF( ANY(n<0) ) ERROR STOP "In equilibration_new, the population n(x,y,z,vel) < 0"
+        IF( ANY(n<0) ) ERROR STOP "In equilibration, the population n(x,y,z,vel) < 0"
 
         !
         ! Update densities after the propagation and check it
@@ -298,7 +298,7 @@ SUBROUTINE equilibration
             jy = jy +n(:,:,:,l)*cy(l)
             jz = jz +n(:,:,:,l)*cz(l)
         end do
-        
+
         !IF( MODULO(t, print_frequency) == 0) PRINT*,  t, "after ", jz(1,1,1)
 
         !
@@ -358,7 +358,7 @@ SUBROUTINE equilibration
           else if( convergence_reached_without_fext ) then
             convergence_reached_with_fext = .true.
           else
-            print*,"ERROR: l.376 of equilibration_new.f90"
+            print*,"ERROR: l.376 of equilibration.f90"
             print*,"=====  I did not anticipate this possibility. Review your if tree."
             stop
           end if
@@ -395,7 +395,7 @@ SUBROUTINE equilibration
                 end if
 
                 if(modulo(n1,2)==0 .or. modulo(n2,2)==0 .or. modulo(n3,2)==0) then
-                  print*,"ERROR: l.158 of equilibration_new.f90"
+                  print*,"ERROR: l.158 of equilibration.f90"
                   print*,"=====  when compensate_f_ext, there should be odd number of nodes in all directions"
                   print*,"n1, n2, n3 =",n1,n2,n3
                   stop
@@ -433,7 +433,7 @@ SUBROUTINE equilibration
                 close(14)
                 close(47)
                 if(err.eqv..true.) then
-                  print*,"ERROR: l306 of equilibration_new.f90. Dominika's particle at a solid node"
+                  print*,"ERROR: l306 of equilibration.f90. Dominika's particle at a solid node"
                   stop
                 end if
 
@@ -457,7 +457,7 @@ SUBROUTINE equilibration
                   f_ext_z = -f_ext_loc(3)/(fluid_nodes)
                  end where
                    if( any(abs([sum(f_ext_x)/fluid_nodes,sum(f_ext_y)/fluid_nodes,sum(f_ext_z)/fluid_nodes])> eps ) ) then
-                     print*,"ERROR: l.215 of equilibration_new.f90"
+                     print*,"ERROR: l.215 of equilibration.f90"
                      print*,"=====  The compensation is not well-implemented."
                      print*,"       sum(f_ext_x)=",sum(f_ext_x)
                      print*,"       sum(f_ext_y)=",sum(f_ext_y)
