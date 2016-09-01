@@ -61,7 +61,7 @@ module io
             character(10) :: time
             call date_and_time ( DATE=date,TIME=time)
             print*,
-            print*,
+            print*,"Laboetie ended up with status OK: everything went fine."
             print*,date(1:4),'/',date(5:6),'/',date(7:8),', ',time(1:2),'h',time(3:4),'m',time(5:6)
             print*,'=================================================='
         END SUBROUTINE
