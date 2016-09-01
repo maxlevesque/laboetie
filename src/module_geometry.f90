@@ -3,11 +3,11 @@ module geometry
     use precision_kinds ! all precision kinds defined in the dedicated module
     use system, only: fluid, solid, supercell, node
     use constants, only: x, y, z
-    
+
     implicit none
 
 contains
-    
+
 subroutine CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
             real(dp), dimension(1:2, 1:4) :: r ! there are 7 cylinders in the supercell, whose only x and y (1:2) coordinates are important
             ! lx is the half of the big size of the hexagon == length/2
@@ -163,7 +163,7 @@ SUBROUTINE construct_slit
     node%nature = fluid
     node(:,:,i)%nature = solid ! the lower bound of the thrid dimension of inside is solid
     node(:,:,j)%nature = solid ! so is the upper bound
-END SUBROUTINE 
+END SUBROUTINE
 
 
 
@@ -432,10 +432,10 @@ SUBROUTINE construct_pbm
     use system, only: node, supercell
 
     IMPLICIT NONE
-    
+
     CHARACTER(2) :: magic_number
     CHARACTER(1) :: pix
-    integer, parameter :: ncolumnmax=350
+    integer, parameter :: ncolumnmax=780
     CHARACTER(ncolumnmax) :: line
     INTEGER :: nline, ncolumn, i, j, nx, ny, nz
     nx = supercell%geometry%dimensions%indiceMax(x)
@@ -460,13 +460,13 @@ SUBROUTINE construct_pbm
         print*,"it is easy to implement higher numbers !"
         error stop "nevertheless it is not now. stop"
     end if
-    
+
     if( ncolumn /= ny) then
         print*,"ncolumn from geom.pbm =",ncolumn
         print*,"ny in lb.in =",ny
         error stop "ncolumn /= ny in geom.pbm"
     end if
-    
+
     if( nline /= nz) then
         print*,"nline from geom.pbm = ",nline
         print*,"nz in lb.in =",nz
@@ -488,14 +488,22 @@ SUBROUTINE construct_pbm
         if(ncolumn>140) read(36,*) line(141:min(ncolumn,210))
         if(ncolumn>210) read(36,*) line(211:min(ncolumn,280))
         if(ncolumn>280) read(36,*) line(281:min(ncolumn,350))
-        if(ncolumn>350) error stop "look at module_geometry.f90 ncolumn>350 not implemented"
+        if(ncolumn>350) read(36,*) line(351:min(ncolumn,420))
+        if(ncolumn>420) read(36,*) line(421:min(ncolumn,490))
+        if(ncolumn>490) read(36,*) line(491:min(ncolumn,560))
+        if(ncolumn>560) read(36,*) line(561:min(ncolumn,630))
+        if(ncolumn>630) read(36,*) line(631:min(ncolumn,700))
+        if(ncolumn>700) read(36,*) line(701:min(ncolumn,770))
+        if(ncolumn>770) error stop "look at module_geometry.f90 ncolumn>770 not implemented"
         do i=1,ncolumn
             select case (line(i:i))
             case("1")
                 node(1,i,j)%nature = solid
             case("0")
             case default
-                error stop "only 0 or 1 allowed in pbm file"
+                print*,"module_geometry. Pbm format allow 0 or 1 only"
+                print*,"error with j,i=",j,i
+                error stop
             end select
         end do
     end do
