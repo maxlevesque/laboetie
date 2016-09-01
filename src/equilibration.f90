@@ -133,8 +133,8 @@ SUBROUTINE equilibration
     PRINT*
     PRINT*,'Lattice Boltzmann'
     PRINT*,'================='
-    PRINT*,'       step     error   '
-    PRINT*,'       -----------------'
+    PRINT*,'       step'
+    PRINT*,'       ----'
 
 
     !
