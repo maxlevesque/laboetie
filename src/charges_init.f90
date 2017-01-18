@@ -3,8 +3,8 @@
 subroutine charges_init
 
   use precision_kinds, only: i2b, dp
-  use system, only: lambda_D, c_plus, c_minus, phi, charge_distrib, sigma, &
-                     fluid, solid, anormf0, bjl, kBT, rho_ch, D_plus, D_minus, supercell
+  use system, only: lambda_D, c_plus, c_minus, phi, charge_distrib, sigma, node,&
+                     fluid, solid, anormf0, bjl, kBT, rho_ch, D_plus, D_minus
   use constants, only: pi, x, y, z
   use input
   use myallocations
@@ -24,7 +24,7 @@ subroutine charges_init
   bjl = input_dp('bjl')
   sigma = input_dp('sigma')
   lambda_d = input_dp('lambda_D')
-  
+
   if( lambda_D <= 0.0_dp ) then
     print*, 'salt free fluid'
     rho_0 = 0.0_dp
@@ -36,15 +36,15 @@ subroutine charges_init
 print*,'rho_ch=',rho_ch
 
   ! count of solid, fluid and interfacial nodes
-  count_solid = count(supercell%node%nature==solid)
-  count_solid_int = count( supercell%node%nature == solid .and. supercell%node%isInterfacial )
+  count_solid = count(node%nature==solid)
+  count_solid_int = count( node%nature == solid .and. node%isInterfacial )
   print*,'nb of solid interfacial nodes ',count_solid_int
-  count_fluid = count(supercell%node%nature==fluid)
+  count_fluid = count(node%nature==fluid)
   print*,'nb of fluid nodes ',count_fluid
 
   ! read where are distributed the charges
 !  call read_charge_distrib
-  charge_distrib = input_ch("charge_distrib")
+  charge_distrib = input_char("charge_distrib")
   if( charge_distrib(1:3) /= 'int' .and. charge_distrib(1:3)/='sol') stop 'charge_distrib can only be int or sol for now'
 
   ! distribute charge, depending on where user asked
@@ -89,13 +89,13 @@ print*,'rho_ch=',rho_ch
 
   print*,'ATTENTION ONLY SURFACE CHARGE IS OK FOR NOW'
 
-  where(supercell%node%nature==solid .and. supercell%node%isInterfacial )
+  where(node%nature==solid .and. node%isInterfacial )
     c_plus = in_c_plus_solid
     c_minus = in_c_minus_solid
-  else where(supercell%node%nature==solid .and. .not. supercell%node%isInterfacial )
+  else where(node%nature==solid .and. .not. node%isInterfacial )
     c_plus = 0.0_dp
     c_minus = 0.0_dp
-  else where(supercell%node%nature==fluid)
+  else where(node%nature==fluid)
     c_plus = in_c_plus_fluid
     c_minus = in_c_minus_fluid
   end where

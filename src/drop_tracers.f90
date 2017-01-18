@@ -5,44 +5,79 @@
 ! Imagine a very small droplet of radioactive particles, so few they do not change
 ! anything to the system, but numerous enough to be followed and make statistics.
 
-SUBROUTINE drop_tracers
+subroutine drop_tracers
 
-    USE precision_kinds, only: dp, i2b
-    USE system, only: tmom, tmax, elec_slope
-    USE populations, only: calc_n_momprop
-    USE moment_propagation, only: init, propagate, deallocate_propagated_quantity!, print_vacf, integrate_vacf!, not_yet_converged
-    USE input, only: input_dp
-    
-    IMPLICIT NONE
-    INTEGER(i2b) :: it
-    LOGICAL :: is_converged
+  use precision_kinds, only: dp
+  USE system, only: tmom, tmax, elec_slope, tic_mp, tac_mp, tic_eq_ads, tac_eq_ads
+  USE input, only: input_dp
+  USE moment_propagation
 
-    PRINT*,'       step           VACF(x)                   VACF(y)                   VACF(z)'
-    PRINT*,'       ----------------------------------------------------------------------------------'
+  IMPLICIT NONE
+  integer :: it
+  logical :: is_converged
 
-    CALL calc_n_momprop ! include elec_slope in population n
-    elec_slope = 0.0_dp ! turn the electric field off for the rest of mom_prop (included in n)
+  CALL update_tracer_population ! include elec_slope in population n
+  elec_slope = 0.0_dp ! turn the electric field off for the rest of mom_prop (included in n)
 
-    ! add electrostatic potential computed by the SOR routine an external contribution
-    ! elec_pot(singlx,ly,lz, ch, phi, phi2, t, t_equil);
-    ! call elec_pot
-    CALL init ! init moment propagation
+  CALL SYSTEM_CLOCK(tic_eq_ads)
+  CALL init_adsorption_equilibration
 
-    ! propagate in time
-    momproploop: DO it= 1, tmax-tmom
-    !  it=0
-    !  do while (not_yet_converged(it))
-    !   call elec_pot
-        CALL propagate (it,is_converged) ! propagate the propagated quantity
-    !    if( modulo(it,50000)==0 ) print_vacf
-    !    it = it + 1
-        IF( is_converged ) EXIT momproploop
-    END DO momproploop
+  DO it= 1, tmax
+    CALL Adsorption_equilibration(it, is_converged) !Equilibrate the densities of tracers
+    IF( is_converged ) exit
+  END DO
+  CALL SYSTEM_CLOCK(tac_eq_ads)
 
-    PRINT*,
+  CALL SYSTEM_CLOCK(tic_mp)
+    is_converged = .false.
+    CALL init_propagation
+ 
+  DO it= 1, tmax
+    CALL propagate (it, is_converged) !propagate the quantities
+    IF( is_converged ) exit
+  END DO
+  CALL SYSTEM_CLOCK(tac_mp)
+  CALL deallocate_propagated_quantity
 
-    !  CALL integrate_vacf ! compute the integral over time of vacf in each direction
-    !  CALL print_vacf ! print vacf to file vacf.dat
-    CALL deallocate_propagated_quantity
+  CALL SYSTEM_CLOCK(tac_mp)
+contains
 
-END SUBROUTINE drop_tracers
+
+  subroutine update_tracer_population
+    use precision_kinds, only: dp, i2b
+    use system, only: n, f_ext, fluid, elec_slope, lbm, x, y, z, node
+    use populations, only: check_population
+    use input, only: input_dp
+    implicit none
+    integer(i2b) :: l
+    type tracer
+      real(dp) :: D ! diffusion coefficient
+      real(dp) :: q ! charge
+    end type
+    type(tracer) :: tr
+
+    tr%D = input_dp('tracer_Db')
+    if (tr%D<=epsilon(1._dp)) stop 'D_tracer, ie tracer_Db in input is invalid'
+
+    tr%q = input_dp('tracer_z')
+
+    ! apply force on all fluid nodes and update populations
+    do concurrent( l= lbm%lmin: lbm%lmax )
+      where( node%nature ==fluid )
+        n(:,:,:,l) = lbm%vel(l)%a0*node%solventDensity &
+                   + lbm%vel(l)%a1*(&
+           lbm%vel(l)%coo(x)*(node%solventFlux(x) + f_ext(x) - node%solventDensity*tr%q *tr%D *elec_slope(x)) &
+         + lbm%vel(l)%coo(y)*(node%solventFlux(y) + f_ext(y) - node%solventDensity*tr%q *tr%D *elec_slope(y)) &
+         + lbm%vel(l)%coo(z)*(node%solventFlux(z) + f_ext(z) - node%solventDensity*tr%q *tr%D *elec_slope(z)) )
+      elsewhere
+        n(:,:,:,l) = lbm%vel(l)%a0*node%solventDensity + lbm%vel(l)%a1*( &
+                          lbm%vel(l)%coo(x)*node%solventFlux(x) + &
+                          lbm%vel(l)%coo(y)*node%solventFlux(y) + &
+                          lbm%vel(l)%coo(z)*node%solventFlux(z) )
+      end where
+    end do
+
+    call check_population(n)   ! check that no population n < 0
+  end subroutine update_tracer_population
+
+end subroutine drop_tracers

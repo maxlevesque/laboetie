@@ -1,7 +1,12 @@
-! the lattice model for LB: D3Q19, D3Q...
+!... Where we define lattices using DnQm classification
+
 module mod_lbmodel
+
     use precision_kinds
     use constants, only: x, z
+
+    implicit none
+
     type type_velocity
         integer(i2b), dimension(x:z) :: coo
         real(dp) :: a0, a1, delta
@@ -16,9 +21,13 @@ module mod_lbmodel
     end type
     type(type_lbmodel), public :: lbm
     contains
+
+!===================================================================================================================================
+
         subroutine initialize
             use input
-            lbm%name = input_ch("lbmodel")
+            implicit none
+            lbm%name = input_char("lbmodel")
             if (lbm%name(1:1)/="D") then
                 stop "critical error. LB model name should begin by D"
             else if (lbm%name(2:2)/="3") then
@@ -34,9 +43,14 @@ module mod_lbmodel
             call init_weight_factors
             call determine_velocity_inverse
         end subroutine
+
+!===================================================================================================================================
+
         subroutine init_velocities
+            implicit none
             allocate (lbm%vel(lbm%lmin:lbm%lmax))
-            if (lbm%nvel==15) then
+            select case (lbm%nvel)
+            case (15) ! D3Q15
                 lbm%vel(lbm%lmin+0)%coo = [0,0,0]
                 lbm%vel(lbm%lmin+1)%coo = [1,0,0]
                 lbm%vel(lbm%lmin+2)%coo = [-1,0,0]
@@ -52,7 +66,7 @@ module mod_lbmodel
                 lbm%vel(lbm%lmin+12)%coo = [-1,1,-1]
                 lbm%vel(lbm%lmin+13)%coo = [1,-1,-1]
                 lbm%vel(lbm%lmin+14)%coo = [-1,-1,-1]
-            else if (lbm%nvel==19) then
+            case (19) ! D3Q19
                 lbm%vel(lbm%lmin+0)%coo = [0,0,0]
                 lbm%vel(lbm%lmin+1)%coo = [1,0,0]
                 lbm%vel(lbm%lmin+2)%coo = [-1,0,0]
@@ -72,7 +86,7 @@ module mod_lbmodel
                 lbm%vel(lbm%lmin+16)%coo = [0,-1,1]
                 lbm%vel(lbm%lmin+17)%coo = [0,1,-1]
                 lbm%vel(lbm%lmin+18)%coo = [0,-1,-1]
-            else if (lbm%nvel==27) then
+            case (27) ! D3Q27
                 lbm%vel(lbm%lmin+0)%coo = [0,0,0]
                 lbm%vel(lbm%lmin+1)%coo = [1,0,0]
                 lbm%vel(lbm%lmin+2)%coo = [-1,0,0]
@@ -99,10 +113,16 @@ module mod_lbmodel
                 lbm%vel(lbm%lmin+23)%coo = [-1,-1,1]
                 lbm%vel(lbm%lmin+24)%coo = [-1,1,-1]
                 lbm%vel(lbm%lmin+25)%coo = [1,-1,-1]
-                lbm%vel(lbm%lmin+26)%coo = [-1,-1,-1]            
-            end if
+                lbm%vel(lbm%lmin+26)%coo = [-1,-1,-1]
+            case default
+                stop "You ask for a DnQm lattice that is not implemented"
+            end select
         end subroutine
+
+!===================================================================================================================================
+
         subroutine init_weight_factors
+            implicit none
             real(dp), parameter :: a_00 = 1.0_dp/3.0_dp ! Weighting factors wi for two different LB models for the discrete velocity vectors e_i
             real(dp), parameter :: a_01 = 1.0_dp/18.0_dp
             real(dp), parameter :: a_02 = 1.0_dp/36.0_dp
@@ -113,19 +133,27 @@ module mod_lbmodel
             if (lbm%nvel==15) then
                 stop "lacks weight factors for D3Q15"
             else if (lbm%nvel==19) then
-                lbm%vel%a0 = [ a_00, a_01, a_01, a_01, a_01, a_01, a_01, a_02, a_02, a_02, &
-                                  a_02, a_02, a_02, a_02, a_02, a_02, a_02, a_02, a_02 ]
-                lbm%vel%a1 = [ a_10, a_11, a_11, a_11, a_11, a_11, a_11, a_12, a_12, a_12, &
-                                  a_12, a_12, a_12, a_12, a_12, a_12, a_12, a_12, a_12 ]
+                lbm%vel%a0 =&
+  [ a_00, a_01, a_01, a_01, a_01, a_01, a_01, a_02, a_02, a_02, a_02, a_02, a_02, a_02, a_02, a_02, a_02, a_02, a_02 ]
+                lbm%vel%a1 =&
+  [ a_10, a_11, a_11, a_11, a_11, a_11, a_11, a_12, a_12, a_12, a_12, a_12, a_12, a_12, a_12, a_12, a_12, a_12, a_12 ]
                 lbm%vel%delta = [ itself, nn, nn, nn, nn, nn, nn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn, nnn ]
             else if (lbm%nvel==27) then
                 stop "lacks weight factors for D3Q27"
             end if
+            if ( abs(sum(lbm%vel%a0))-1._dp > epsilon(1.0)) stop "The sum of the weights of the velocities (a0) must be 1."
         end subroutine
+
+!===================================================================================================================================
+
         subroutine determine_velocity_inverse
+            implicit none
             integer(i2b) :: l, li
             do concurrent (l=lbm%lmin:lbm%lmax, li=lbm%lmin:lbm%lmax)
                 if (all (lbm%vel(l)%coo == -lbm%vel(li)%coo) ) lbm%vel(l)%inv = li
             end do
         end subroutine
+
+!===================================================================================================================================
+
 end module

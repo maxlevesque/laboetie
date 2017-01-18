@@ -9,7 +9,7 @@ module system
     implicit none
     ! time
     integer(i2b) :: time ! time in simu, from 0 to tmax
-    integer(i4b) :: tic, tic_eq_flux, tac_eq_flux, tic_eq_ads, tac_eq_ads, tic_mp, tac_mp ! clock time when simulation starts, unconstrained equilibration stars and ends, constrained equilibration starts and ends, moment propagation starts and ends
+    integer(i4b) :: tic, tic_ue, tac_ue, tic_ce, tac_ce, tic_mp, tac_mp ! clock time when simulation starts, unconstrained equilibration stars and ends, constrained equilibration starts and ends, moment propagation starts and ends
     integer(i2b) :: t_equil, tmom, tmin,  tmax ! 0->t_equil; t_equil->tmom; t_mom->tmax
     ! Convergence criterions
     real(dp) :: delta_disp, delta_vacf, delta_fa

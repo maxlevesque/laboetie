@@ -8,7 +8,7 @@ SUBROUTINE poisson_nernst_planck
   USE system, ONLY: D_equil, sigma, time, elec_slope, lncb_slope
   USE input
   USE io, ONLY: print_everything_related_to_charge_equil
-  
+
   IMPLICIT NONE
   INTEGER(i2b) :: timestep, timestepmax
   LOGICAL :: is_converged = .FALSE.
@@ -21,7 +21,7 @@ SUBROUTINE poisson_nernst_planck
   ! read the number of iterations one does for the first step of equilibration (D_iter)
 
   IF (D_equil<0) STOP "D_equil should be >= 0"
-  
+
   CALL get_timestepmax (timestepmax)
 
   ! read electrostatic related stuff
@@ -54,7 +54,7 @@ SUBROUTINE poisson_nernst_planck
 
 
     CONTAINS
-    
+
         SUBROUTINE get_timestepmax (a)
             INTEGER(i2b) :: a
             a = input_int("timestepmax_for_PoissonNernstPlanck")

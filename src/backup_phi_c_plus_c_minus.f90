@@ -2,7 +2,7 @@ SUBROUTINE backup_phi_c_plus_c_minus
 
     USE system, ONLY: phi, phi_old, c_plus, c_plus_old, c_minus, c_minus_old
     USE myallocations, ONLY: allocateReal3D
-    
+
     IMPLICIT NONE
 
     ! if it is the first iteration in find_equilibrium_charge_distribution then allocate backup arrays

@@ -1,6 +1,6 @@
 module geometry
     use precision_kinds ! all precision kinds defined in the dedicated module
-    use system, only: fluid, solid, supercell
+    use system, only: fluid, solid, supercell, node
     use constants, only: x, y, z
     implicit none
     !  private
@@ -39,18 +39,18 @@ module geometry
                             exit checkincyl
                         end if
                     end do checkincyl
-                if( isInCylinders ) supercell%node(i,j,:)%nature = solid
+                if( isInCylinders ) node(i,j,:)%nature = solid
                 end do
             end do
-            supercell%node(:,:,1)%nature = solid
-            supercell%node(:,:,lz)%nature = solid
+            node(:,:,1)%nature = solid
+            node(:,:,lz)%nature = solid
         end subroutine CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
 
 SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
 ! construct the system described in Makhnovskii et al., Chem. Phys. 367, 110 (2010)
 ! 4 effective variables: length of big pore lw, narrow pore ln, radius of each, R and a, respectively.
 ! the tube is along x, with infinity sym along z (ie lz = 1 ok)
-  real(dp) :: R, a, ln, lw, lw_o_lx, a_o_R
+  real(dp) :: R, a, lw_o_lx, a_o_R
   real(dp), dimension(2) :: r0, rjk
   integer(i2b) :: i, j, k
   logical :: is_here
@@ -59,7 +59,7 @@ SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
             ly = supercell%geometry%dimensions%indiceMax(y)
             lz = supercell%geometry%dimensions%indiceMax(z)
   if(ly/=lz) stop 'ly should be equal to lz cause it is a tube'
-  supercell%node%nature = solid
+  node%nature = solid
   inquire(file='tube.in',exist=is_here)
   if(.not.is_here) stop 'tube.in cannot be read'
   open(unit=12,file='tube.in')
@@ -71,15 +71,15 @@ SUBROUTINE CONSTRUCT_TUBE_WITH_VARYING_DIAMETER
     rjk = [real(j),real(k)]
     if(i>lw_o_lx*lx) then
       if( norm2( rjk-r0 ) < a ) then
-        supercell%node(i,j,k)%nature = fluid
+        node(i,j,k)%nature = fluid
       else
-        supercell%node(i,j,k)%nature = solid
+        node(i,j,k)%nature = solid
       end if
     else if(i<=lw_o_lx*lx) then
       if( norm2( rjk-r0 ) < R ) then
-        supercell%node(i,j,k)%nature = fluid
+        node(i,j,k)%nature = fluid
       else
-        supercell%node(i,j,k)%nature = solid
+        node(i,j,k)%nature = solid
       end if
     end if
   end do
@@ -94,7 +94,7 @@ SUBROUTINE CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D
 ! construct the system described in Makhnovskii et al., Chem. Phys. 367, 110 (2010)
 ! 4 effective variables: length of big pore lw, narrow pore ln, radius of each, R and a, respectively.
 ! the tube is along x, with infinity sym along z (ie lz = 1 ok)
-  real(dp) :: R, a, ln, lw
+
   integer(i2b) :: i
             integer(i2b) :: lx, ly, lz
             lx = supercell%geometry%dimensions%indiceMax(x)
@@ -104,13 +104,13 @@ SUBROUTINE CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D
 !  a = R/2._dp
 !  lw = real(lx,dp)/2._dp
 !  ln = lw
-  supercell%node%nature = fluid
-  supercell%node(:,1,:)%nature = solid
-  supercell%node(:,ly,:)%nature = solid
+  node%nature = fluid
+  node(:,1,:)%nature = solid
+  node(:,ly,:)%nature = solid
   do i=1,lx
     if( i>lx/2 ) then
-      supercell%node(i,2:1+(ly-2)/4,:)%nature = solid
-      supercell%node(i,ly-(ly-2)/4:ly-1,:)%nature = solid
+      node(i,2:1+(ly-2)/4,:)%nature = solid
+      node(i,ly-(ly-2)/4:ly-1,:)%nature = solid
     end if
   end do
 END SUBROUTINE CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D
@@ -139,11 +139,11 @@ SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
     mirror = midly
     do j = midly, ly
       if( j < ninty ) then
-        supercell%node(i,j,:)%nature = fluid
+        node(i,j,:)%nature = fluid
       else
-        supercell%node(i,j,:)%nature = solid
+        node(i,j,:)%nature = solid
       end if
-      supercell%node(i, mirror, :)%nature = supercell%node(i, j, :)%nature
+      node(i, mirror, :)%nature = node(i, j, :)%nature
       mirror = mirror - 1
     end do
   end do
@@ -154,11 +154,11 @@ END SUBROUTINE CONSTRUCT_SINUSOIDAL_WALLS_2D
 
 SUBROUTINE CONSTRUCT_SLIT
   integer(i2b) :: mi, ma
-  mi = lbound(supercell%node%nature,3)
-  ma = ubound(supercell%node%nature,3)
-  supercell%node%nature = fluid
-  supercell%node( :, :, mi)%nature = solid ! the lower bound of the thrid dimension of inside is solid
-  supercell%node( :, :, ma)%nature = solid ! so is the upper bound
+  mi = lbound(node%nature,3)
+  ma = ubound(node%nature,3)
+  node%nature = fluid
+  node( :, :, mi)%nature = solid ! the lower bound of the thrid dimension of inside is solid
+  node( :, :, ma)%nature = solid ! so is the upper bound
 END SUBROUTINE CONSTRUCT_SLIT
 
 
@@ -184,9 +184,9 @@ SUBROUTINE CONSTRUCT_SPHERICAL_CAVITY
       do k = 1, lz
         rnode = [real(i,dp),real(j,dp),real(k,dp)] - rorigin
         if( norm2(rnode) >= radius ) then ! = radius is important because without it one has exists
-          supercell%node(i,j,k)%nature = solid
+          node(i,j,k)%nature = solid
         else
-          supercell%node(i,j,k)%nature = fluid
+          node(i,j,k)%nature = fluid
         end if
       end do
     end do
@@ -207,12 +207,12 @@ SUBROUTINE CONSTRUCT_CC
             ly = supercell%geometry%dimensions%indiceMax(y)
             lz = supercell%geometry%dimensions%indiceMax(z)
   if( lx /= ly .or. lx /= lz ) stop 'with wall = 3, i.e. cfc cell, the supercell should be cubic with lx=ly=lz'
-  supercell%node%nature = fluid
+  node%nature = fluid
   do concurrent( i=1:lx, j=1:ly, k=1:lz )
     if( is_in_solid_sphere(i,j,k) ) then
-      supercell%node(i,j,k)%nature = solid
+      node(i,j,k)%nature = solid
     else
-      supercell%node(i,j,k)%nature = fluid
+      node(i,j,k)%nature = fluid
     end if
   end do
   contains
@@ -264,9 +264,9 @@ SUBROUTINE CONSTRUCT_CYLINDER
     do j = 1, ly
       rnode = [real(i,dp),real(j,dp)] - rorigin
       if( norm2(rnode) >= radius ) then ! = radius is important because without it one has exists
-        supercell%node(i,j,:)%nature = solid
+        node(i,j,:)%nature = solid
       else
-        supercell%node(i,j,:)%nature = fluid
+        node(i,j,:)%nature = fluid
       end if
     end do
   end do
@@ -293,7 +293,7 @@ SUBROUTINE CONSTRUCT_SPHERE_BENICHOU
 !oo       oo
 !o         o
 !o         o
-!           
+!
 !o         o
 !o         o
 !oo       oo
@@ -317,9 +317,9 @@ SUBROUTINE CONSTRUCT_SPHERE_BENICHOU
       do k = 1, lz
         rnode = [real(i,dp),real(j,dp),real(k,dp)] - rorigin
         if( norm2(rnode) > radius ) then
-          supercell%node(i,j,k)%nature = solid
+          node(i,j,k)%nature = solid
         else
-          supercell%node(i,j,k)%nature = fluid
+          node(i,j,k)%nature = fluid
         end if
       end do
     end do
@@ -342,7 +342,7 @@ SUBROUTINE CONSTRUCT_DISC_BENICHOU
 !oo       oo
 !o         o
 !o         o
-!           
+!
 !o         o
 !o         o
 !oo       oo
@@ -365,9 +365,9 @@ SUBROUTINE CONSTRUCT_DISC_BENICHOU
     do j = 1, ly
       rnode = [real(i,dp),real(j,dp)] - rorigin
       if( norm2(rnode) > radius ) then
-        supercell%node(i,j,:)%nature = solid
+        node(i,j,:)%nature = solid
       else
-        supercell%node(i,j,:)%nature = fluid
+        node(i,j,:)%nature = fluid
       end if
     end do
   end do
@@ -387,7 +387,7 @@ END SUBROUTINE CONSTRUCT_DISC_BENICHOU
             print*,"Cant find file containing custom geometry: "//filename//". Check lb.in if you really wanted custom geometry"
             stop "stop"
         end if
-        supercell%node%nature = fluid ! everything but what is precised in geom.in is fluid
+        node%nature = fluid ! everything but what is precised in geom.in is fluid
         open(unit=u,file=filename)
         stat= 0
         do while (.not. is_iostat_end(stat) )
@@ -416,7 +416,7 @@ END SUBROUTINE CONSTRUCT_DISC_BENICHOU
                 print*,"Index ",k," in 3rd column (z column) of geom.in is sup to nb of nodes. It must be between 1 and lz"
                 stop
             end if
-            supercell%node(i,j,k)%nature = solid
+            node(i,j,k)%nature = solid
         end do
         close(u)
     end subroutine

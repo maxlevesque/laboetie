@@ -1,79 +1,49 @@
 MODULE POPULATIONS
+
   use precision_kinds
   use constants, only: x, y, z
-  use system, only: supercell
+  use system, only: node
   use mod_lbmodel, only: lbm
   implicit none
+
   private
-  public :: calc_n, calc_n_momprop
+  public :: update_populations, check_population
 
 contains
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine update_populations
+    use system, only: fluid, f_ext, n, solid
+    implicit none
+    integer(i2b) :: l
+    real(dp) :: a0, a1, c(3)
+    ! apply force on all fluid nodes and update populations
+    do concurrent (l= lbm%lmin:lbm%lmax)
+      a0 = lbm%vel(l)%a0
+      a1 = lbm%vel(l)%a1
+      c(:) = lbm%vel(l)%coo(:)
+      where (node%nature == fluid)
+        n(:,:,:,l) =  a0*node%solventDensity &
+          + a1*( &
+            c(x)*(node%solventFlux(x) + f_ext(x)) &
+          + c(y)*(node%solventFlux(y) + f_ext(y)) &
+          + c(z)*(node%solventFlux(z) + f_ext(z)) )
+      elsewhere
+        n(:,:,:,l) =  a0*node%solventDensity &
+            + a1*( &
+              c(x)*node%solventFlux(x) &
+            + c(y)*node%solventFlux(y) &
+            + c(z)*node%solventFlux(z)  )
+      end where
+    end do
+    ! call check_population (n) ! check that no population n < 0
+  end subroutine update_populations
 
-SUBROUTINE CALC_N
-  use system, only: fluid, f_ext, n, solid
-  integer(kind=i2b) :: l
-  ! apply force on all fluid nodes and update populations
-  do l= lbm%lmin, lbm%lmax
-    where (supercell%node%nature == fluid)
-      n(:,:,:,l) = lbm%vel(l)%a0*supercell%node%solventDensity &
-          + lbm%vel(l)%a1*( lbm%vel(l)%coo(x)*(supercell%node%solventFlux(x) + f_ext(x)) &
-                  + lbm%vel(l)%coo(y)*(supercell%node%solventFlux(y) + f_ext(y)) &
-                  + lbm%vel(l)%coo(z)*(supercell%node%solventFlux(z) + f_ext(z)) )
-    elsewhere
-      n(:,:,:,l) = lbm%vel(l)%a0*supercell%node%solventDensity + &
-            lbm%vel(l)%a1*( lbm%vel(l)%coo(x)*supercell%node%solventFlux(x)&
-                     + lbm%vel(l)%coo(y)*supercell%node%solventFlux(y) &
-                     + lbm%vel(l)%coo(z)*supercell%node%solventFlux(z) )
-    end where
-  end do
-
-  ! check that no population n < 0
-  call check_population(n)
-
-END SUBROUTINE CALC_N
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-SUBROUTINE CALC_N_MOMPROP
-  use system, only: n, f_ext, fluid, elec_slope
-  use input, only: input_dp
-  integer(kind=i2b) :: l
-  real(dp) :: D_tracer, tracer_z
-  D_tracer = input_dp('tracer_Db')
-  if (D_tracer<=0.0_dp) stop 'D_tracer, ie tracer_Db in input is invalid'
-  tracer_z = input_dp('tracer_z')
-
-  ! apply force on all fluid nodes and update populations
-  do concurrent( l= lbm%lmin: lbm%lmax )
-    where( supercell%node%nature ==fluid )
-      n(:,:,:,l) = lbm%vel(l)%a0*supercell%node%solventDensity &
-                 + lbm%vel(l)%a1*( lbm%vel(l)%coo(x)*&
-                 (supercell%node%solventFlux(x) + f_ext(x) - supercell%node%solventDensity*tracer_z *D_tracer *elec_slope(x)) &
-                         + lbm%vel(l)%coo(y)*(supercell%node%solventFlux(y) + f_ext(y) &
-                         - supercell%node%solventDensity*tracer_z *D_tracer *elec_slope(y)) &
-                         + lbm%vel(l)%coo(z)*(supercell%node%solventFlux(z) + f_ext(z) - &
-                         supercell%node%solventDensity*tracer_z *D_tracer *elec_slope(z)) )
-    elsewhere
-      n(:,:,:,l) = lbm%vel(l)%a0*supercell%node%solventDensity + lbm%vel(l)%a1*( &
-                        lbm%vel(l)%coo(x)*supercell%node%solventFlux(x) + &
-                        lbm%vel(l)%coo(y)*supercell%node%solventFlux(y) + &
-                        lbm%vel(l)%coo(z)*supercell%node%solventFlux(z) )
-    end where
-  end do
-
-  ! check that no population n < 0
-  call check_population(n)
-END SUBROUTINE CALC_N_MOMPROP
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    SUBROUTINE CHECK_POPULATION (arrayin)
-        real(dp), dimension(:,:,:,:), intent(in) :: arrayin
-        real(dp), parameter :: permitted_minimum_value_numerical_noise = epsilon(1.0_dp)
-        if (any(arrayin > 1.0_dp + permitted_minimum_value_numerical_noise)) stop 'STOP population n > 1 somewhere'
-        if (any(arrayin < permitted_minimum_value_numerical_noise)) stop 'STOP some population n < 0 somewhere.'
-    END SUBROUTINE CHECK_POPULATION
+  subroutine check_population (arrayin)
+    implicit none
+    real(dp), dimension(:,:,:,:), intent(in) :: arrayin
+    real(dp), parameter :: eps=epsilon(1.0_dp)
+    if (any(abs(arrayin) > 1+eps)) stop "Critical. Population n_i(r) > 1 somewhere"
+    if (any(arrayin < -eps)) stop 'Critical. Population n_i(r) < 0 somewhere.'
+  end subroutine check_population
 
 END MODULE POPULATIONS

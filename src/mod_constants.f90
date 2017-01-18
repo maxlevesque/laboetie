@@ -29,5 +29,8 @@ module constants ! fondamental_constants
   complex ( kind = dp ) , parameter :: i_complex     = ( 0.0_dp , 1.0_dp ) ! i complex
   real ( kind = dp )    , parameter :: infty         = huge ( 1.0_dp ) ! largest number fortran can reach at given precision
   integer ( kind = i2b ), parameter :: x = 1, y = 2, z = 3
+  real(dp), parameter :: zerodp = 0._dp
+  real(dp), parameter :: epsdp = epsilon(1._dp)
+
 
 end module constants

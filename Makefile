@@ -1,22 +1,20 @@
+
 MODDIR = mod
 SRCDIR = src
-FC = gfortran
+FC = gfortran #-/opt/intel/bin/ifort #
 # flags forall (e.g. look for system .mod files, required in gfortran)
-FCFLAGS = -J $(MODDIR)
+FCFLAGS = -J $(MODDIR) #- module
 # libraries needed for linking, unused in the examples
-LDFLAGS = -lfftw3
+LDFLAGS = #-lfftw3
 
-DEBUG = -Og -g -Wall -Wextra -fimplicit-none -fbacktrace -std=f2008 -pedantic -fwhole-file -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -fbounds-check -fcheck=all -fcheck-array-temporaries -Warray-temporaries -Wconversion -pg -Wunused-parameter -Wimplicit-interface -frecursive
-#-g turns on debugging
-#-p turns on profiling
-
-OPTIM = -O3 -march=native #-ffast-math -funroll-loops
+OPTIM = -O3 -march=native -funroll-loops -fopenmp #-Ofast
+#OPTIM = -O3 -march=native -ffast-math -funroll-loops #-fopenmp #-Ofast
 # -fopenmp for OPENMP support
 
 EXE = laboetie
 
 
-OBJS = 	$(SRCDIR)/mod_precision_kinds.f90 \
+SRCS = 	$(SRCDIR)/mod_precision_kinds.f90 \
 		$(SRCDIR)/mod_input.f90 \
 		$(SRCDIR)/mod_constants.f90 \
 		$(SRCDIR)/mod_lbmodel.f90 \
@@ -26,6 +24,8 @@ OBJS = 	$(SRCDIR)/mod_precision_kinds.f90 \
 		$(SRCDIR)/mod_myallocations.f90 \
 		$(SRCDIR)/mod_populations.f90 \
 		$(SRCDIR)/mod_supercell.f90 \
+		$(SRCDIR)/mod_read_file.f90\
+		$(SRCDIR)/mod_velocity_profiles.f90\
 	    $(SRCDIR)/backup_phi_c_plus_c_minus.f90 \
 		$(SRCDIR)/advect.f90 \
 		$(SRCDIR)/charges_init.f90 \
@@ -36,26 +36,32 @@ OBJS = 	$(SRCDIR)/mod_precision_kinds.f90 \
 		$(SRCDIR)/comp_rho.f90 \
 		$(SRCDIR)/drop_tracers.f90 \
 		$(SRCDIR)/electrostatic_pot.f90 \
-		$(SRCDIR)/equilibration_with_constraints.f90 \
-		$(SRCDIR)/equilibration_without_constraint.f90 \
+		$(SRCDIR)/equilibration_new.f90 \
+		$(SRCDIR)/module_io.f90 \
 		$(SRCDIR)/init_simu.f90 \
 		$(SRCDIR)/just_eq_smolu.f90 \
 		$(SRCDIR)/main.f90 \
-		$(SRCDIR)/module_io.f90 \
 		$(SRCDIR)/poisson_nernst_planck.f90 \
 		$(SRCDIR)/propagation.f90 \
 		$(SRCDIR)/smolu.f90 \
 		$(SRCDIR)/sor.f90 \
-		$(SRCDIR)/supercell_definition.f90 \
-		$(SRCDIR)/velocity_profiles.f90
+		$(SRCDIR)/supercell_definition.f90 
+		
 
+OBJS = $(SRCS:.f90=.o)
 # symbol '@' in front of a line makes it silent. Otherwise it is printed in terminal when called
 
- all: $(OBJS)
-	 $(FC) $(FCFLAGS) $(OPTIM) -o $(EXE) $(OBJS) $(LDFLAGS)
+all: $(EXE)
+debug: $(EXE) 
+debug: OPTIM= -g -Wall -Wextra -fimplicit-none -fbacktrace -fbounds-check -fcheck-array-temporaries -Wunused-parameter -frecursive -pedantic -Wimplicit-interface -fwhole-file -fcheck=all 
 
- debug: $(OBJS)
-	 $(FC) $(FCFLAGS) $(DEBUG) -o $(EXE) $(OBJS) $(LDFLAGS)
+$(EXE) : $(OBJS)
+	$(FC) $(FCFLAGS) $(OPTIM) -o $@ $(OBJS) $(LDFLAGS)
 
- clean:
-	rm -vf gmon.out $(EXE) $(MODDIR)/* 
+%.o: %.f90
+	$(FC) $(FCFLAGS) $(OPTIM) -o $@ -c $<
+
+clean:
+	rm -vf gmon.out $(EXE) $(MODDIR)/* $(OBJS)
+
+

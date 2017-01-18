@@ -3,8 +3,11 @@ subroutine init_simu
     use mod_lbmodel, only: init_everything_related_to_lb_model => initialize
     use io, only: manageInputs => manage, print_header, print_input_in_output_folder, inquireNecessaryFilesExistence
     use myallocations
+    use system, only: tic
     implicit none
 
+    !Clock time initialisation
+    CALL SYSTEM_CLOCK(tic)
     call print_header  ! print header
     call inquireNecessaryFilesExistence  ! check that input, output folder and file ./lb.in exist
     call manageInputs  ! go read the input file(s) and put everything in a character array
@@ -18,18 +21,17 @@ subroutine init_simu
 
         subroutine init_moments_for_LB
             use precision_kinds, only: dp
-            use system, only: n, supercell
+            use system, only: n, node
             use input, only: input_dp
-            use mod_lbmodel, only: lbm
             real(dp) :: initialSolventDensity
             initialSolventDensity = input_dp('initialSolventDensity') ! read the initial, homogeneous, solvent density in input file
-            supercell%node%solventDensity = initialSolventDensity
+            node%solventDensity = initialSolventDensity
             if (.not. allocated(n)) call allocateReal4D(n)  ! zeroth order moment == population(r,v) == mass density
         end subroutine init_moments_for_LB
 
         subroutine scheduler
-            use system, only: t_equil, tmom, tmax, D_iter, time
-            use input, only: input_int
+            use system, only: t_equil, tmom, tmin, tmax, D_iter, time, delta_disp, delta_vacf, delta_fa
+            use input, only: input_int, input_dp
             ! 4 times are important :
             ! - 0 at which simulation starts
             ! - t_equil which is the time of equilibration ending
@@ -40,13 +42,17 @@ subroutine init_simu
             D_iter = input_int('D_iter')
             tmax = input_int('tmax')
             tmom = input_int('tmom')
+            tmin = input_int('tmin')
             t_equil = input_int('t_equil')
+            delta_disp = input_dp('delta_disp')
+            delta_vacf = input_dp('delta_vacf')
+            delta_fa = input_dp('delta_fa')
             ! check coherence
-            if( tmax <= 0 .or. tmom <= 0 .or. t_equil <= 0 ) then
+            if( tmax <= 0 .or. tmom <= 0 .or. t_equil <= 0 .or. tmin <= 0 ) then
                 stop 'in scheduler. no time should be negative or zero'
             end if
             ! check tmax is last 
-            if( tmom > tmax .or. t_equil > tmax ) then
+            if( tmom > tmax .or. t_equil > tmax .or. tmin > tmax ) then
                 stop 'equilibration and moment propagation cannot start after simulation end. check input.'
             end if
             ! tracer moment preparation should come after equilibration

@@ -1,59 +1,69 @@
 ################################################################################
-# LaBo INPUT FILE
+# LaBo INPUT FILE #
 ################################################################################
-
-lx = 1
-ly = 1
-lz = 30
-
-lbmodel = D3Q19
-
-timestepmax_for_PoissonNernstPlanck = 100
-D_equil = 10 # number of steps for equilibrating charges (finding PB solution). 1 if charge (salt) free fluid.
+ 
+lx =          1 # nb of grid points in x direction
+ly =          1 # nb of grid points in y direction
+lz =        102 # nb of grid points in z direction
+ 
+lbmodel = D3Q19 # lattice boltzmann model Only D3Q19 is allowed
+ 
+timestepmax_for_PoissonNernstPlanck = 1 # let it to 1
+D_equil = 0
+# number of steps for equilibrating charges (finding PB solution).1 if charge (salt) free fluid.
 t_equil = 20 # number of steps for equilibrating the flux without constraints
-tmom = 200 # between t_equil and tmom, constraints are applieds (pression, electric field,...)
-tmax = 200000000 # between tmom and tmax, moment propagation is done
-
-geometryLabel = 1 # 0 for a custom cell (written in geom.in)
-	          # 1 for a slit, i.e. two walls at z=zmin and z=zmax
-                  # 2 for a cylinder along Z. lx have to be equal to ly.
-                  # 3 for a body centered cubic cell with solid spheres in contact
-                  # 4 for disc benichou with exists at 0, 3, 6 and 9 oclock
-                  # 5 for corrugated wall (sinusoidal and mirored wrt to y=ly/2.
-                  # 6 for a slit with various diameter (2D)
-                  # 7 for a tube with various diameter (3D)
-                  # 8 for a spherical cavity (3D)
-                  # 9 for sphere with 6 exits as asked by benichou
-                  # 10 for the supercell given by Xudong, Vincent, Marie and Benjamin from COMSOL
-
-stripes = 0.0 0.0 0.0
-initialSolventDensity = 1.0 # fluid density in LB units
-f_ext = 0.0 0.0 0.0 # external force
-
+tmom =     600000 # between t_equil and tmom, constraints are applieds (pression, electric field,...)
+comp_eq_flux =          1 # 1: compute flux equilibration, 0: read flux properties in DensityField.dat and FluxField.dat
+tmin =      40000 # Minimum number of step of moment propagation before checking convergence
+tmax =     600000 # between tmom and tmax, moment propagation is done
+ delta_disp =    1.0000000000000000E-010  # convergence criterion on dispersion
+ delta_vacf =    1.0000000000000000E-013  # convergence criterion on vacf
+ delta_fa =    1.0000000000000001E-009  # convergence criterion on fa
+ delta_flux =    1.0000000000000000E-010
+ print_frequency =         1000
+ 
+geometryLabel = 0 # 0 for a custom cell (readen in geom.in)
+         # 1 for a slit, i.e. two walls at z=zmin and z=zmax
+            # 2 for a cylinder along Z. lx have to be equal to ly.
+            # 3 for a body centered cubic cell with solid spheres in contact
+            # 4 for disc benichou with exists at 0, 3, 6 and 9 oclock
+            # 5 for corrugated wall (sinusoidal and mirored wrt to y=ly/2.
+            # 6 for a slit with various diameter (2D)
+            # 7 for a tube with various diameter (3D)
+            # 8 for a spherical cavity (3D)
+            # 9 for sphere with 6 exits as asked by benichou
+            # 10 for the supercell given by Xudong, Vincent, Marie and Benjamin from COMSOL
+            # 11 for a slit pore with parallepipedic cavities on walls
+ 
+stripes = 0.0 0.0 0.0  # do not touch this
+initialSolventDensity = 1.0 # fluid density in LB units do not touch this
+f_ext = 0.00E+00  7.01E-07  0.00E+00 # external force
+ compensate_f_ext = F
+ 
 ################################################################################
 # charge of the solid
 ################################################################################
-charge_distrib = int # sol) charge distributed in the whole solid. int) charge distributed on interfacial nodes only
+charge_distrib = int # sol) charge distributed in the whole solid
+                       int) charge distributed on interfacial nodes only
 sigma = 0.0 # charge distributed in solid
 bjl = 0.4 # bjerum length
 lambda_D = -2.0 # old debye_l
-
-D_plus = 0.05
-D_minus = 0.05
+ 
+D_plus = 0.05 # diffusion coeff of salt +
+D_minus = 0.05 # diffusion coeff of salt -
 D_iter = 1
-
-
+ 
 ################################################################################
 # Moment Propagation
 ################################################################################
-tracer_Db = 0.01   # bulk diffusion coefficient of the tracer
-tracer_Ds = 0.0   # surface diffusion coefficient of the tracer
+tracer_Db = 1.00E-2   # bulk diffusion coefficient of the tracer
+tracer_Ds = 0.0   # surface diffusion coefficient of the tracer # STILL UNTESTED
 tracer_z = 0.0     # charge of the tracer
-tracer_ka = 0.1    # adsorption coefficient of the tracer
-tracer_kd = 0.01    # desorption coefficient of the tracer
-
-
-
+tracer_ka = 8.00E-2    # adsorption coefficient of the tracer
+tracer_kd = 6.40E-3  # desorption coefficient of the tracer
+considerpmax =          0
+pmax = 1.25E-1
+ 
 ################################################################################
 # Useless for now
 ################################################################################
@@ -63,5 +73,5 @@ right wall vel = 0.0
 Tprint_eq = 1000
 Tprint_run = 10000
 elec_slope = 0.0 0.0 0.0 # external electric field
-lncb_slope = 0.0 0.0 0.0 # external gradient of salt concentration 
-f_gen = 0.0 0.0 0.0
+lncb_slope = 0.0 0.0 0.0 # external gradient of salt concentration
+f_gen = 0.0 0.0 0.0 #
