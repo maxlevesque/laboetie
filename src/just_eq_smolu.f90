@@ -7,7 +7,7 @@ subroutine just_eq_smolu
     use precision_kinds
     use system, only: D_plus, D_minus, node,&
         D_equil, time, fluid, phi, c_plus, c_minus,&
-        rho_0=>rho_ch, sigma, pbc, supercell
+        rho_0, sigma, pbc, supercell
     use constants, only: x, y, z
     use mod_lbmodel, only: lbm
     use myAllocations
@@ -20,6 +20,9 @@ subroutine just_eq_smolu
     real(dp) :: tot_diff_plus, tot_diff_minus ! total flux of + and - solutes init at high values
     real(dp) :: eD_plus, eD_minus ! effective D_plus and D_minus
     real(dp), parameter :: convergence_criteria = 5.e-6
+    real(dp) :: FactMinus, FactPlus ! dummy variables
+
+
     call allocateReal3D( flux_site_plus)
     call allocateReal3D( flux_site_minus)
     ! init
@@ -150,10 +153,12 @@ subroutine just_eq_smolu
     ! compute the total flux in this equilibration step one wants to minimize.
     if( sigma/=0 .and. eD_plus/=0.0_dp .and. eD_minus/=0.0_dp ) then
       ! the sum of all flux
+      FactPlus = sum(c_plus) / count(node%nature==fluid) + rho_0
+      FactMinus = sum(c_minus) / count(node%nature==fluid) + rho_0
       tot_diff_plus  = sqrt(sum(flux_site_plus**2,mask=(node%nature==fluid))) &
-          / count(node%nature==fluid) / (0.5_dp*rho_0*eD_plus ) / sigma ! 1st denominator is the number of fluid nodes)
+          / count(node%nature==fluid) / (0.5_dp*FactPlus*eD_plus ) / sigma ! 1st denominator is the number of fluid nodes)
       tot_diff_minus = sqrt(sum(flux_site_minus**2,mask=(node%nature==fluid))) &
-          / count(node%nature==fluid) / (0.5_dp*rho_0*eD_minus) / sigma ! norm2 is the Fortran intrinsic for euclidean norm
+          / count(node%nature==fluid) / (0.5_dp*FactMinus*eD_minus) / sigma ! norm2 is the Fortran intrinsic for euclidean norm
 !      print*,'DIFF_plus =',tot_diff_plus,' DIFF_minus =',tot_diff_minus
     end if
 
