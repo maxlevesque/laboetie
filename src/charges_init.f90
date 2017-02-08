@@ -15,7 +15,6 @@ subroutine charges_init
     real(dp) :: sigma_solid, sigma_fluid
     real(dp) :: in_c_plus_solid, in_c_plus_fluid, in_c_minus_solid, in_c_minus_fluid
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
-    real(dp) :: FactMinus, FactPlus ! dummy variables
 
     !
     ! Is there any charge into the solute ?
