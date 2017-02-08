@@ -1,0 +1,60 @@
+        Note: The following floating-point exceptions are signalling: IEEE_DIVIDE_BY_ZERO IEEE_OVERFLOW_FLAG
+        ERROR STOP In equilibration, the population n(x,y,z,vel) < 0
+
+        with following input:
+
+        lx = 1
+		ly = 1
+		lz = 11
+		geometryLabel = 1  # 1 => slit pore; 0 => geom.in; 11 => geom.pbm
+		f_ext = 0.0  0.0  0.0
+
+		sigma = -1.0
+		timestepmax_for_PoissonNernstPlanck = 1000000
+		bjl = 0.4
+		lambda_D = 0.0
+		lncb_slope = 0.0  0.0  0.0
+		charge_distrib = int
+		D_plus = 0.05
+		D_minus = 0.05
+		D_iter = 1
+		elec_slope = 0.0 0.0 0.0
+
+	
+       TO DO: Ask Benjamin if the configuration above is physical, i.e. no salt but charged surface.
+
+       As well as the following input, when salt is added (i.e. lambda_D > 0.0 )
+
+
+        lx = 1
+	ly = 1
+	lz = 11
+	geometryLabel = 1
+	f_ext = 0.0  0.0  0.0
+
+	print_every = 30
+
+	sigma = -0.2
+	timestepmax_for_PoissonNernstPlanck = 1000000
+	bjl = 0.4
+	lambda_D = 1.0
+	lncb_slope = 0.0  0.0  0.0
+	charge_distrib = int
+	D_plus = 0.05
+	D_minus = 0.05
+	D_iter = 1
+	elec_slope = 0.0 0.0 0.0
+
+     The c_plus tables are fine both at the end of Poisson Nernst Planck and during the temporal loop in
+     equilibtion.f90
+
+     Benjamin pointed out that when comparing c_plus_alongZ.dat with c_plus_alongZTIME*.dat, the value 
+     of charges changes where walls are. THIS SHOULD NOT HAPPEN!
+     Commenting "CALL advect" in equilibration.f90, fixed the problem. Thus there is an issue somewhere in 
+     advect.f90
+
+     OK.... something crazy happened..... Now the apparent problem of not having the same charge at the walls
+     has vanished for some unknown reason. I used the exact same configuration as above and tried even with
+     the code version in ValidationNoChargesWithSalt in order to double check whether I had done some very 
+     recent modification, which I could not remember. This is really bizarre. Anyway... back to starting point
+     most probably something wrong is happening in solute_force tables.

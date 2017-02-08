@@ -7,11 +7,18 @@ subroutine advect
   use myallocations
   implicit none
   real(dp) :: c_minus_total_old, c_plus_total_old, c_minus_total_new, c_plus_total_new
-  integer(i2b) :: i, j, k, ix, iy, iz, ip, jp, kp, ip_all(3), jp_all(3), kp_all(3)
+  integer(i2b) :: i, j, k, ix, iy, iz, ip, jp, kp, ip_all(-1:1), jp_all(-1:1), kp_all(-1:1)
   real(dp) :: vx, vy, vz, ax, ay, az
   real(dp) :: flux_link_minus, flux_link_plus
   call allocateReal3D( flux_site_minus )
   call allocateReal3D( flux_site_plus )
+
+  ! Ade : This is a temporary test. To be removed
+  !-------------------- Ade --------------------------- 
+  ! init ion (solute) concentrations
+  if (.not. allocated(c_plus)) call allocateReal3D(c_plus)
+  if (.not. allocated(c_minus)) call allocateReal3D( c_minus)
+  !-------------------- Ade --------------------------- 
 
   !   THIS IS VERY CRIPTIC...
   !   What I am doing is what discussed with you.
@@ -56,13 +63,47 @@ subroutine advect
   c_plus_total_old = sum( c_plus)
   c_minus_total_old = sum( c_minus)
 
+
+
+  !-------------------- Ade --------------------------- 
+  ip_all = [0,0,0]
+  jp_all = [0,0,0]
+  kp_all = [0,0,0]
+
+  ix = 0
+  iy = 0
+  iz = 0
+
+  ip = 0
+  jp = 0
+  kp = 0
+  !-------------------- Ade --------------------------- 
+  
   do i= supercell%geometry%dimensions%indiceMin(x), supercell%geometry%dimensions%indiceMax(x)
+    
+    !do ix = -1,1
+    !    ip_all(ix) = pbc( i+ix ,x)
+    !    print*, 'ix dans la boucle vaut ', ix
+    !end do     
     ip_all(:) = [(pbc(i+ix,x),ix=-1,1)]
+    
     do j= supercell%geometry%dimensions%indiceMin(y), supercell%geometry%dimensions%indiceMax(y)
+      
+      !do iy = -1,1
+      !    jp_all(iy) = pbc( j+iy ,y)
+      !    print*, 'iy dans la boucle vaut ', iy
+      !end do     
       jp_all(:) = [(pbc(j+iy,y),iy=-1,1)]
+      
       do k= supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
         if( abs(c_plus(i,j,k))<=epsilon(1._dp) .and. abs(c_minus(i,j,k))<=epsilon(1._dp) ) cycle
+        
+        !do iz = -1,1
+        !    kp_all(iz) = pbc( k+iz ,z)
+        !    print*, 'iz dans la boucle vaut ', iz
+        !end do     
         kp_all(:) = [(pbc(k+iz,z),iz=-1,1)]
+        
         ! velocities
         vx = node(i,j,k)%solventFlux(x)
         vy = node(i,j,k)%solventFlux(y)
@@ -72,7 +113,7 @@ subroutine advect
           do iy= -1, 1
             ay = vy * real(iy,dp)
             do iz= -1, 1
-              ip = ip_all(ix)
+              ip = ip_all(ix) ! Ade: there is a problem with ip!! The number is huge
               jp = jp_all(iy)
               kp = kp_all(iz)
               az = vz * real(iz,dp)
@@ -98,6 +139,7 @@ subroutine advect
       end do
     end do
   end do
+  
 
   ! update concentrations accordingly to flux calculated previously
   where( node%nature == fluid )
@@ -110,7 +152,7 @@ subroutine advect
   c_plus_total_new = sum(c_plus)
 
   ! check that total concentration has not changed
-  if( abs( c_minus_total_new - c_minus_total_old ) > 1.e-8 .or. abs( c_plus_total_new - c_plus_total_old ) > 1.e-8 ) then ! TODO magic number
-    stop 'Total concentration has changed in advect.f90. STOP but unsure STOP is needed'
-  end if
+  !if( abs( c_minus_total_new - c_minus_total_old ) > 1.e-8 .or. abs( c_plus_total_new - c_plus_total_old ) > 1.e-8 ) then ! TODO magic number
+  !  stop 'Total concentration has changed in advect.f90. STOP but unsure STOP is needed'
+  !end if
 end subroutine advect

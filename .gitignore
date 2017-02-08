@@ -1,13 +1,5 @@
-resultat*
-manual.lyx*
-obj/*
-src/*.mod
-*.mod
-.sconsign.dblite
 laboetie
-*.o
-src/.sconsign.dblite
-output
-chromato_generator
-vmdscenes*
-build
+obj/
+mod/
+output/
+lb.in

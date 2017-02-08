@@ -37,7 +37,9 @@ subroutine check_charge_distribution_equilibrium( time, is_converged)
   if(q/=0) dcm  = sum( abs(  (c_minus - c_minus_old )/c_minus_old ), mask= abs(c_minus_old)>eps) / real(q,kind=dp) ! it may be worth implementing a function called norm1 somewhere when I have time
 
   ! check convergence between previous and current step
-  if( dphi<eps .and. dcp<eps .and. dcm<eps ) then ! TODO here is a very very idiot test
+  !if( dphi<eps .and. dcp<eps .and. dcm<eps ) then ! TODO here is a very very idiot test
+  if( .not.is_firsttimehere .and. dphi<eps .and. dcp<eps .and. dcm<eps ) then ! TODO here is a very very idiot test ! ADE : Modification de Benjamin .not.is_firsttimehere. dphi est egal a zero au debut et donc la comparaison n'est pas
+                                                                              ! bonne au debut
     is_converged = .true.
   else
     is_converged = .false.

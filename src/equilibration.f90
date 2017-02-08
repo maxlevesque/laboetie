@@ -1,7 +1,7 @@
 SUBROUTINE equilibration
 
     USE precision_kinds, only: i2b, dp, sp
-    USE system, only: fluid, supercell, node, lbm, n, pbc
+    USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, t_equil, c_plus
     use module_collision, only: collide
     use module_input, only: getinput
     USE constants, only: x, y, z, zerodp
@@ -9,28 +9,23 @@ SUBROUTINE equilibration
 
     implicit none
     integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3, lmin, lmax, timer(100), g, ng, pdr, pd, ios, px, py, pz, pCoord(3)
-    integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency, GL
+    integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency, GL, print_every
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
     real(dp) :: n_loc, f_ext_loc(3), l2err, target_error
     REAL(dp) :: vmaxx, vmaxy, vmaxz, vmax
     REAL(dp) :: vmaxx_old, vmaxy_old, vmaxz_old, vmax_old
-    real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, n_old, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z
+    real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, n_old, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z,& 
+                                               F1, F2, F3
     real(dp), allocatable, dimension(:) :: a0, a1
     integer, allocatable, dimension(:) :: cx, cy, cz
     logical :: convergence_reached, compensate_f_ext, convergence_reached_without_fext, convergence_reached_with_fext, err
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
     LOGICAL :: write_total_mass_flux
     integer, allocatable :: il(:,:), jl(:,:), kl(:,:), l_inv(:)
+    integer(i2b) :: lx, ly, lz
+    character*200 :: ifile, ifile2
 
-    !
-    ! laboetie doesnt work for charged solutes
-    !
-    IF( ABS(getinput%dp('sigma', zerodp)) > eps ) THEN
-        print*,"ERROR: laboetie can only consider uncharged systems."
-        print*,"===== Dont tell Benjamin you'd like to see such feature in Laboetie :)"
-        print*,"Hi Benjamin. I'm sure it is you testing this! grrrr :))"
-        ERROR STOP
-    END IF
+    open(316, file = "output/soluteForceEq.dat")
 
     lmin = lbm%lmin
     lmax = lbm%lmax
@@ -40,6 +35,12 @@ SUBROUTINE equilibration
     n1 = getinput%int("lx", assert=">0")
     n2 = getinput%int("ly", assert=">0")
     n3 = getinput%int("lz", assert=">0")
+
+    !--------------------------------- ADE -----------------------------------------------------------------
+    lx = supercell%geometry%dimensions%indiceMax(x)
+    ly = supercell%geometry%dimensions%indiceMax(y)
+    lz = supercell%geometry%dimensions%indiceMax(z)
+    !--------------------------------- ADE -----------------------------------------------------------------
 
     !
     ! Print info to terminal every that number of steps
@@ -51,6 +52,11 @@ SUBROUTINE equilibration
     !
     print_files_frequency = getinput%int("print_files_frequency", HUGE(1))
 
+    ! ADE : Read 
+    print_every = getinput%int("print_every", defaultvalue=1000) ! reads from lb.in file
+                                                                 ! the frequency of printing time
+                                                                 ! the default value needs to be changed eventually
+    ! ADE : End of Modification
     fluid_nodes = count( node%nature==fluid )
 
     ! Max : I had 1.D-8 before ADE's modification (June 21)
@@ -65,6 +71,10 @@ SUBROUTINE equilibration
         l_inv(l) = lbm%vel(l)%inv
     end do
 
+    !--------------------------------- ADE -----------------------------------------------------------------
+    ! ADE : we allocate solute_force
+    if(.not.allocated(solute_force)) allocate(solute_force(lx,ly,lz,x:z),source=0.0_dp)
+    !--------------------------------- ADE -----------------------------------------------------------------
 
     allocate( jx     (n1,n2,n3), source=node%solventflux(x))
     allocate( jx_old (n1,n2,n3) )
@@ -94,6 +104,11 @@ SUBROUTINE equilibration
     allocate( f_ext_x(n1,n2,n3), source=zerodp)
     allocate( f_ext_y(n1,n2,n3), source=zerodp)
     allocate( f_ext_z(n1,n2,n3), source=zerodp)
+    !--------------- Ade ----------------------
+    allocate( F1(n1,n2,n3), source=zerodp)
+    allocate( F2(n1,n2,n3), source=zerodp)
+    allocate( F3(n1,n2,n3), source=zerodp)
+    !--------------- Ade ----------------------
 
     f_ext_loc = zerodp ! this is important and spagetty like... please read carefuln2 before modifying this line
     allocate( cx(lmax), source=lbm%vel(:)%coo(1))
@@ -121,7 +136,10 @@ SUBROUTINE equilibration
     convergence_reached_without_fext = .false.
     convergence_reached_with_fext = .false.
     compensate_f_ext = getinput%log("compensate_f_ext",.false.)
-    if(compensate_f_ext) open(79,file="./output/v_centralnode.dat")
+    if(compensate_f_ext) then
+        open(79,file="./output/v_centralnode.dat")
+        open(80,file="./output/rho_centralnode.dat")
+    endif
 
     write_total_mass_flux = getinput%log("write_total_mass_flux", .FALSE.)
     IF( write_total_mass_flux ) THEN
@@ -137,11 +155,34 @@ SUBROUTINE equilibration
     PRINT*,'       ----'
 
 
+    ! ADE : We initialise tfext, which is the time from when the force f_ext is applied
+    ! upon a certain number of nodes. 
+    tfext = HUGE(tfext)
+    ! We also initialise l2err, the convergence error
+    l2err = -1
+
     !
     ! TIME STEPS (in lb units)
     !
     do t=1,HUGE(t)
 
+
+        !--------------------------------- Ade --------------------------------------------------------------
+        if (t<t_equil) then
+            f_ext_x = zerodp
+            f_ext_y = zerodp
+            f_ext_z = zerodp
+        else
+            f_ext_x = f_ext_loc(1)
+            f_ext_y = f_ext_loc(2)
+            f_ext_z = f_ext_loc(3)
+        endif
+        !--------------------------------- Ade --------------------------------------------------------------
+
+        !-------------------------------- Ade -----------------------------------------------------------
+        print*, 2, SUM(c_plus(:,:,2))
+        ! This is a debugging test
+        !-------------------------------- Ade -----------------------------------------------------------
 
         !
         ! Print sdtout timestep, etc
@@ -185,14 +226,31 @@ SUBROUTINE equilibration
         if( compensate_f_ext .and. convergence_reached_without_fext) then
             if(px<=0 .or. py<=0 .or. pz<=0) error stop "px, py or pz is not valid in equilibration.f90"
             write(79,*)t-tfext, jx(px,py,pz), jy(px,py,pz), jz(px,py,pz)
+            write(80,*)t-tfext, density(px,py,pz)
         end if
 
 
-        !
-        ! Collision step
-        !
-        call collide(n, density, jx, jy, jz, f_ext_x, f_ext_y, f_ext_z)
+        !--------------------------------- ADE -----------------------------------------------------------------
+        ! Ade : BEGIN OF MODIF 17/01/17
 
+        ! f_ext is obtained reading input file lb.in (=> pressure gradient)
+        ! solute_force is computed in smolu.f90
+
+        write(316,*) solute_force(:,:,:,3) !solute_force(:,:,:,2), solute_force(:,:,:,3)
+        F1(:,:,:)  = f_ext_x(:,:,:) + solute_force(:,:,:,1)
+        F2(:,:,:)  = f_ext_y(:,:,:) + solute_force(:,:,:,2)
+        F3(:,:,:)  = f_ext_z(:,:,:) + solute_force(:,:,:,3) 
+
+
+        !##################
+        !# Collision step #
+        !##################
+
+        call collide(n, density, jx, jy, jz, F1, F2, F3)
+        !call collide(n, density, jx, jy, jz, f_ext_x, f_ext_y, f_ext_z) ! Ade : There is a problem in solute_force
+
+        !--------------------------------- ADE -----------------------------------------------------------------
+        
         ! print velocity profile if you need/want it
         ! if( modulo(t, print_frequency) == 0) then
         !    call velocity_profiles(t) ! print velocity profiles
@@ -221,9 +279,9 @@ SUBROUTINE equilibration
             end do
         end do
 
-        !
-        ! propagation
-        !
+        !###############
+        !# PROPAGATION #
+        !###############
         !$OMP PARALLEL DO DEFAULT(NONE) &
         !$OMP SHARED(n,n3,n2,n1,lmin,lmax,cz,cy,cx,il,jl,kl) &
         !$OMP PRIVATE(l,k,j,i,ip,jp,kp,n_old)
@@ -243,7 +301,7 @@ SUBROUTINE equilibration
         !$OMP END PARALLEL DO
 
         !
-        ! The populations, since they are probabilities, must never be negative
+        ! The populations are probabilities and thus must never be negative
         !
         IF( ANY(n<0) ) ERROR STOP "In equilibration, the population n(x,y,z,vel) < 0"
 
@@ -253,9 +311,9 @@ SUBROUTINE equilibration
         !
         density = SUM(n,4)
 
-        !
-        ! WRITE the total density
-        !
+        !###########################
+        !# WRITE the total density #
+        !###########################
         IF( write_total_mass_flux ) THEN
             WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ])
         END IF
@@ -300,10 +358,32 @@ SUBROUTINE equilibration
         end do
 
         !IF( MODULO(t, print_frequency) == 0) PRINT*,  t, "after ", jz(1,1,1)
+        
+        !--------------------------------- ADE -----------------------------------------------------------------
 
-        !
-        ! Dominika
-        !
+        ! Ade: we need to assign the correct table to node%solventflux as it is being called by other following
+        ! subroutines (e.g. advect )
+        node%solventdensity = density
+        node%solventflux(x) = jx
+        node%solventflux(y) = jy
+        node%solventflux(z) = jz
+        !node%nature = nature ! Ade : Do I actually need this line here ????
+
+        call advect
+        call sor ! TODO    ! compute phi with the Successive Overrelation Routine (SOR)
+        call electrostatic_pot ! Ade: The routine is called in order to compute Phi_tot which is used in smolu
+        call smolu
+        call charge_test
+
+        ! Future work : Write some stuff out for postprocessing
+
+
+        !--------------------------------- ADE -----------------------------------------------------------------
+
+
+        !##################
+        !# SINGULAR FORCE #
+        !##################
         if( compensate_f_ext .and. convergence_reached_without_fext .and. t==tfext) then
             open(90,file="./output/f_ext-field_t0.dat")
             open(91,file="./output/vel-field_central_t0.dat")
@@ -333,9 +413,9 @@ SUBROUTINE equilibration
         ! !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !11
 
 
-        !
-        ! check convergence
-        !
+        !#####################
+        !# check convergence #
+        !#####################
         open(13,file="./output/l2err.dat")
         l2err = maxval([maxval(abs(jx-jx_old)), &
                         maxval(abs(jy-jy_old)), &
@@ -364,9 +444,9 @@ SUBROUTINE equilibration
           end if
         end if
 
-        !
-        ! Apply external contraints (f_ext) or not
-        !
+        !############################################
+        !# Apply external contraints (f_ext) or not #
+        !############################################
         if( convergence_reached ) then
 
           ! if you are already converged without then with f_ext then quit time loop. Stationary state is found.
@@ -376,6 +456,9 @@ SUBROUTINE equilibration
           ! if you have already converged without fext, but not yet with fext, then enable fext
           else if(convergence_reached_without_fext .and. .not.convergence_reached_with_fext) then
             tfext=t+1
+            !################
+            !## READ f_ext ##
+            !################
             f_ext_loc = getinput%dp3("f_ext", [0._dp,0._dp,0._dp] )
 
             if(.not.compensate_f_ext) then ! the force is exerced everywhere with same intensity
@@ -487,10 +570,45 @@ SUBROUTINE equilibration
             end if
           end if
         end if
+        !#########################
+        !# END OF SINGULAR FORCE #
+        !#########################
+     
+        ! ADE : I added the following lines in order to write every so often the flux/velocity field values
+        ! (j = rho*v), so that we can observe the trainsient time behaviour of the flow field.
+
+        !print*, 't=',t,'mod=',mod(t,print_every) 
+	if ((print_every.gt.0).and.(mod(t,print_every)==0)) then ! we divide "print_every" by the iteration time step. When remainder is zero
+	                                                         ! the velocity field is written on vel-fieldTIME_*.dat (*=1,2,3,4,....)
+                if( compensate_f_ext ) then
+		    write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
+		    !print*,TRIM(ADJUSTL(ifile))
+		    open(92,file=TRIM(ADJUSTL(ifile)))
+		     do i=1,n1
+			do k=1,n3
+			    WRITE(92,*) i, k, jx(i,py,k), jz(i,py,k)
+			    !print*, i, k, jx(i,py,k), jz(i,py,k)
+			end do
+		    end do
+		    close(92)
+		endif
+		! ----------------------------- Ade -----------------------------------------------
+		! ADE : I added the following part for debugging purposes
+		write(ifile2,'(a,i0,a)') './output/c_plus_alongZTIME_', t,'.dat'
+		open(3180, file=TRIM(ADJUSTL(ifile2)))
+		DO k=supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
+		    WRITE(3180,*) k, SUM(c_plus(:,:,k))
+		ENDDO
+		close(3180)
+		! ----------------------------- Ade -----------------------------------------------
+        endif
+        ! ADE : end of modification
+
 
   end do
 
   close(79)
+  close(80)
   CLOSE(65)
 
   !
@@ -520,6 +638,7 @@ SUBROUTINE equilibration
   CLOSE(56)
   CLOSE(57)
   CLOSE(58)
+  close(316)
 
   !
   ! Print velocity 2D profilew

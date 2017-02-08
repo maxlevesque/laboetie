@@ -5,14 +5,18 @@
 SUBROUTINE poisson_nernst_planck
 
   USE precision_kinds, ONLY: dp
-  USE system, ONLY: D_equil, sigma, time, elec_slope, lncb_slope, node
+  USE system, ONLY: D_equil, sigma, time, elec_slope, lncb_slope, node, c_plus, c_minus, supercell ! ADE: I added c_plus and c_minus
   use module_input, only: getinput
   USE io, ONLY: print_everything_related_to_charge_equil
+  use constants, only: z
 
   IMPLICIT NONE
 
-  INTEGER :: timestep, timestepmax
+  INTEGER :: timestep, timestepmax, k
   LOGICAL :: is_converged = .FALSE.
+
+  !print*, 'c_plus = ', abs(c_plus)
+
 
   !
   ! If sigma is 0, salf free system, and thus no need to go continue here
@@ -46,6 +50,12 @@ SUBROUTINE poisson_nernst_planck
             CALL check_charge_distribution_equilibrium (time, is_converged)
         END IF
     END DO
+
+    open(314, file='output/c_plus_alongZ.dat')
+    DO k=supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
+       WRITE(314,*) k, SUM(c_plus(:,:,k))
+    ENDDO
+    close(314)
 
     call charge_test ! check charge conservation ! TODO rename to call check_charge_conservation ! check charge conservation every 1000 steps (arbitrary number)
     if( sigma == 0.0_dp ) return

@@ -10,7 +10,8 @@ DEBUG = -g -fbacktrace -pedantic -fwhole-file -Wline-truncation -Wcharacter-trun
 #-g turns on debugging
 #-p turns on profiling
 
-OPTIM = -O3 -fopenmp -funroll-loops
+OPTIM = 
+#OPTIM = -O3 -fopenmp -funroll-loops
 
 EXE = laboetie
 

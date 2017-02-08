@@ -43,8 +43,13 @@ subroutine charges_init
     ! read where are distributed the charges
     ! call read_charge_distrib
 
+    !---------------------------Ade----------------------------------
+    ! We moved the allocation of the following table outside the if statement underneath
+    !if (.not. allocated(c_plus)) call allocateReal3D(c_plus)
+    !if (.not. allocated(c_minus)) call allocateReal3D( c_minus)
+    !---------------------------Ade----------------------------------
 
-    IF( ABS(sigma) > EPSILON(1._dp) ) THEN
+    IF( ABS(sigma) > EPSILON(1._dp) ) THEN ! Ade : this if statement should be removed 27/01/2017
 
         ! init ion (solute) concentrations
         if (.not. allocated(c_plus)) call allocateReal3D(c_plus)
@@ -125,6 +130,12 @@ subroutine charges_init
         end where
 
         anormf0 = 4.0_dp*pi*bjl*kBT/2.0_dp *sum(c_plus+c_minus)
+
+        ! ---------------------- Ade ---------------------------
+        print*, 2, SUM(c_plus(:,:,2))
+        ! Ade : this is a debugging test
+        ! ---------------------- Ade ---------------------------
+
 
         ! TODO call charge_test
 

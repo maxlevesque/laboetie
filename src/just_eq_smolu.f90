@@ -23,8 +23,10 @@ subroutine just_eq_smolu
     call allocateReal3D( flux_site_plus)
     call allocateReal3D( flux_site_minus)
     ! init
-    tot_diff_plus = huge(1.0_dp)
-    tot_diff_minus = huge(1.0_dp)
+    !tot_diff_plus = huge(1.0_dp)
+    !tot_diff_minus = huge(1.0_dp)
+    tot_diff_plus = convergence_criteria
+    tot_diff_minus = convergence_criteria 
     ! diffusion coefficients of solutes are read in input file.
     ! if we're in the first steps of equilibration, it speeds up convergence
     ! to use a smaller diffusion coefficient.
@@ -57,30 +59,44 @@ subroutine just_eq_smolu
 
   ! init convergence iterations
   iter = 0
-
+  !print*, 'max_iter = ', max_iter, 'iter =', iter
+  !print*, 'tot_diff_minus+tot_diff_plus = ', tot_diff_minus + tot_diff_plus
   do while( tot_diff_minus + tot_diff_plus > convergence_criteria .and. iter < max_iter )
 
     ! flux_site_plus or minus is what makes the system evoluate.
     flux_site_plus = 0.0_dp
     flux_site_minus = 0.0_dp
-
+    !print*, 'WE HAVE ARRIVED JUST BEFORE THE LOOP'
     ! for all sites
-    do i= supercell%geometry%dimensions%indiceMin(x), supercell%geometry%dimensions%indiceMax(x)
-      do j= supercell%geometry%dimensions%indiceMax(y), supercell%geometry%dimensions%indiceMax(y)
-        do k= supercell%geometry%dimensions%indiceMax(z), supercell%geometry%dimensions%indiceMax(z)
-
+    do i= supercell%geometry%dimensions%indiceMin(x), supercell%geometry%dimensions%indiceMax(x) 
+      do j= supercell%geometry%dimensions%indiceMin(y), supercell%geometry%dimensions%indiceMax(y) ! ADE : There was an error for j and k. The counter started at Max instead of Min. Copy and paste mistake
+        do k= supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
+          !print*, '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+          !print*, 'WE ARE IN THE LOOP'
+ 
           ! here one could add a if(node(i,j,k)%nature==solid)cycle ! but things get hard to read
 
           ! and all neighbours of this site
           do l= lbm%lmin+1, lbm%lmax, 2 ! at once flux in both directions ! l=1 corresponds to no velocity ie flux toward itself ie delta(l)=0
+          !print*, '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+          !print*, 'WE ARE IN THE LOOP2'
 
             ! periodic boundary conditions to neighbours
             ip= pbc( i+ lbm%vel(l)%coo(x) ,x)
             jp= pbc( j+ lbm%vel(l)%coo(y) ,y)
             kp= pbc( k+ lbm%vel(l)%coo(z) ,z)
 
+            !print*, '**********************************************'
+            !print*, 'Index ip = ', ip, ' Index i = ', i, 'Index j = ', j, 'Index k = ', k
+            !print*, '**********************************************'
+
             ! continue for fluid-fluid flux only
+            OPEN( 165, FILE="output/VraiFaux.dat" )
+            WRITE(165,*) node(i,j,k)%nature == fluid, node(ip,jp,kp)%nature == fluid, node(i,j,k)%nature, node(ip,jp,kp)%nature
+            !print*,' LOGICAL = ', node(i,j,k)%nature == fluid
             if( node(i,j,k)%nature == fluid .and. node(ip,jp,kp)%nature == fluid) then
+            !print*, '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+            !print*, 'WE ARE IN THE LOOP3'
 
               ! compute the difference in potential between sites i,j,k and ip,jp,kp
               exp_dphi = exp( phi(ip,jp,kp) - phi(i,j,k) ) ! be carefull to sign
@@ -90,7 +106,13 @@ subroutine just_eq_smolu
               flux_link_plus  = 0.5_dp * (1.0_dp+ exp_min_dphi)*( c_plus(ip,jp,kp) * exp_dphi     - c_plus (i,j,k) )
               flux_link_plus = flux_link_plus * eD_plus / lbm%vel(l)%delta
               flux_link_minus = 0.5_dp * (1.0_dp+ exp_dphi    )*( c_minus(ip,jp,kp) * exp_min_dphi - c_minus(i,j,k) )
+              !print*, '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+              !print*, 'flux_link_plus1 =', flux_link_plus 
+              !print*, '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
               flux_link_minus = flux_link_minus * eD_minus / lbm%vel(l)%delta
+              !print*, '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+              !print*, 'flux_link_plus2 =', flux_link_plus 
+              !print*, '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
 
               ! update flux on each site accordingly to flux inside link involving site
               flux_site_plus(i,j,k) = flux_site_plus(i,j,k) + flux_link_plus
@@ -111,11 +133,18 @@ subroutine just_eq_smolu
       stop 'the sum of all flux does not add up. problem in just_eq_smolu.f90'
     end if
 
+    !print*, '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+    !print*, '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+    !print*, 'flux_site_plus =', flux_site_plus 
+    !print*, '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+    !print*, '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
     ! update concentrations (smolushowski part)
     where(node%nature==fluid)
       c_plus = c_plus + flux_site_plus
       c_minus = c_minus + flux_site_minus
     end where
+    WRITE(165,*) flux_site_minus
+    CLOSE(165)
 
 
     ! compute the total flux in this equilibration step one wants to minimize.

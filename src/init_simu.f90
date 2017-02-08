@@ -55,7 +55,7 @@ SUBROUTINE scheduler
         ! - tmax at which simulation stops
         ! init to non-physical value catched later in order to be sure they are modified
         time = 0
-        D_iter = getinput%int('D_iter',-1)
+        D_iter = getinput%int('D_iter',1) ! ADE : the default value should be 1 (check)
         tmax = getinput%int('tmax',-1)
         tmom = getinput%int('tmom',-1)
         t_equil = getinput%int('t_equil',-1)

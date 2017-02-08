@@ -24,7 +24,8 @@ subroutine smolu
 
   if(.not.allocated(solute_force)) allocate(solute_force(lx,ly,lz,x:z),source=0.0_dp)
 
-
+  open(315, FILE = "output/solute_force.dat")
+  
   ! compute the flux between site i,j,k and site ip,jp,kp
   do i = 1, lx
     do j = 1, ly
@@ -32,18 +33,14 @@ subroutine smolu
 
         ! find arrival sites corresponding to each velocity
         do l= lbm%lmin+1, lbm%lmax ! not first l which is (ip,jp,kp)==(i,j,k). One may begin at l=1 but cycle if delta(l)==0. For instance in a where(delta/=0.0_dp)
-
           ! apply periodic boundary conditions
           ip= pbc( i+ lbm%vel(l)%coo(x) ,x)
           jp= pbc( j+ lbm%vel(l)%coo(y) ,y)
           kp= pbc( k+ lbm%vel(l)%coo(z) ,z)
-
           ! if both nodes are in fluid
           if( node(i,j,k)%nature == fluid .and. node(ip,jp,kp)%nature == fluid ) then
-
             ! compute potential difference between sites
             exp_dphi = exp( phi_tot(ip,jp,kp) - phi_tot(i,j,k) ) ! arrival minus departure
-
             ! here is a very bizarre trick to correct for the jump in the external potential (elec_slope)
             if( i == lx .and. ip == 1  ) exp_dphi = exp_dphi* exp( elec_slope(x)* lx )
             if( j == ly .and. jp == 1  ) exp_dphi = exp_dphi* exp( elec_slope(y)* ly )
@@ -51,7 +48,6 @@ subroutine smolu
             if( i == 1  .and. ip == lx ) exp_dphi = exp_dphi* exp(-elec_slope(x)* lx )
             if( j == 1  .and. jp == ly ) exp_dphi = exp_dphi* exp(-elec_slope(y)* ly )
             if( k == 1  .and. kp == lz ) exp_dphi = exp_dphi* exp(-elec_slope(z)* lz )
-
             ! inverse
             exp_min_dphi = 1.0_dp / exp_dphi
 
@@ -66,7 +62,6 @@ subroutine smolu
                                     *( c_minus(ip,jp,kp)*exp_min_dphi*exp_dlncb -c_minus(i,j,k) )
             el_curr  = flux_link_plus * D_plus - flux_link_minus * D_minus
             ion_curr = flux_link_plus * D_plus + flux_link_minus * D_minus
-
             ! forces exerted by solute on fluid
             f_plus  = 0.5_dp * ( 1.0_dp + exp_min_dphi )*( c_plus(ip,jp,kp) * exp_dphi - c_plus(i,j,k) )
             f_minus = 0.5_dp * ( 1.0_dp + exp_dphi )*( c_minus(ip,jp,kp) * exp_min_dphi - c_minus(i,j,k) )
@@ -76,7 +71,6 @@ subroutine smolu
 
             flux_link_plus = flux_link_plus * (D_plus / lbm%vel(l)%delta )
             flux_link_minus = flux_link_minus * (D_minus / lbm%vel(l)%delta )
-
             flux_site_plus(i,j,k) = flux_site_plus(i,j,k) + flux_link_plus
             flux_site_minus(i,j,k) = flux_site_minus(i,j,k) + flux_link_minus
 
@@ -90,9 +84,20 @@ subroutine smolu
 
             ! force exerted on fluid
             solute_force(i,j,k,:) = solute_force(i,j,k,:) + lbm%vel(l)%a1 *lbm%vel(l)%coo(:) *f_microions/D_iter
+            !print*, '****************************************************************************************'
+            !print*, 'F_microions', f_microions
+            !print*, '****************************************************************************************'
+            !print*, 'lbm%vel(l)%a1', lbm%vel(l)%a1 
+            !print*, '****************************************************************************************'
+            !print*,  'lbm%vel(l)%coo(:)', lbm%vel(l)%coo(:)
+            !print*, '****************************************************************************************'
+            !print*, 'f_microions', f_microions
+
+            !print*, 'SOLUTE FORCE = ', solute_force
+            !print*, '****************************************************************************************'
+            write(315,*) solute_force(:,:,:,3)
 
           else if( node(i,j,k)%nature ==fluid .and. node(ip,jp,kp)%nature == solid) then
-
 !            dphi = phi(ip,jp,kp)-phi(i,j,k)
 
 !            ! If needed correct for the jump in the external potential (slope)
@@ -110,15 +115,18 @@ subroutine smolu
             f_minus = c_minus(i,j,k)*(1.0_dp-exp_dphi)
             f_microions = kBT*(f_plus + f_minus)
             solute_force(i,j,k,:) = solute_force(i,j,k,:) + lbm%vel(l)%a1*lbm%vel(l)%coo(:)*f_microions/D_iter
+            !print*, '****************************************************************************************'
+            !print*, 'SOLUTE FORCE = ', solute_force
+            !print*, '****************************************************************************************'
 
           end if
-
+ 
         end do ! loop over neighbours
-
+       
       end do
     end do
   end do
-
+  close(315)
   ! update concentrations. Smoluchowski part.
   where(node%nature==fluid)
     c_plus = c_plus + flux_site_plus

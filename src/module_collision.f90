@@ -12,13 +12,14 @@ contains
   !     Guo et al. Phys. Rev. E 65, 046308 (2002)
   ! In particular Eqs. 3, 4, 5, 17, 19, 20
 
-  subroutine collide(n, density, jx, jy, jz, f_ext_x, f_ext_y, f_ext_z)
+  subroutine collide(n, density, jx, jy, jz, F1, F2, F3) !f_ext_x, f_ext_y, f_ext_z) Ade: for consistency puroposes, I swapped old variable names
+                                                         ! with new ones
     use system, only: fluid, solid, node
     use mod_lbmodel, only: lbm
     use module_input, only: getinput
     implicit none
     real(dp), intent(in) :: density(:,:,:), jx(:,:,:), jy(:,:,:), jz(:,:,:)
-    real(dp), intent(in) :: f_ext_x(:,:,:), f_ext_y(:,:,:), f_ext_z(:,:,:)
+    real(dp), intent(in) :: F1(:,:,:), F2(:,:,:), F3(:,:,:) !f_ext_x(:,:,:), f_ext_y(:,:,:), f_ext_z(:,:,:)
     real(dp), intent(inout) :: n(:,:,:,:)
     integer :: l, lmin, lmax, nx, ny, nz
     real(dp), allocatable, dimension(:) :: a0, a1, a2, cx, cy, cz
@@ -99,8 +100,8 @@ contains
           n(:,:,:,l) = (1._dp-1._dp/relaxation_time)*n(:,:,:,l) &
           + (1._dp/relaxation_time)*neq &
           + (1._dp-1._dp/(2._dp*relaxation_time))*( &
-                a1(l)*( (cx(l)-ux)*f_ext_x + (cy(l)-uy)*f_ext_y + (cz(l)-uz)*f_ext_z ) &
-              + 2._dp*a2(l)*( cx(l)*ux + cy(l)*uy + cz(l)*uz )*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z ) &
+                a1(l)*( (cx(l)-ux)*F1 + (cy(l)-uy)*F2 + (cz(l)-uz)*F3 ) &
+              + 2._dp*a2(l)*( cx(l)*ux + cy(l)*uy + cz(l)*uz )*( cx(l)*F1 + cy(l)*F2 + cz(l)*F3 ) &
                                                    )
           !+ a1(l)*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z )
           ! here we could add the second order also for f_ext
@@ -118,7 +119,7 @@ contains
           n(:,:,:,l) = (1._dp-1._dp/relaxation_time)*n(:,:,:,l) &
           + (1._dp/relaxation_time)*neq &
           + (1._dp-1._dp/(2._dp*relaxation_time))*( &
-                a1(l)*( (cx(l)-ux)*f_ext_x + (cy(l)-uy)*f_ext_y + (cz(l)-uz)*f_ext_z ) &
+                a1(l)*( (cx(l)-ux)*F1 + (cy(l)-uy)*F2 + (cz(l)-uz)*F3 ) &
                                                   )
           !+ a1(l)*( cx(l)*f_ext_x + cy(l)*f_ext_y + cz(l)*f_ext_z )
         end where
