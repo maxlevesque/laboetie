@@ -86,7 +86,7 @@ module system
     real(dp), dimension(x:z) :: elec_slope, lncb_slope
     real(dp) :: el_curr_x, el_curr_y, el_curr_z
     real(dp) :: ion_curr_x, ion_curr_y, ion_curr_z
-    real(dp) :: rho_ch ! charge density?
+    real(dp) :: rho_0 ! Charge (ie solute) density in lb units
     ! external force given by user
     real(dp), dimension(x:z) :: f_ext ! external force (constraints) applied to flux
     real(dp), allocatable, dimension(:,:,:,:) :: solute_force ! (lx, ly, lz, 3)

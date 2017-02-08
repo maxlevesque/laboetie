@@ -4,7 +4,7 @@ subroutine charges_init
 
     use precision_kinds, only: i2b, dp
     use system, only: lambda_D, c_plus, c_minus, phi, charge_distrib, sigma, node,&
-                       fluid, solid, anormf0, bjl, kBT, rho_ch, D_plus, D_minus, supercell
+                       fluid, solid, anormf0, bjl, kBT, rho_0, D_plus, D_minus, supercell
     use constants, only: pi, x, y, z
     use module_input, only: getinput
     use myallocations
@@ -14,8 +14,8 @@ subroutine charges_init
     integer  :: count_solid, count_fluid, count_solid_int
     real(dp) :: sigma_solid, sigma_fluid
     real(dp) :: in_c_plus_solid, in_c_plus_fluid, in_c_minus_solid, in_c_minus_fluid
-    real(dp) :: rho_0 ! don't understand why here it is different from the value read in input file.
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
+    real(dp) :: FactMinus, FactPlus ! dummy variables
 
     !
     ! Is there any charge into the solute ?
@@ -33,7 +33,6 @@ subroutine charges_init
     else
       rho_0 = 1.0_dp / (4.0_dp*pi*bjl*lambda_D**2)
     end if
-    rho_ch = 1.0_dp / (4.0_dp*pi*bjl*lambda_D**2) ! DONT UNDERSTAND AWFULL THING WHAT IS THE F* DIFFERENCE BETWEEN RHO_0 AND CH.RHO_0 IN C CODE?
 
     ! count of solid, fluid and interfacial nodes
     count_solid = count(node%nature==solid)
