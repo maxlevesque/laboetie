@@ -24,12 +24,19 @@ We are researchers: our work is evaluated on the basis of citations to our publi
   1. **Accounting for adsorption and desorption in lattice Boltzmann simulations**  
       Maximilien Levesque, Magali Duvail, Ignacio Pagonabarraga, Daan Frenkel and Benjamin Rotenberg  
       Phys. Rev. B 88, 013308 (2013)  
-      http://sci-hub.cc/10.1103/PhysRevE.88.013308    
+      http://dx.doi.org/10.1103/PhysRevE.88.013308    
   2. **Unexpected coupling between flow and adsorption in porous media**  
      Jean-Mathieu Vanson, François-Xavier Coudert, Benjamin Rotenberg, Maximilien Levesque, Caroline Tardivat, Michaela Klotz and Anne Boutin  
      Soft Matter 11, 6125-6133 (2015)  
-     http://sci-hub.cc/10.1039/C5SM01348H  
-      
+     http://dx.doi.org/10.1039/C5SM01348H  
+  3. **Transport and adsorption under liquid flow: the role of pore geometry**  
+     Jean-Mathieu Vanson, Anne Boutin, Michaela Klotz and François-Xavier Coudert  
+     Soft Matter 13, 875-885 (2017)  
+     http://dx.doi.org/10.1039/C6SM02414A
+  4. **Transient hydrodynamic finite size effects in simulations under periodic boundary conditions**  
+      Adelchi J. Asta, Maximilien Levesque, Rodolphe Vuilleumier and Benjamin Rotenberg  
+      arXiv:1702.01082  
+
 ---
 
 ## Installation instructions
@@ -40,15 +47,14 @@ cd laboetie
 make
 ```
 
-## How to develop in laboetie or report a bug
-
-### Our git workflow
+## Git, github, issues etc.
 
 [A successful git branching model](http://nvie.com/posts/a-successful-git-branching-model/)
 
-### How to Report Bugs Effectively
+[How to reports bugs effectively](http://www.chiark.greenend.org.uk/~sgtatham/bugs.html)
 
-[A blogpost by Simon Tatham](http://www.chiark.greenend.org.uk/~sgtatham/bugs.html)
+[How to write a git commit message](http://chris.beams.io/posts/git-commit/)
+
 
 ### Parallelism
 
