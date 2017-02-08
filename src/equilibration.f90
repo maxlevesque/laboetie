@@ -8,7 +8,7 @@ SUBROUTINE equilibration
     USE mod_time, only: tick, tock
 
     implicit none
-    integer :: t,i,j,k,l,ip,jp,kp,n1,n2,n3, lmin, lmax, timer(100), g, ng, pdr, pd, ios, px, py, pz, pCoord(3)
+    integer :: t,i,j,k,l,ip,jp,kp, lmin, lmax, timer(100), g, ng, pdr, pd, ios, px, py, pz, pCoord(3)
     integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency, GL, print_every
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
     real(dp) :: n_loc, f_ext_loc(3), l2err, target_error
@@ -32,37 +32,29 @@ SUBROUTINE equilibration
 
     supercellgeometrylabel = supercell%geometry%label ! -1 for solid free cell
 
-    n1 = getinput%int("lx", assert=">0")
-    n2 = getinput%int("ly", assert=">0")
-    n3 = getinput%int("lz", assert=">0")
-
-    !--------------------------------- ADE -----------------------------------------------------------------
     lx = supercell%geometry%dimensions%indiceMax(x)
     ly = supercell%geometry%dimensions%indiceMax(y)
     lz = supercell%geometry%dimensions%indiceMax(z)
-    !--------------------------------- ADE -----------------------------------------------------------------
 
     !
     ! Print info to terminal every that number of steps
     !
-    print_frequency = getinput%int('print_frequency', defaultvalue=max(int(50000/(n1*n2*n3)),1), assert=">0" ) ! this number is my own optimal. To be generalized on strong criteria some day.
+    print_frequency = getinput%int('print_frequency', defaultvalue=max(int(50000/(lx*ly*lz)),1), assert=">0" ) ! this number is my own optimal. To be generalized on strong criteria some day.
 
     !
     ! WRITE velocity profiles to terminal every that number of steps
     !
     print_files_frequency = getinput%int("print_files_frequency", HUGE(1))
 
-    ! ADE : Read 
     print_every = getinput%int("print_every", defaultvalue=1000) ! reads from lb.in file
                                                                  ! the frequency of printing time
                                                                  ! the default value needs to be changed eventually
-    ! ADE : End of Modification
     fluid_nodes = count( node%nature==fluid )
 
     ! Max : I had 1.D-8 before ADE's modification (June 21)
     target_error = getinput%dp("target_error", 1.D-10)
 
-    allocate( density(n1,n2,n3), source=node%solventdensity, stat=ios)
+    allocate( density(lx,ly,lz), source=node%solventdensity, stat=ios)
     if (ios /= 0) stop "density: Allocation request denied"
 
     allocate( l_inv(lmin:lmax) , stat=ios)
@@ -76,12 +68,12 @@ SUBROUTINE equilibration
     if(.not.allocated(solute_force)) allocate(solute_force(lx,ly,lz,x:z),source=0.0_dp)
     !--------------------------------- ADE -----------------------------------------------------------------
 
-    allocate( jx     (n1,n2,n3), source=node%solventflux(x))
-    allocate( jx_old (n1,n2,n3) )
-    allocate( jy     (n1,n2,n3), source=node%solventflux(y))
-    allocate( jy_old (n1,n2,n3) )
-    allocate( jz     (n1,n2,n3), source=node%solventflux(z))
-    allocate( jz_old (n1,n2,n3) )
+    allocate( jx     (lx,ly,lz), source=node%solventflux(x))
+    allocate( jx_old (lx,ly,lz) )
+    allocate( jy     (lx,ly,lz), source=node%solventflux(y))
+    allocate( jy_old (lx,ly,lz) )
+    allocate( jz     (lx,ly,lz), source=node%solventflux(z))
+    allocate( jz_old (lx,ly,lz) )
     jx = 0
     jy = 0
     jz = 0
@@ -100,17 +92,17 @@ SUBROUTINE equilibration
     OPEN(57, FILE="output/mean-density_profile_along_y.dat")
     OPEN(58, FILE="output/mean-density_profile_along_x.dat")
 
-    allocate( nature (n1,n2,n3), source=node%nature)
-    allocate( f_ext_x(n1,n2,n3), source=zerodp)
-    allocate( f_ext_y(n1,n2,n3), source=zerodp)
-    allocate( f_ext_z(n1,n2,n3), source=zerodp)
+    allocate( nature (lx,ly,lz), source=node%nature)
+    allocate( f_ext_x(lx,ly,lz), source=zerodp)
+    allocate( f_ext_y(lx,ly,lz), source=zerodp)
+    allocate( f_ext_z(lx,ly,lz), source=zerodp)
     !--------------- Ade ----------------------
-    allocate( F1(n1,n2,n3), source=zerodp)
-    allocate( F2(n1,n2,n3), source=zerodp)
-    allocate( F3(n1,n2,n3), source=zerodp)
+    allocate( F1(lx,ly,lz), source=zerodp)
+    allocate( F2(lx,ly,lz), source=zerodp)
+    allocate( F3(lx,ly,lz), source=zerodp)
     !--------------- Ade ----------------------
 
-    f_ext_loc = zerodp ! this is important and spagetty like... please read carefuln2 before modifying this line
+    f_ext_loc = zerodp ! this is important and spagetty like... please read carefully before modifying this line
     allocate( cx(lmax), source=lbm%vel(:)%coo(1))
     allocate( cy(lmax), source=lbm%vel(:)%coo(2))
     allocate( cz(lmax), source=lbm%vel(:)%coo(3))
@@ -121,16 +113,16 @@ SUBROUTINE equilibration
     ! Tabulate the index of the node one finishes if one starts from a node and a velocity index l
     ! per direction
     !
-    allocate( il(lbm%lmin:lbm%lmax, 1:n1), stat=ios)
+    allocate( il(lbm%lmin:lbm%lmax, 1:lx), stat=ios)
     if (ios /= 0) stop "il: Allocation request denied"
-    allocate( jl(lbm%lmin:lbm%lmax, 1:n2), stat=ios)
+    allocate( jl(lbm%lmin:lbm%lmax, 1:ly), stat=ios)
     if (ios /= 0) stop "jl: Allocation request denied"
-    allocate( kl(lbm%lmin:lbm%lmax, 1:n3), stat=ios)
+    allocate( kl(lbm%lmin:lbm%lmax, 1:lz), stat=ios)
     if (ios /= 0) stop "kl: Allocation request denied"
     do l= lmin, lmax
-        il(l,:) = [( pbc(i+cx(l),x) ,i=1,n1 )]
-        jl(l,:) = [( pbc(j+cy(l),y) ,j=1,n2 )]
-        kl(l,:) = [( pbc(k+cz(l),z) ,k=1,n3 )]
+        il(l,:) = [( pbc(i+cx(l),x) ,i=1,lx )]
+        jl(l,:) = [( pbc(j+cy(l),y) ,j=1,ly )]
+        kl(l,:) = [( pbc(k+cz(l),z) ,k=1,lz )]
     end do
 
     convergence_reached_without_fext = .false.
@@ -199,15 +191,15 @@ SUBROUTINE equilibration
             WRITE(56,*)"# timestep",t
             WRITE(57,*)"# timestep",t
             WRITE(58,*)"# timestep",t
-            DO k=1,n3
+            DO k=1,lz
                 WRITE(56,*) k, SUM(density(:,:,k))/ MAX( COUNT(density(:,:,k)>eps)  ,1)
                 WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
             END DO
-            DO k=1,n2
+            DO k=1,ly
                 WRITE(57,*) k, SUM(density(:,k,:))/ MAX( COUNT(density(:,k,:)>eps)  ,1)
                 WRITE(67,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
             END DO
-            DO k=1,n1
+            DO k=1,lx
                 WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps)  ,1)
                 WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
             END DO
@@ -260,13 +252,13 @@ SUBROUTINE equilibration
         ! Bounce back (boundpm) to simplify propagation step
         !
         do concurrent(l=lmin:lmax:2)
-            do concurrent(k=1:n3)
+            do concurrent(k=1:lz)
                 kp = kl(l,k)
                 !kp=pbc(k+cz(l),z)
-                do concurrent(j=1:n2)
+                do concurrent(j=1:ly)
                     jp = jl(l,j)
                     !jp=pbc(j+cy(l),y)
-                    do concurrent(i=1:n1)
+                    do concurrent(i=1:lx)
                         ip = il(l,i)
                         !ip=pbc(i+cx(l),x)
                         if( nature(i,j,k) /= nature(ip,jp,kp) ) then
@@ -283,15 +275,15 @@ SUBROUTINE equilibration
         !# PROPAGATION #
         !###############
         !$OMP PARALLEL DO DEFAULT(NONE) &
-        !$OMP SHARED(n,n3,n2,n1,lmin,lmax,cz,cy,cx,il,jl,kl) &
+        !$OMP SHARED(n,lz,ly,lx,lmin,lmax,cz,cy,cx,il,jl,kl) &
         !$OMP PRIVATE(l,k,j,i,ip,jp,kp,n_old)
         do l=lmin,lmax
             n_old = n(:,:,:,l)
-            do k=1,n3
+            do k=1,lz
                 kp = kl(l,k)
-                do j=1,n2
+                do j=1,ly
                     jp = jl(l,j)
-                    do i=1,n1
+                    do i=1,lx
                         ip = il(l,i)
                         n(ip,jp,kp,l) = n_old(i,j,k)
                     end do
@@ -387,8 +379,8 @@ SUBROUTINE equilibration
         if( compensate_f_ext .and. convergence_reached_without_fext .and. t==tfext) then
             open(90,file="./output/f_ext-field_t0.dat")
             open(91,file="./output/vel-field_central_t0.dat")
-            do i=1,n1
-                do k=1,n3
+            do i=1,lx
+                do k=1,lz
                     WRITE(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
                     WRITE(91,*) i, k, jx(i,py,k), jz(i,py,k)
                 end do
@@ -399,8 +391,8 @@ SUBROUTINE equilibration
         if( compensate_f_ext .and. convergence_reached_without_fext .and. t==tfext+1) then
             open(90,file="./output/f_ext-field_t1.dat")
             open(91,file="./output/vel-field_central_t1.dat")
-            do i=1,n1
-                do k=1,n3
+            do i=1,lx
+                do k=1,lz
                     WRITE(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
                     WRITE(91,*) i, k, jx(i,py,k), jz(i,py,k)
                 end do
@@ -477,10 +469,10 @@ SUBROUTINE equilibration
                   stop
                 end if
 
-                if(modulo(n1,2)==0 .or. modulo(n2,2)==0 .or. modulo(n3,2)==0) then
+                if(modulo(lx,2)==0 .or. modulo(ly,2)==0 .or. modulo(lz,2)==0) then
                   print*,"ERROR: l.158 of equilibration.f90"
                   print*,"=====  when compensate_f_ext, there should be odd number of nodes in all directions"
-                  print*,"n1, n2, n3 =",n1,n2,n3
+                  print*,"lx, ly, lz =",lx,ly,lz
                   stop
                 end if
                 pdr = pd/2 ! nodes of the particle on the right (or left) of the particle center. If particle is diameter 3, we have 1 node on the left and 1 on the right, so pd=3, pdr=3/2=1
@@ -494,7 +486,7 @@ SUBROUTINE equilibration
                 open(47,file="output/dominika_particle_shape.xyz")
                 open(14,file="output/NodesInParticle.dat")
                 ! ADE : We read the particle coordinates from lb.in
-                pCoord = getinput%int3("particle_coordinates", defaultvalue=[n1/2+1,n2/2+1,n3/2+1] )
+                pCoord = getinput%int3("particle_coordinates", defaultvalue=[lx/2+1,ly/2+1,lz/2+1] )
                 px = pCoord(1)
                 py = pCoord(2)
                 pz = pCoord(3)
@@ -584,8 +576,8 @@ SUBROUTINE equilibration
 		    write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
 		    !print*,TRIM(ADJUSTL(ifile))
 		    open(92,file=TRIM(ADJUSTL(ifile)))
-		     do i=1,n1
-			do k=1,n3
+		     do i=1,lx
+			do k=1,lz
 			    WRITE(92,*) i, k, jx(i,py,k), jz(i,py,k)
 			    !print*, i, k, jx(i,py,k), jz(i,py,k)
 			end do
@@ -620,15 +612,15 @@ SUBROUTINE equilibration
   WRITE(56,*)"# Steady state with convergence criteria", REAL(target_error)
   WRITE(57,*)"# Steady state with convergence criteria", REAL(target_error)
   WRITE(58,*)"# Steady state with convergence criteria", REAL(target_error)
-  DO k=1,n3
+  DO k=1,lz
       WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
       WRITE(56,*) k, SUM(density(:,:,k))/ MAX( COUNT(density(:,:,k)>eps) ,1)
   END DO
-  DO k=1,n2
+  DO k=1,ly
       WRITE(67,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
       WRITE(57,*) k, SUM(density(:,k,:))/ MAX( COUNT(density(:,k,:)>eps) ,1)
   END DO
-  DO k=1,n1
+  DO k=1,lx
       WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
       WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps) ,1)
   END DO
@@ -644,8 +636,8 @@ SUBROUTINE equilibration
   ! Print velocity 2D profilew
   !
   OPEN(69, FILE="output/mass-flux_field_2d_at_x.eq.1.dat")
-  DO j=1,n2
-      DO k=1,n3
+  DO j=1,ly
+      DO k=1,lz
           WRITE(69,*) j, k, jy(1,j,k), jz(1,j,k)
       END DO
   END DO
@@ -656,8 +648,8 @@ SUBROUTINE equilibration
     print*,"       The particle is located at ", px,py,pz
     open(90,file="./output/f_ext-field.dat")
     open(91,file="./output/vel-field_central.dat")
-    do i=1,n1
-      do k=1,n3
+    do i=1,lx
+      do k=1,lz
         WRITE(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
         WRITE(91,*) i, k,      jx(i,py,k),      jz(i,py,k)
       end do
