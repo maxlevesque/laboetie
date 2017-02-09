@@ -71,8 +71,13 @@ subroutine smolu
 
             flux_link_plus = flux_link_plus * (D_plus / lbm%vel(l)%delta )
             flux_link_minus = flux_link_minus * (D_minus / lbm%vel(l)%delta )
+
             flux_site_plus(i,j,k) = flux_site_plus(i,j,k) + flux_link_plus
             flux_site_minus(i,j,k) = flux_site_minus(i,j,k) + flux_link_minus
+            ! -------------------- Ade : 8-02-17 -------------------------------------
+            flux_site_plus(ip,jp,kp) = flux_site_plus(ip,jp,kp) - flux_link_plus
+            flux_site_minus(ip,jp,kp) = flux_site_minus(ip,jp,kp) - flux_link_minus
+            ! -------------------- Ade : 8-02-17 -------------------------------------
 
             ! flux. real flux is arriving at node. Real flux and el_curr are opposite.
             el_curr_x  = el_curr_x + lbm%vel(l)%a1 *lbm%vel(l)%coo(x) *el_curr / D_iter
@@ -84,17 +89,6 @@ subroutine smolu
 
             ! force exerted on fluid
             solute_force(i,j,k,:) = solute_force(i,j,k,:) + lbm%vel(l)%a1 *lbm%vel(l)%coo(:) *f_microions/D_iter
-            !print*, '****************************************************************************************'
-            !print*, 'F_microions', f_microions
-            !print*, '****************************************************************************************'
-            !print*, 'lbm%vel(l)%a1', lbm%vel(l)%a1 
-            !print*, '****************************************************************************************'
-            !print*,  'lbm%vel(l)%coo(:)', lbm%vel(l)%coo(:)
-            !print*, '****************************************************************************************'
-            !print*, 'f_microions', f_microions
-
-            !print*, 'SOLUTE FORCE = ', solute_force
-            !print*, '****************************************************************************************'
             write(315,*) solute_force(:,:,:,3)
 
           else if( node(i,j,k)%nature ==fluid .and. node(ip,jp,kp)%nature == solid) then
@@ -115,9 +109,6 @@ subroutine smolu
             f_minus = c_minus(i,j,k)*(1.0_dp-exp_dphi)
             f_microions = kBT*(f_plus + f_minus)
             solute_force(i,j,k,:) = solute_force(i,j,k,:) + lbm%vel(l)%a1*lbm%vel(l)%coo(:)*f_microions/D_iter
-            !print*, '****************************************************************************************'
-            !print*, 'SOLUTE FORCE = ', solute_force
-            !print*, '****************************************************************************************'
 
           end if
  
