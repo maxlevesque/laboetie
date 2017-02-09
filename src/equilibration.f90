@@ -25,7 +25,10 @@ SUBROUTINE equilibration
     integer(i2b) :: lx, ly, lz
     character*200 :: ifile, ifile2
 
-    open(316, file = "output/soluteForceEq.dat")
+    open(316, file = "output/soluteForceEqX.dat")
+    open(323, file = "output/soluteForceEqY.dat")
+    open(324, file = "output/soluteForceEqZ.dat")
+
 
     lmin = lbm%lmin
     lmax = lbm%lmax
@@ -228,7 +231,15 @@ SUBROUTINE equilibration
         ! f_ext is obtained reading input file lb.in (=> pressure gradient)
         ! solute_force is computed in smolu.f90
 
-        write(316,*) solute_force(:,:,:,3) !solute_force(:,:,:,2), solute_force(:,:,:,3)
+        DO k=1,lz
+            write(316,*) k, solute_force(:,:,k,1) ! Ade : The fluid is moving in the y-direction whenever a slit 
+                                                  ! case is imposed, as the walls are located at z = 0 and z = L
+                                                  ! which is the reason why we are observing F_y(z). 2=>y and k=>z
+            write(323,*) k, solute_force(:,:,k,2) ! Ade : The fluid is moving in the y-direction whenever a slit 
+            write(324,*) k, solute_force(:,:,k,3) ! Ade : The fluid is moving in the y-direction whenever a slit 
+        END DO
+
+
         F1(:,:,:)  = f_ext_x(:,:,:) + solute_force(:,:,:,1)
         F2(:,:,:)  = f_ext_y(:,:,:) + solute_force(:,:,:,2)
         F3(:,:,:)  = f_ext_z(:,:,:) + solute_force(:,:,:,3) 
@@ -603,6 +614,7 @@ SUBROUTINE equilibration
   close(80)
   CLOSE(65)
 
+
   !
   ! Print velocity 1D velocity field
   !
@@ -631,6 +643,9 @@ SUBROUTINE equilibration
   CLOSE(57)
   CLOSE(58)
   close(316)
+  close(323)
+  close(324)
+
 
   !
   ! Print velocity 2D profilew
