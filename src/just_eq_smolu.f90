@@ -22,6 +22,7 @@ subroutine just_eq_smolu
     real(dp), parameter :: convergence_criteria = 5.e-6
     real(dp) :: FactMinus, FactPlus ! dummy variables
 
+    open(271, FILE = "output/phi_just_eq_smolu.dat")
 
     call allocateReal3D( flux_site_plus)
     call allocateReal3D( flux_site_minus)
@@ -35,7 +36,7 @@ subroutine just_eq_smolu
     ! especially considering the high amount of magic numbers and +- convention for time.
     
     if( time > 0 .or. time<-D_equil) then
-        stop 'in just_eq_smolu.f90. Should be accessed in equilibration steps only'
+       error stop 'in just_eq_smolu.f90. Should be accessed in equilibration steps only'
     else if( time < -D_equil+100) then ! 100 first steps
         eD_plus = 0.1_dp*D_plus
         eD_minus = 0.1_dp*D_minus
@@ -139,4 +140,8 @@ subroutine just_eq_smolu
     iter = iter +1
 
   end do ! while loop about convergence on tot_diff_minus+tot_diff_plus
+  DO k=1,supercell%geometry%dimensions%indiceMax(z)
+      write(271,*) k, phi(:,:,k)
+  ENDDO
+  close(271)  
 end subroutine just_eq_smolu

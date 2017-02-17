@@ -1,7 +1,7 @@
 SUBROUTINE equilibration
 
     USE precision_kinds, only: i2b, dp, sp
-    USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, t_equil, c_plus
+    USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, t_equil, c_plus, phi
     use module_collision, only: collide
     use module_input, only: getinput
     USE constants, only: x, y, z, zerodp
@@ -28,6 +28,7 @@ SUBROUTINE equilibration
     open(316, file = "output/soluteForceEqX.dat")
     open(323, file = "output/soluteForceEqY.dat")
     open(324, file = "output/soluteForceEqZ.dat")
+    open(325, file = "output/phi.dat")
 
 
     lmin = lbm%lmin
@@ -374,6 +375,12 @@ SUBROUTINE equilibration
 
         call advect
         call sor ! TODO    ! compute phi with the Successive Overrelation Routine (SOR)
+        ! --------------------------- Ade : 13/02/2017 ---------------------------------------------------------------
+        write(325,*) '# t = ', t
+        DO k=1,lz
+            write(325,*) k, phi(:,:,k) 
+        END DO
+        ! --------------------------- Ade : 13/02/2017 ---------------------------------------------------------------
         call electrostatic_pot ! Ade: The routine is called in order to compute Phi_tot which is used in smolu
         call smolu
         call charge_test
@@ -645,6 +652,7 @@ SUBROUTINE equilibration
   close(316)
   close(323)
   close(324)
+  close(325)
 
 
   !

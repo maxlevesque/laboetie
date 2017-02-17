@@ -4,11 +4,11 @@ subroutine smolu
                      elec_slope, lncb_slope, phi_tot, &
                      kbt, fluid, solid, c_plus, c_minus, el_curr_x, el_curr_y, el_curr_z,&
                      ion_curr_x, ion_curr_y, ion_curr_z, pbc, supercell, node
-  use constants, only: x, y, z
+  use constants, only: x, y, z, zerodp
   use mod_lbmodel, only: lbm
   use myallocations
   implicit none
-  integer(kind=i2b) :: i, j, k, ip, jp, kp, l
+  integer(kind=i2b) :: i, j, k, ip, jp, kp, l, m
   real(kind=dp) :: exp_dphi, exp_min_dphi, exp_dlncb, exp_min_dlncb
   real(dp), dimension(:,:,:), allocatable :: flux_site_minus, flux_site_plus
   integer(kind=i2b) :: n_fluidsites ! total number of fluid side
@@ -23,9 +23,18 @@ subroutine smolu
   call allocateReal3D( flux_site_minus)
 
   if(.not.allocated(solute_force)) allocate(solute_force(lx,ly,lz,x:z),source=0.0_dp)
+  ! --------------------------- Ade 16/02/2017 ---------------------------------- 
+  if (.not. allocated(c_plus)) call allocateReal3D(c_plus)
+  if (.not. allocated(c_minus)) call allocateReal3D(c_minus)
+  ! --------------------------- Ade 16/02/2017 ----------------------------------
 
-  open(315, FILE = "output/solute_force.dat")
-  
+  solute_force(:,:,:,1) = zerodp 
+  solute_force(:,:,:,2) = zerodp
+  solute_force(:,:,:,3) = zerodp
+
+  OPEN( 1616, FILE="output/TRUEFALSE.dat" )
+  OPEN( 1717, FILE="output/Debug.dat" )
+
   ! compute the flux between site i,j,k and site ip,jp,kp
   do i = 1, lx
     do j = 1, ly
@@ -37,6 +46,11 @@ subroutine smolu
           ip= pbc( i+ lbm%vel(l)%coo(x) ,x)
           jp= pbc( j+ lbm%vel(l)%coo(y) ,y)
           kp= pbc( k+ lbm%vel(l)%coo(z) ,z)
+
+           write(1616,*) 'node(ip,jp,k)%nature == solid ', node(ip,jp,kp)%nature == solid
+           write(1616,*) 'node(i,j,k)%nature ==fluid ', node(i,j,k)%nature ==fluid
+           write(1616,*) 'Both ', node(i,j,k)%nature ==fluid .and. node(ip,jp,kp)%nature == solid
+
           ! if both nodes are in fluid
           if( node(i,j,k)%nature == fluid .and. node(ip,jp,kp)%nature == fluid ) then
             ! compute potential difference between sites
@@ -52,7 +66,7 @@ subroutine smolu
             exp_min_dphi = 1.0_dp / exp_dphi
 
             ! contribution of the applied salt gradient (contribution of Magali)
-            exp_dlncb = exp (sum (lncb_slope*lbm%vel(l)%coo(:)))
+            exp_dlncb = 1.0_dp !exp (sum (lncb_slope*lbm%vel(l)%coo(:)))
             exp_min_dlncb = 1.0_dp / exp_dlncb  ! inverse
 
             ! flux due to electrostatic potential, density gradients and applied salt gradient
@@ -78,7 +92,6 @@ subroutine smolu
             flux_site_plus(ip,jp,kp) = flux_site_plus(ip,jp,kp) - flux_link_plus
             flux_site_minus(ip,jp,kp) = flux_site_minus(ip,jp,kp) - flux_link_minus
             ! -------------------- Ade : 8-02-17 -------------------------------------
-
             ! flux. real flux is arriving at node. Real flux and el_curr are opposite.
             el_curr_x  = el_curr_x + lbm%vel(l)%a1 *lbm%vel(l)%coo(x) *el_curr / D_iter
             el_curr_y  = el_curr_y + lbm%vel(l)%a1 *lbm%vel(l)%coo(y) *el_curr / D_iter
@@ -86,10 +99,15 @@ subroutine smolu
             ion_curr_x = ion_curr_x + lbm%vel(l)%a1 *lbm%vel(l)%coo(x) *ion_curr / D_iter
             ion_curr_y = ion_curr_y + lbm%vel(l)%a1 *lbm%vel(l)%coo(y) *ion_curr / D_iter
             ion_curr_z = ion_curr_z + lbm%vel(l)%a1 *lbm%vel(l)%coo(z) *ion_curr / D_iter
+            write(1717,*) 'exp_dphi1 =', flux_link_plus, flux_site_plus(:,:,k), f_plus, exp_min_dphi, c_plus(:,:,k), exp_dphi
 
             ! force exerted on fluid
+            !print*, '!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!'
+            !DO m=1,lz
+            !      print*, 'FIRST solute_force = ', solute_force(:,:,k,3) ! Ade : The fluid is moving in the y-direction whenever a slit 
+            !END DO
+            !print*, '!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!'
             solute_force(i,j,k,:) = solute_force(i,j,k,:) + lbm%vel(l)%a1 *lbm%vel(l)%coo(:) *f_microions/D_iter
-            write(315,*) solute_force(:,:,:,3)
 
           else if( node(i,j,k)%nature ==fluid .and. node(ip,jp,kp)%nature == solid) then
 !            dphi = phi(ip,jp,kp)-phi(i,j,k)
@@ -101,7 +119,8 @@ subroutine smolu
 !            if(j==1 .and. jp==ly) dphi = dphi-elec_slope(y)*ly
 !            if(k==lz .and. kp==1) dphi = dphi+elec_slope(z)*lz
 !            if(k==1 .and. kp==lz) dphi = dphi-elec_slope(z)*lz
-
+            write(1717,*) 'exp_dphi2 =', exp_dphi
+            !write(1717,*) 'f_plus(1,1,3) =', f_plus(1,1,3)
             ! force acting on the solid. NO contribution of lncb_slope
             exp_dphi = exp(phi_tot(ip,jp,kp)-phi_tot(i,j,k))
             exp_min_dphi = 1.0_dp/exp_dphi
@@ -109,6 +128,11 @@ subroutine smolu
             f_minus = c_minus(i,j,k)*(1.0_dp-exp_dphi)
             f_microions = kBT*(f_plus + f_minus)
             solute_force(i,j,k,:) = solute_force(i,j,k,:) + lbm%vel(l)%a1*lbm%vel(l)%coo(:)*f_microions/D_iter
+            !print*, '!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!'
+            !DO m=1,lz
+            !      print*, 'SECOND solute_force = ', solute_force(:,:,k,3) ! Ade : The fluid is moving in the y-direction whenever a slit 
+            !END DO
+            !print*, '!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!'
 
           end if
  
@@ -117,7 +141,9 @@ subroutine smolu
       end do
     end do
   end do
-  close(315)
+  close(1616)
+  close(1717)
+
   ! update concentrations. Smoluchowski part.
   where(node%nature==fluid)
     c_plus = c_plus + flux_site_plus
