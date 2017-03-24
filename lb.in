@@ -5,27 +5,22 @@
 
 lx = 1
 ly = 1
-lz = 11
-geometryLabel = 1 
+lz = 31
+geometryLabel = 1
 f_ext = 0.0  0.0  0.0
 
-print_every = 30
 
-sigma = -0.1
+Alpha = 0.10270664
+capacitor = 1
+
+#print_every = 30
+sigma = -1.0
 timestepmax_for_PoissonNernstPlanck = 1000000
-#bjl = 0.4
 bjl = 0.4
-#lambda_D = 0.0 
-lambda_D = 1.0
+lambda_D = 0.0
 lncb_slope = 0.0  0.0  0.0
 charge_distrib = int
 D_plus = 0.05
 D_minus = 0.05
 D_iter = 1
 elec_slope = 0.0 0.0 0.0
-
-
-#relaxation_time = 1.0
-#first_order_only = F
-#write_total_mass_flux = T
-#print_files_frequency = 1000

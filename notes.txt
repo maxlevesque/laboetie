@@ -58,3 +58,209 @@
      the code version in ValidationNoChargesWithSalt in order to double check whether I had done some very 
      recent modification, which I could not remember. This is really bizarre. Anyway... back to starting point
      most probably something wrong is happening in solute_force tables.
+
+21/02/17
+     When using the following input
+
+	lx = 10
+	ly = 10
+	lz = 11
+	geometryLabel = 1
+	f_ext = 0.0  0.0  0.0
+
+	print_every = 30
+	#0.1
+	sigma = -0.01
+	timestepmax_for_PoissonNernstPlanck = 1000000
+	bjl = 0.4
+	lambda_D = 0.0
+	#lambda_D = 1.0
+	lncb_slope = 0.0  0.0  0.0
+	charge_distrib = int
+	D_plus = 0.05
+	D_minus = 0.05
+	D_iter = 1
+	elec_slope = 0.0 0.0001 0.0
+
+    I have the following segmentation fault message. This error is created when writing phi_tot(i,j,k) = phi(i,j,k) in electrostatic_pot.f90
+
+	Lattice Boltzmann
+	=================
+	step
+	----
+	   2   1.1114006995581436E-003
+	SOR converged in           0 steps
+	with anormf0 =   0.23455478474419519     
+
+	Program received signal SIGSEGV: Segmentation fault - invalid memory reference.
+
+	Backtrace for this error:
+	#0  0x7FCC3D23AE08
+	#1  0x7FCC3D239F90
+	#2  0x7FCC3C94C4AF
+	#3  0x42E3E6 in electrostatic_pot_
+	#4  0x43C2B1 in equilibration_
+	#5  0x458D85 in MAIN__ at main.f90:?
+	Segmentation fault (core dumped)
+
+    same error if I write  phi_tot(i,j,k) = sum( elec_slope * real([i,j,k],dp) )
+-----------------------------------------------------
+
+    Now when I use the following input 
+
+	lx = 3
+	ly = 3
+	lz = 11
+	geometryLabel = 1
+	f_ext = 0.0  0.0  0.0
+
+	print_every = 30
+	#0.1
+	sigma = -0.01
+	timestepmax_for_PoissonNernstPlanck = 1000000
+	bjl = 0.4
+	#lambda_D = 0.0 
+	lambda_D = 1.0
+	lncb_slope = 0.0  0.0  0.0
+	charge_distrib = int
+	D_plus = 0.05
+	D_minus = 0.05
+	D_iter = 1
+	elec_slope = 0.0 0.0001 0.0
+
+   I get the following error. 
+   
+    ERROR STOP In equilibration, the population n(x,y,z,vel) < 0
+
+
+--------------------------------------------------------------------------------
+
+24/02/17
+
+lx = 1
+ly = 8
+lz = 11
+geometryLabel = 1
+f_ext = 0.0  0.0  0.0
+
+print_every = 30
+#0.1
+sigma = -0.01
+timestepmax_for_PoissonNernstPlanck = 1000000
+bjl = 0.4
+#lambda_D = 0.0 
+lambda_D = 1.0
+lncb_slope = 0.0  0.0  0.0
+charge_distrib = int
+D_plus = 0.05
+D_minus = 0.05
+D_iter = 1
+elec_slope = 0.0 0.0001 0.0
+
+
+7/03/17
+
+	lx = 10
+	ly = 10
+	lz = 11
+	geometryLabel = 1
+	f_ext = 0.0  0.0  0.0
+
+	print_every = 30
+	sigma = -0.01
+	timestepmax_for_PoissonNernstPlanck = 1000000
+	bjl = 0.4
+	lambda_D = 0.0
+	lncb_slope = 0.0  0.0  0.0
+	charge_distrib = int
+	D_plus = 0.05
+	D_minus = 0.05
+	D_iter = 1
+	elec_slope = 0.0 0.0001 0.0
+
+
+	The code seems now to be working for soluteForceY. The correction in the jump of the external potential was absent in the
+	second part of the if statement of smolu.f90 (i.e. boundaries)
+
+	[6]   Done                    ./laboetie > p.out  (wd: /data/adelchi/CurrentVersion/NewTests/sigma0.01/EF1)
+	(wd now: /data/adelchi/CurrentVersion/NewTests/X_Efield)
+	[7]   Done                    ./laboetie > p.out  (wd: /data/adelchi/CurrentVersion/NewTests/sigma0.01/EF2)
+	(wd now: /data/adelchi/CurrentVersion/NewTests/X_Efield)
+	[8]-  Done                    ./laboetie > p.out  (wd: /data/adelchi/CurrentVersion/NewTests/sigma0.08/EF1)
+	(wd now: /data/adelchi/CurrentVersion/NewTests/X_Efield)
+
+
+
+20/03/17
+        lx = 10
+	ly = 10
+	lz = 11
+	geometryLabel = 1
+	f_ext = 0.0  0.0  0.0
+
+	Alpha = 0.00528394
+
+	# deactivate print_every
+	#print_every = 30
+	sigma = -0.01
+	timestepmax_for_PoissonNernstPlanck = 1000000
+	bjl = 0.4
+	lambda_D = 0.0
+	lncb_slope = 0.0  0.0  0.0
+	charge_distrib = int
+	D_plus = 0.05
+	D_minus = 0.05
+	D_iter = 1
+	elec_slope = 0.0 0.0 0.0
+
+
+        => pOLD.out. I stopped the simulation as it was taking too much time.  
+
+-----------------------------------------------
+
+         2017/03/20, 14h01m51
+	 ==================================================
+	 Laboetie, fluid dynamics for chemical applications
+	 ==================================================
+
+	 salt free fluid
+	 The total charge is set ONLY on the solid nodes at the interface (          50 /          50 )
+	 Internal sites (at the interface) =           50 , charge per link =  -2.0000000000000000E-002
+	 External sites =         1500  charge per link =   6.6666666666666664E-004
+	 Salt concentration    0.0000000000000000
+	 Init density values :
+	 p_solid =  -1.0000000000000000E-002
+	 p_fluid =   6.6666666666666664E-004
+	 m_solid =   1.0000000000000000E-002
+	 m_fluid =   0.0000000000000000
+	 *********************************************************************
+	 ATTENTION ONLY SURFACE CHARGE IS OK FOR NOW
+
+	 Poisson + Nernst-Planck
+	 =======================
+
+        lx = 5
+	ly = 5
+	lz = 62
+	geometryLabel = 1
+	f_ext = 0.0  0.0  0.0
+
+	Alpha = 0.03299671
+
+	#print_every = 30
+	sigma = -1.0
+	timestepmax_for_PoissonNernstPlanck = 1000000
+	bjl = 0.4
+	lambda_D = 0.0
+	lncb_slope = 0.0  0.0  0.0
+	charge_distrib = int
+	D_plus = 0.05
+	D_minus = 0.05
+	D_iter = 1
+	elec_slope = 0.0 0.0 0.0
+
+	Note: The following floating-point exceptions are signalling: IEEE_DENORMAL
+	STOP maximum iterations 500 000 reached without convergence in sor
+
+
+        STOP maximum iterations 500 000 reached without convergence in sor

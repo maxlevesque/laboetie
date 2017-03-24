@@ -141,7 +141,7 @@ subroutine just_eq_smolu
 
   end do ! while loop about convergence on tot_diff_minus+tot_diff_plus
   DO k=1,supercell%geometry%dimensions%indiceMax(z)
-      write(271,*) k, phi(:,:,k)
+      write(271,*) k, SUM(phi(:,:,k)) 
   ENDDO
   close(271)  
 end subroutine just_eq_smolu

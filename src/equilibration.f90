@@ -1,7 +1,7 @@
 SUBROUTINE equilibration
 
     USE precision_kinds, only: i2b, dp, sp
-    USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, t_equil, c_plus, phi
+    USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, t_equil, c_plus, phi, Phi_tot
     use module_collision, only: collide
     use module_input, only: getinput
     USE constants, only: x, y, z, zerodp
@@ -22,13 +22,18 @@ SUBROUTINE equilibration
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
     LOGICAL :: write_total_mass_flux
     integer, allocatable :: il(:,:), jl(:,:), kl(:,:), l_inv(:)
-    integer(i2b) :: lx, ly, lz
+    integer(i2b) :: lx, ly, lz, half
     character*200 :: ifile, ifile2
 
     open(316, file = "output/soluteForceEqX.dat")
     open(323, file = "output/soluteForceEqY.dat")
     open(324, file = "output/soluteForceEqZ.dat")
+    open(1316, file = "output/SFX.dat")
+    open(1323, file = "output/SFY.dat")
+    open(1324, file = "output/SFZ.dat")
     open(325, file = "output/phi.dat")
+    open(387, file = "output/phiAVANT.dat")
+    open(388, file = "output/phiAPRES.dat")
 
 
     lmin = lbm%lmin
@@ -176,7 +181,7 @@ SUBROUTINE equilibration
         !--------------------------------- Ade --------------------------------------------------------------
 
         !-------------------------------- Ade -----------------------------------------------------------
-        print*, 2, SUM(c_plus(:,:,2))
+        !print*, 2, SUM(c_plus(:,:,2))
         ! This is a debugging test
         !-------------------------------- Ade -----------------------------------------------------------
 
@@ -232,12 +237,15 @@ SUBROUTINE equilibration
         ! f_ext is obtained reading input file lb.in (=> pressure gradient)
         ! solute_force is computed in smolu.f90
 
+        write(316,*) 't =', t
+        write(323,*) 't =', t
+        write(324,*) 't =', t
         DO k=1,lz
-            write(316,*) k, solute_force(:,:,k,1) ! Ade : The fluid is moving in the y-direction whenever a slit 
-                                                  ! case is imposed, as the walls are located at z = 0 and z = L
-                                                  ! which is the reason why we are observing F_y(z). 2=>y and k=>z
-            write(323,*) k, solute_force(:,:,k,2) ! Ade : The fluid is moving in the y-direction whenever a slit 
-            write(324,*) k, solute_force(:,:,k,3) ! Ade : The fluid is moving in the y-direction whenever a slit 
+            write(316,*) k, SUM(solute_force(:,:,k,1)) ! Ade : The fluid is moving in the y-direction whenever a slit 
+                                                        ! case is imposed, as the walls are located at z = 0 and z = L
+                                                        ! which is the reason why we are observing F_y(z). 2=>y and k=>z
+            write(323,*) k, SUM(solute_force(:,:,k,2)) ! Ade : The fluid is moving in the y-direction whenever a slit 
+            write(324,*) k, SUM(solute_force(:,:,k,3)) ! Ade : The fluid is moving in the y-direction whenever a slit 
         END DO
 
 
@@ -376,13 +384,22 @@ SUBROUTINE equilibration
         call advect
         call sor ! TODO    ! compute phi with the Successive Overrelation Routine (SOR)
         ! --------------------------- Ade : 13/02/2017 ---------------------------------------------------------------
-        write(325,*) '# t = ', t
-        DO k=1,lz
-            write(325,*) k, phi(:,:,k) 
-        END DO
+        !write(325,*) '# t = ', t
+        !DO k=1,lz
+        !    write(325,*) k, SUM(phi(:,:,k)) 
+        !END DO
         ! --------------------------- Ade : 13/02/2017 ---------------------------------------------------------------
         call electrostatic_pot ! Ade: The routine is called in order to compute Phi_tot which is used in smolu
+        !WRITE(387,*) '# t = ', t
+        !half = lz/2
+        !DO k=1,ly
+        !    WRITE(387,*) k, (phi_tot(:,k,half))
+        !ENDDO
         call smolu
+        !WRITE(388,*) '# t = ', t
+        !DO k=1,ly
+        !    WRITE(388,*) k, (phi_tot(:,k,half))
+        !ENDDO
         call charge_test
 
         ! Future work : Write some stuff out for postprocessing
@@ -590,36 +607,33 @@ SUBROUTINE equilibration
         !print*, 't=',t,'mod=',mod(t,print_every) 
 	if ((print_every.gt.0).and.(mod(t,print_every)==0)) then ! we divide "print_every" by the iteration time step. When remainder is zero
 	                                                         ! the velocity field is written on vel-fieldTIME_*.dat (*=1,2,3,4,....)
-                if( compensate_f_ext ) then
+         if( compensate_f_ext ) then
 		    write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
 		    !print*,TRIM(ADJUSTL(ifile))
 		    open(92,file=TRIM(ADJUSTL(ifile)))
-		     do i=1,lx
-			do k=1,lz
+		    do i=1,lx
+			  do k=1,lz
 			    WRITE(92,*) i, k, jx(i,py,k), jz(i,py,k)
 			    !print*, i, k, jx(i,py,k), jz(i,py,k)
-			end do
+			  end do
 		    end do
-		    close(92)
-		endif
+		   close(92)
+		 endif
 		! ----------------------------- Ade -----------------------------------------------
 		! ADE : I added the following part for debugging purposes
-		write(ifile2,'(a,i0,a)') './output/c_plus_alongZTIME_', t,'.dat'
-		open(3180, file=TRIM(ADJUSTL(ifile2)))
-		DO k=supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
-		    WRITE(3180,*) k, SUM(c_plus(:,:,k))
-		ENDDO
-		close(3180)
+		!write(ifile2,'(a,i0,a)') './output/c_plus_alongZTIME_', t,'.dat'
+		!open(3180, file=TRIM(ADJUSTL(ifile2)))
+		!DO k=supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
+		!    WRITE(3180,*) k, SUM(c_plus(:,:,k))
+		!ENDDO
+		!close(3180)
 		! ----------------------------- Ade -----------------------------------------------
-        endif
+    endif
         ! ADE : end of modification
 
 
-  end do
+  end do ! end of temporal loop
 
-  close(79)
-  close(80)
-  CLOSE(65)
 
 
   !
@@ -643,6 +657,28 @@ SUBROUTINE equilibration
       WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
       WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps) ,1)
   END DO
+
+! **********************************************
+! ************ Ade : POSTPROCESSING ************
+!***********************************************
+ 
+ ! 1. Solute Force
+ DO k=1,lz
+     write(1316,*) k, SUM(solute_force(:,:,k,1)) ! Ade : The fluid is moving in the y-direction whenever a slit 
+                                                 ! case is imposed, as the walls are located at z = 0 and z = L
+                                                 ! which is the reason why we are observing F_y(z). 2=>y and k=>z
+     write(1323,*) k, SUM(solute_force(:,:,k,2)) 
+     write(1324,*) k, SUM(solute_force(:,:,k,3)) 
+ ENDDO 
+
+ ! 2. Potential PHI
+DO k=1,lz
+    write(325,*) k, SUM(phi(:,:,k)) 
+END DO
+  close(79)
+  close(80)
+  CLOSE(65)
+  
   CLOSE(66)
   CLOSE(67)
   CLOSE(68)
@@ -653,6 +689,9 @@ SUBROUTINE equilibration
   close(323)
   close(324)
   close(325)
+  close(1316)
+  close(1323)
+  close(1324)
 
 
   !
@@ -680,6 +719,8 @@ SUBROUTINE equilibration
     close(90)
     close(91)
   end if
+ close(387)
+ close(388)
 
   ! put back arrays into original types
   node%solventdensity = density
