@@ -165,7 +165,47 @@ SUBROUTINE construct_slit
     node(:,:,j)%nature = solid ! so is the upper bound
 END SUBROUTINE
 
-
+! Ade : the following subroutine was created in order to have two sheets of solid nodes for the 
+! capacitor test case, as it can have issues in computing the potential phi, because of PBC
+SUBROUTINE construct_slit_2sheets
+    IMPLICIT NONE
+    INTEGER(i2b) :: i, j
+    i = LBOUND( node%nature, 3)
+    j = UBOUND( node%nature, 3)
+    node%nature = fluid
+    node(:,:,i)%nature = solid ! the lower bound of the thrid dimension of inside is solid
+    node(:,:,i+1)%nature = solid ! the second sheet from lower bound is solid
+    node(:,:,j)%nature = solid ! so is the upper bound
+    node(:,:,j-1)%nature = solid ! the sheet before the upper bound is solid
+END SUBROUTINE
+SUBROUTINE construct_slit_3sheets
+    IMPLICIT NONE
+    INTEGER(i2b) :: i, j
+    i = LBOUND( node%nature, 3)
+    j = UBOUND( node%nature, 3)
+    node%nature = fluid
+    node(:,:,i)%nature = solid ! the lower bound of the thrid dimension of inside is solid
+    node(:,:,i+1)%nature = solid ! the second sheet from lower bound is solid
+    node(:,:,i+2)%nature = solid ! the third sheet from lower bound is solid
+    node(:,:,j)%nature = solid ! so is the upper bound
+    node(:,:,j-1)%nature = solid ! the sheet before the upper bound is solid
+    node(:,:,j-2)%nature = solid ! the second sheet before the upper bound is solid
+END SUBROUTINE
+SUBROUTINE construct_slit_4sheets
+    IMPLICIT NONE
+    INTEGER(i2b) :: i, j
+    i = LBOUND( node%nature, 3)
+    j = UBOUND( node%nature, 3)
+    node%nature = fluid
+    node(:,:,i)%nature = solid ! the lower bound of the thrid dimension of inside is solid
+    node(:,:,i+1)%nature = solid ! the second sheet from lower bound is solid
+    node(:,:,i+2)%nature = solid ! the third sheet from lower bound is solid
+    node(:,:,i+3)%nature = solid ! the third sheet from lower bound is solid
+    node(:,:,j)%nature = solid ! so is the upper bound
+    node(:,:,j-1)%nature = solid ! the sheet before the upper bound is solid
+    node(:,:,j-2)%nature = solid ! the sheet before the upper bound is solid
+    node(:,:,j-3)%nature = solid ! the sheet before the upper bound is solid
+END SUBROUTINE
 
 
 

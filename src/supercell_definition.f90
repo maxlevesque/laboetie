@@ -11,7 +11,8 @@ subroutine supercell_definition
                       CONSTRUCT_SPHERE_BENICHOU,&
                       CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS,&
                       construct_custom,&
-                      CONSTRUCT_PBM
+                      CONSTRUCT_PBM, construct_slit_2sheets, construct_slit_3sheets,&
+                      construct_slit_4sheets
   use io, only: print_supercell_xsf
   use mod_lbmodel, only: lbm
 
@@ -74,6 +75,12 @@ subroutine supercell_definition
     call CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS
   case (11)
     call CONSTRUCT_PBM
+  case (12)
+    call construct_slit_2sheets
+  case (13)
+    call construct_slit_3sheets
+  case (14)
+    call construct_slit_4sheets
   case default
     stop 'supercell%geometry%label tag in input file is invalid'
   end select

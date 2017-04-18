@@ -75,7 +75,7 @@ module system
     ! electrostatic related
     real(dp) :: bjl ! Bjerum length
     real(dp) :: lambda_D ! debye length. <0 means salt free fluid
-    real(dp) :: sigma ! sigma is the number of charges the user want to put in solid and surface. read from input file.
+    real(dp) :: tot_sol_charge ! tot_sol_charge is the number of charges the user want to put in solid and surface. read from input file.
     real(dp) :: D_plus, D_minus ! diffusion coefficient of ions
     real(dp), allocatable, dimension(:,:,:) :: c_plus, c_minus ! concentrations
     real(dp), allocatable, dimension(:,:,:) :: phi ! internal potential (calculated by the sucessive overrelaxation methode)

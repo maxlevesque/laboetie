@@ -7,7 +7,7 @@ subroutine just_eq_smolu
     use precision_kinds
     use system, only: D_plus, D_minus, node,&
         D_equil, time, fluid, phi, c_plus, c_minus,&
-        rho_0, sigma, pbc, supercell
+        rho_0, tot_sol_charge, pbc, supercell
     use constants, only: x, y, z
     use mod_lbmodel, only: lbm
     use myAllocations
@@ -35,13 +35,17 @@ subroutine just_eq_smolu
     ! i think there is a bug in C code here,
     ! especially considering the high amount of magic numbers and +- convention for time.
     
-    if( time > 0 .or. time<-D_equil) then
-       error stop 'in just_eq_smolu.f90. Should be accessed in equilibration steps only'
-    else if( time < -D_equil+100) then ! 100 first steps
+    !if( time > 0 .or. time<-D_equil) then
+    !   error stop 'in just_eq_smolu.f90. Should be accessed in equilibration steps only'
+    ! Ade : no need for the two line above as time is always positive. Used to be negative in C-code
+    print*, '!!!!!!!!!!!!!DEBUG!!!!!!!!!!!!'
+    print*, 'time = ', time
+    print*, '!!!!!!!!!!!!!DEBUG!!!!!!!!!!!!'
+    if( time < 100) then ! 100 first steps ! Ade : change of > and signs
         eD_plus = 0.1_dp*D_plus
         eD_minus = 0.1_dp*D_minus
         max_iter = 10
-    else if( time < -D_equil +500) then
+    else if( time > D_equil - 500) then ! Ade : change of > and signs
         eD_plus = D_plus
         eD_minus = D_minus
         max_iter = 1
@@ -126,14 +130,14 @@ subroutine just_eq_smolu
 
 
     ! compute the total flux in this equilibration step one wants to minimize.
-    if( sigma/=0 .and. eD_plus/=0.0_dp .and. eD_minus/=0.0_dp ) then
+    if( tot_sol_charge/=0 .and. eD_plus/=0.0_dp .and. eD_minus/=0.0_dp ) then
       ! the sum of all flux
       FactPlus = sum(c_plus) / count(node%nature==fluid) + rho_0
       FactMinus = sum(c_minus) / count(node%nature==fluid) + rho_0
       tot_diff_plus  = sqrt(sum(flux_site_plus**2,mask=(node%nature==fluid))) &
-          / count(node%nature==fluid) / (0.5_dp*FactPlus*eD_plus ) / sigma ! 1st denominator is the number of fluid nodes)
+          / count(node%nature==fluid) / (0.5_dp*FactPlus*eD_plus ) / tot_sol_charge ! 1st denominator is the number of fluid nodes)
       tot_diff_minus = sqrt(sum(flux_site_minus**2,mask=(node%nature==fluid))) &
-          / count(node%nature==fluid) / (0.5_dp*FactMinus*eD_minus) / sigma ! norm2 is the Fortran intrinsic for euclidean norm
+          / count(node%nature==fluid) / (0.5_dp*FactMinus*eD_minus) / tot_sol_charge ! norm2 is the Fortran intrinsic for euclidean norm
     end if
 
     ! increment iteration

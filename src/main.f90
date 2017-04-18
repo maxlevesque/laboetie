@@ -17,7 +17,7 @@ PROGRAM main
   CALL init_simu
 
   !
-  ! system equilibration: -D_equil <= time <= 0
+  ! system equilibration: -D_equil <= time <= 0 ! Ade : this is not true. The time is now always positive
   ! one solves coupled Poisson and Nernst-Planck equations without solvant flux nor external forces
   ! one then arrives at Poisson-Boltzmann distribution. For now, Poisson is solved using SOR and
   ! Nernst-Planck by Link-Flux without advection.

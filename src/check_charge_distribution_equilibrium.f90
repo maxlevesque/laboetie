@@ -10,7 +10,7 @@ subroutine check_charge_distribution_equilibrium( time, is_converged)
   logical, intent(out) :: is_converged
   real(kind=dp) :: dphi, dcp, dcm ! diff_phi, diff_c_plus and diff_c_minus
   integer(kind=i2b) :: n, p, q
-  real(kind=dp), parameter :: eps=1.0d-12
+  real(kind=dp), parameter :: eps=1.0d-6
   logical, save :: is_firsttimehere = .true. ! first time
 
   ! in this file is printed the convergence of phi due to the Sucessive OverRelaxation method
