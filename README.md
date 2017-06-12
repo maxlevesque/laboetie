@@ -36,9 +36,10 @@ We are researchers: our work is evaluated on the basis of citations to our publi
   4. **Transient hydrodynamic finite size effects in simulations under periodic boundary conditions**  
       Adelchi J. Asta, Maximilien Levesque, Rodolphe Vuilleumier and Benjamin Rotenberg  
       arXiv:1702.01082  
-  5. **Kinetic Accessibility of Porous Material Adsorption Sites Studied through the Lattice Boltzmann Method**
+  5. **Kinetic Accessibility of Porous Material Adsorption Sites Studied through the Lattice Boltzmann Method**  
       Jean-Mathieu Vanson, François-Xavier Coudert, Michaela Klotz and Anne Boutin  
-      http://dx.doi.org/10.1021/acs.langmuir.6b04472
+      Langmuir 33, 1405-1411 (2017)  
+      http://dx.doi.org/10.1021/acs.langmuir.6b04472  
 
 ---
 
