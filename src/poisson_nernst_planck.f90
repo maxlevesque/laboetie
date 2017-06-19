@@ -29,12 +29,14 @@ SUBROUTINE poisson_nernst_planck
   open(280, file='output/PHI_PNP1.dat')
   open(281, file='output/PHI_PNP2.dat')
   open(282, file='output/PHIijk.dat')
+  open(283, file='output/C_PLUSijk.dat')
+  open(284, file='output/C_MINUSijk.dat')
 
   !
   ! If tot_sol_charge is 0, salf free system, and thus no need to go continue here
   !
   tot_sol_charge = getinput%dp('tot_sol_charge',0._dp)
-  IF ( ABS(tot_sol_charge) <= EPSILON(1._dp) ) RETURN
+  IF ( ABS(tot_sol_charge) <= EPSILON(1._dp) .and. ABS(lambda_D) <= EPSILON(1._dp)) RETURN ! Ade: 22/05/17 I added the and
 
   PRINT*
   PRINT*,'Poisson + Nernst-Planck'
@@ -146,22 +148,47 @@ SUBROUTINE poisson_nernst_planck
     ! Ade : POSTPROCESSING AT EQUILIBRIUM 
     ! ---------------------------------------------------
     ! Cations density profile
-    DO k=supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
-       WRITE(314,*) k, SUM(c_plus(:,:,k))
-       WRITE(315,*) k, SUM(c_minus(:,:,k))
-    ENDDO
-    ! Potential PHI profile
-     
+
+    ! Ade : For restart
     DO i=1,supercell%geometry%dimensions%indiceMax(x)
         DO j=1,supercell%geometry%dimensions%indiceMax(y)
             DO k=1,supercell%geometry%dimensions%indiceMax(z)
-                write(282,*) i,j,k, phi(i,j,k) 
+               WRITE(283, *) c_plus(i,j,k)
+               WRITE(284, *) c_minus(i,j,k)
             ENDDO
         ENDDO
     ENDDO
-    DO k=1,supercell%geometry%dimensions%indiceMax(z)
+    if (geometrie==2) then ! Cylindrical geometry
+     DO j=1,ly
+       WRITE(314,*) j, c_plus(j,ly/2,lz/2)
+       WRITE(315,*) j, c_minus(j,ly/2,lz/2)
+     ENDDO
+    else
+      DO k=supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
+         WRITE(314,*) k, SUM(c_plus(:,:,k))
+         WRITE(315,*) k, SUM(c_minus(:,:,k))
+      ENDDO
+    endif
+    ! Potential PHI profile
+     
+    ! Ade : For restart
+    !DO i=1,supercell%geometry%dimensions%indiceMax(x)
+    !    DO j=1,supercell%geometry%dimensions%indiceMax(y)
+    !        DO k=1,supercell%geometry%dimensions%indiceMax(z)
+    !            write(282,*) phi(i,j,k) 
+    !        ENDDO
+    !    ENDDO
+    !ENDDO
+
+   if (geometrie==2) then ! Cylindrical geometry
+     DO j=1,ly
+       WRITE(281,*) j, phi(j,ly/2,lz/2)
+     ENDDO
+   else
+     DO k=1,supercell%geometry%dimensions%indiceMax(z)
       write(281,*) k, SUM(phi(:,:,k)), phi(1,1,k)
-    ENDDO
+     ENDDO
+   endif
 
     ! Ade : remove comments below. This is a debugging test!!!!!!
     !call charge_test ! check charge conservation ! TODO rename to call check_charge_conservation ! check charge conservation every 1000 steps (arbitrary number)
@@ -179,6 +206,8 @@ SUBROUTINE poisson_nernst_planck
     close(317)
     close(281)
     close(282)
+    close(283)
+    close(284)
 
 
     CONTAINS

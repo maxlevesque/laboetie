@@ -1,17 +1,18 @@
 SUBROUTINE equilibration
 
     USE precision_kinds, only: i2b, dp, sp
-    USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, t_equil, c_plus, phi, Phi_tot
+    USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, t_equil, c_plus, c_minus, phi, Phi_tot
     use module_collision, only: collide
     use module_input, only: getinput
     USE constants, only: x, y, z, zerodp
     USE mod_time, only: tick, tock
+    USE myallocations
 
     implicit none
     integer :: t,i,j,k,l,ip,jp,kp, lmin, lmax, timer(100), g, ng, pdr, pd, ios, px, py, pz, pCoord(3)
     integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency, GL, print_every
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
-    real(dp) :: n_loc, f_ext_loc(3), l2err, target_error
+    real(dp) :: n_loc, f_ext_loc(3), l2err, target_error, djx, djy, djz, Jxx, Jyy, Jzz
     REAL(dp) :: vmaxx, vmaxy, vmaxz, vmax
     REAL(dp) :: vmaxx_old, vmaxy_old, vmaxz_old, vmax_old
     real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, n_old, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z,& 
@@ -23,7 +24,9 @@ SUBROUTINE equilibration
     LOGICAL :: write_total_mass_flux
     integer, allocatable :: il(:,:), jl(:,:), kl(:,:), l_inv(:)
     integer(i2b) :: lx, ly, lz, half
+    integer(i2b) :: n1,n2,n3 ! Ade : dummy for reading purposes
     character*200 :: ifile, ifile2
+    LOGICAL :: RestartPNP = .TRUE.
 
     open(316, file = "output/soluteForceEqX.dat")
     open(323, file = "output/soluteForceEqY.dat")
@@ -31,10 +34,23 @@ SUBROUTINE equilibration
     open(1316, file = "output/SFX.dat")
     open(1323, file = "output/SFY.dat")
     open(1324, file = "output/SFZ.dat")
+    open(1325, file = "output/SFXtime.dat")
+    open(1326, file = "output/SFYtime.dat")
+    open(1327, file = "output/SFZtime.dat")
+    ! For debugging
+    open(1328, file = "output/Ligne2Courant.dat")
+    ! end debugging
     open(325, file = "output/phi.dat")
     open(387, file = "output/phiAVANT.dat")
     open(388, file = "output/phiAPRES.dat")
-
+    open(389, file = "output/c_plusTimeEquil.dat")
+    open(390, file = "output/PHITimeEquil.dat")
+    !------------------------------------------------
+    ! Ade : For restart purposes
+    !open(1389, file = "output/PHIijk.dat")
+    !open(1390, file = "output/C_PLUSijk.dat")
+    !open(1391, file = "output/C_MINUSijk.dat")
+    !------------------------------------------------
 
     lmin = lbm%lmin
     lmax = lbm%lmax
@@ -44,6 +60,27 @@ SUBROUTINE equilibration
     lx = supercell%geometry%dimensions%indiceMax(x)
     ly = supercell%geometry%dimensions%indiceMax(y)
     lz = supercell%geometry%dimensions%indiceMax(z)
+    !******************************
+    !******* Restart-PNP **********
+    !******************************
+    RestartPNP = getinput%log("RestartPNP", .TRUE.)
+    !if(.not.RestartPNP) then
+    !    IF( .NOT. ALLOCATED(phi) ) CALL allocateReal3D(phi)
+    !   IF( .NOT. ALLOCATED(c_plus) ) CALL allocateReal3D(c_plus)
+    !    IF( .NOT. ALLOCATED(c_minus) ) CALL allocateReal3D(c_minus)
+    !    DO i=1,lx
+    !     DO j=1,ly
+    !      DO k=1,lz
+    !        read(1389,*) phi(i,j,k)
+    !        read(1390,*) c_plus(i,j,k)
+    !        read(1391,*) c_minus(i,j,k)
+    !      ENDDO
+    !     ENDDO
+    !    ENDDO
+    !endif
+    !******************************
+    !******* End of Restart-PNP ***
+    !******************************
 
     !
     ! Print info to terminal every that number of steps
@@ -55,7 +92,7 @@ SUBROUTINE equilibration
     !
     print_files_frequency = getinput%int("print_files_frequency", HUGE(1))
 
-    print_every = getinput%int("print_every", defaultvalue=1000) ! reads from lb.in file
+    print_every = getinput%int("print_every", defaultvalue=0) ! reads from lb.in file
                                                                  ! the frequency of printing time
                                                                  ! the default value needs to be changed eventually
     fluid_nodes = count( node%nature==fluid )
@@ -89,6 +126,9 @@ SUBROUTINE equilibration
     jx_old = 0
     jy_old = 0
     jz_old = 0
+    djx = 0.0
+    djy = 0.0
+    djz = 0.0
 
     OPEN(66, FILE="output/mass-flux_profile_along_z.dat")
     OPEN(67, FILE="output/mass-flux_profile_along_y.dat")
@@ -360,9 +400,13 @@ SUBROUTINE equilibration
         !jx=0
         !jy=0
         !jz=0
-        jx=f_ext_x/2._dp
-        jy=f_ext_y/2._dp
-        jz=f_ext_z/2._dp
+        !jx=f_ext_x/2._dp
+        !jy=f_ext_y/2._dp
+        !jz=f_ext_z/2._dp
+
+        jx = F1/2._dp ! Ade : 30/05/17 there was a mistake here. Only f_ext was divided
+        jy = F2/2._dp ! by 2.0_dp
+        jz = F3/2._dp
         do l=lmin,lmax
             jx = jx +n(:,:,:,l)*cx(l)
             jy = jy +n(:,:,:,l)*cy(l)
@@ -388,6 +432,11 @@ SUBROUTINE equilibration
         !DO k=1,lz
         !    write(325,*) k, SUM(phi(:,:,k)) 
         !END DO
+
+        DO k=1,lz
+          write(389,*) k, sum(c_plus(:,:,k))
+          write(390,*) k, sum(phi(:,:,k))
+        ENDDO
         ! --------------------------- Ade : 13/02/2017 ---------------------------------------------------------------
         call electrostatic_pot ! Ade: The routine is called in order to compute Phi_tot which is used in smolu
         !WRITE(387,*) '# t = ', t
@@ -401,6 +450,20 @@ SUBROUTINE equilibration
         !    WRITE(388,*) k, (phi_tot(:,k,half))
         !ENDDO
         call charge_test
+        write(1325,*) '# Iteration ', t
+        write(1326,*) '# Iteration ', t
+        write(1327,*) '# Iteration ', t
+        DO k=1,lz
+            write(1325,*) k, SUM(solute_force(:,:,k,1)) ! Ade : The fluid is moving in the y-direction whenever a slit 
+                                                        ! case is imposed, as the walls are located at z = 0 and z = L
+                                                        ! which is the reason why we are observing F_y(z). 2=>y and k=>z
+            write(1326,*) k, SUM(solute_force(:,:,k,2)) 
+            write(1327,*) k, SUM(solute_force(:,:,k,3)) 
+        ENDDO 
+        ! Ade : 19/03/17 three lines below for debugging purposes. To be removed
+        do j=1,ly
+            write(1328,*) j, solute_force(lx/2,j,lz/2,2)
+        ENDDO
 
         ! Future work : Write some stuff out for postprocessing
 
@@ -443,11 +506,19 @@ SUBROUTINE equilibration
         !#####################
         !# check convergence #
         !#####################
+        ! count the number of times the array is not zero
+        !n1 = count(abs(jx_old)>1.0d-6)
+        !n2 = count(abs(jy_old)>1.0d-6)
+        !n3 = count(abs(jz_old)>1.0d-6)
         open(13,file="./output/l2err.dat")
+        !if(n1/=0) djx = sum( abs(  (jx - jx_old)/jx_old ), mask= abs(jx_old)>1.0d-6) / real(n1,kind=dp)
+        !if(n2/=0) djy = sum( abs(  (jy - jy_old)/jy_old ), mask= abs(jy_old)>1.0d-6) / real(n2,kind=dp)
+        !if(n3/=0) djz = sum( abs(  (jz - jz_old)/jz_old ), mask= abs(jz_old)>1.0d-6) / real(n3,kind=dp)
         l2err = maxval([maxval(abs(jx-jx_old)), &
                         maxval(abs(jy-jy_old)), &
                         maxval(abs(jz-jz_old)) &
                        ])
+        !l2err = maxval([djx,djy,djz])
         write(13,*) t, l2err
 
         if( l2err <= target_error .and. t>2 ) then
@@ -465,7 +536,7 @@ SUBROUTINE equilibration
           else if( convergence_reached_without_fext ) then
             convergence_reached_with_fext = .true.
           else
-            print*,"ERROR: l.376 of equilibration.f90"
+            print*,"ERROR: l.530 of equilibration.f90"
             print*,"=====  I did not anticipate this possibility. Review your if tree."
             stop
           end if
@@ -618,6 +689,21 @@ SUBROUTINE equilibration
 			  end do
 		    end do
 		   close(92)
+         else
+		    write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
+		    !print*,TRIM(ADJUSTL(ifile))
+		    open(92,file=TRIM(ADJUSTL(ifile)))
+              GL = getinput%int("geometryLabel", defaultvalue=0) ! if GL=-1 =>bulk case
+              if(GL==2) then 
+                do j=1,ly
+                    WRITE(92,*) j, sum(jx(:,j,:)), sum(jy(:,j,:)), sum(jz(:,j,:))
+                end do
+              else
+                do k=1,lz
+                    WRITE(92,*) k, sum(jx(:,:,k)), sum(jy(:,:,k)), sum(jz(:,:,k))
+                end do
+              endif 
+		   close(92)
 		 endif
 		! ----------------------------- Ade -----------------------------------------------
 		! ADE : I added the following part for debugging purposes
@@ -635,34 +721,50 @@ SUBROUTINE equilibration
   end do ! end of temporal loop
 
 
+! **********************************************
+! ************ Ade : POSTPROCESSING ************
+!***********************************************
 
-  !
-  ! Print velocity 1D velocity field
-  !
+  ! 1. Print velocity field
   WRITE(66,*)"# Steady state with convergence criteria", REAL(target_error)
   WRITE(67,*)"# Steady state with convergence criteria", REAL(target_error)
   WRITE(68,*)"# Steady state with convergence criteria", REAL(target_error)
   WRITE(56,*)"# Steady state with convergence criteria", REAL(target_error)
   WRITE(57,*)"# Steady state with convergence criteria", REAL(target_error)
   WRITE(58,*)"# Steady state with convergence criteria", REAL(target_error)
-  DO k=1,lz
-      WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
-      WRITE(56,*) k, SUM(density(:,:,k))/ MAX( COUNT(density(:,:,k)>eps) ,1)
-  END DO
-  DO k=1,ly
-      WRITE(67,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
-      WRITE(57,*) k, SUM(density(:,k,:))/ MAX( COUNT(density(:,k,:)>eps) ,1)
-  END DO
-  DO k=1,lx
-      WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
-      WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps) ,1)
-  END DO
 
-! **********************************************
-! ************ Ade : POSTPROCESSING ************
-!***********************************************
+  
+  GL = getinput%int("geometryLabel", defaultvalue=0) ! if GL=-1 =>bulk case
+  if (GL==2) then ! Cylindrical geometry
+   Jxx = 0
+   Jyy = 0
+   Jzz = 0
+   DO i=1,lx
+        Jxx = jx(i,ly/2,lz/2)
+        Jyy = jy(i,ly/2,lz/2)
+        Jzz = jz(i,ly/2,lz/2)
+        !Jxx = jx(lx/2,j,lz/2)
+        !Jyy = jy(lx/2,j,lz/2)
+        !Jzz = jz(lx/2,j,lz/2)
+    WRITE(67,*) i, Jxx, Jyy, Jzz
+    ENDDO
+        !WRITE(56,*) k, SUM(density(:,:,k),mask=node%nature==fluid)/ MAX( COUNT(density(:,:,k)>eps) ,1)
+  else
+    DO k=1,lz
+        WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
+        WRITE(56,*) k, SUM(density(:,:,k))/ MAX( COUNT(density(:,:,k)>eps) ,1)
+    END DO
+    DO k=1,ly
+        WRITE(67,*) k, SUM(jx(:,k,:)), SUM(jy(:,k,:)), SUM(jz(:,k,:))
+        WRITE(57,*) k, SUM(density(:,k,:))/ MAX( COUNT(density(:,k,:)>eps) ,1)
+    END DO
+    DO k=1,lx
+        WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
+        WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps) ,1)
+    END DO
+  endif
  
- ! 1. Solute Force
+ ! 2. Solute Force
  DO k=1,lz
      write(1316,*) k, SUM(solute_force(:,:,k,1)) ! Ade : The fluid is moving in the y-direction whenever a slit 
                                                  ! case is imposed, as the walls are located at z = 0 and z = L
@@ -671,7 +773,7 @@ SUBROUTINE equilibration
      write(1324,*) k, SUM(solute_force(:,:,k,3)) 
  ENDDO 
 
- ! 2. Potential PHI
+ ! 3. Potential PHI
 DO k=1,lz
     write(325,*) k, SUM(phi(:,:,k)) 
 END DO
@@ -685,6 +787,9 @@ END DO
   CLOSE(56)
   CLOSE(57)
   CLOSE(58)
+  CLOSE(89)
+  CLOSE(90)
+  CLOSE(91)
   close(316)
   close(323)
   close(324)
@@ -692,6 +797,13 @@ END DO
   close(1316)
   close(1323)
   close(1324)
+  close(1325)
+  close(1326)
+  close(1327)
+  close(1328)
+  close(1389)
+  close(1390)
+  close(1391)
 
 
   !
@@ -721,6 +833,7 @@ END DO
   end if
  close(387)
  close(388)
+ close(389)
 
   ! put back arrays into original types
   node%solventdensity = density

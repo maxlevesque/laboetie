@@ -67,7 +67,7 @@ subroutine charges_init
     if (.not. allocated(c_minusT)) call allocateReal3D(c_minusT)
     c_minusT = 0._dp
 
-    IF( ABS(tot_sol_charge) > EPSILON(1._dp) ) THEN ! Ade : this if statement should be removed 27/01/2017
+    IF( ABS(tot_sol_charge) > EPSILON(1._dp) .OR. ABS(lambda_d)> EPSILON(1._dp)) THEN ! Ade : this if statement should be removed 27/01/2017
 
         ! init ion (solute) concentrations
         if (.not. allocated(c_plus)) call allocateReal3D(c_plus)

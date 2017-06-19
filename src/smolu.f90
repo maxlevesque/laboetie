@@ -23,6 +23,15 @@ subroutine smolu
   call allocateReal3D( flux_site_minus)
   call allocateReal3D( phiTEMP)
 
+! Ade: for Debug
+open(305, file = "output/FluxSitePLUS.dat")
+open(306, file = "output/FluxSiteMINUS.dat")
+open(455, file = "output/IonElecCurrX.dat")
+open(456, file = "output/IonElecCurrY.dat")
+open(457, file = "output/IonElecCurrZ.dat")
+! end debug
+
+
   if(.not.allocated(solute_force)) allocate(solute_force(lx,ly,lz,x:z),source=0.0_dp)
   ! --------------------------- Ade 16/02/2017 ---------------------------------- 
   if (.not. allocated(c_plus)) call allocateReal3D(c_plus)
@@ -66,12 +75,12 @@ subroutine smolu
             !if (l==lbm%lmin+3) phiTEMP(i,j,k) =  phi_tot(ip,jp,kp) - phi_tot(i,j,k)
             if (l==lbm%lmin+3) phiTEMP(i,j,k) = phi_tot(i,j,k)
             ! here is a very bizarre trick to correct for the jump in the external potential (elec_slope)
-            if( i == lx .and. ip == 1  ) exp_dphi = exp_dphi* exp( elec_slope(x)* (lx+1) ) ! Ade : we added +1 here and below
-            if( j == ly .and. jp == 1  ) exp_dphi = exp_dphi* exp( elec_slope(y)* (ly+1) )
-            if( k == lz .and. kp == 1  ) exp_dphi = exp_dphi* exp( elec_slope(z)* (lz+1) )
-            if( i == 1  .and. ip == lx ) exp_dphi = exp_dphi* exp(-elec_slope(x)* (lx+1) )
-            if( j == 1  .and. jp == ly ) exp_dphi = exp_dphi* exp(-elec_slope(y)* (ly+1) )
-            if( k == 1  .and. kp == lz ) exp_dphi = exp_dphi* exp(-elec_slope(z)* (lz+1) )
+            if( i == lx .and. ip == 1  ) exp_dphi = exp_dphi* exp( elec_slope(x)* (lx) ) ! Ade : we added +1 here and below
+            if( j == ly .and. jp == 1  ) exp_dphi = exp_dphi* exp( elec_slope(y)* (ly) )
+            if( k == lz .and. kp == 1  ) exp_dphi = exp_dphi* exp( elec_slope(z)* (lz) )
+            if( i == 1  .and. ip == lx ) exp_dphi = exp_dphi* exp(-elec_slope(x)* (lx) )
+            if( j == 1  .and. jp == ly ) exp_dphi = exp_dphi* exp(-elec_slope(y)* (ly) )
+            if( k == 1  .and. kp == lz ) exp_dphi = exp_dphi* exp(-elec_slope(z)* (lz) )
             ! phiTEMP = log(exp_dphi)
             ! inverse
             exp_min_dphi = 1.0_dp / exp_dphi
@@ -121,16 +130,22 @@ subroutine smolu
             !END DO
             !print*, '!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!'
             solute_force(i,j,k,:) = solute_force(i,j,k,:) + lbm%vel(l)%a1 *lbm%vel(l)%coo(:) *f_microions/D_iter
-
+            !Ade : Debug
+            !if (i==lx/2 .and. k==lz/2) then
+            !  write(305,*) j, l ,lbm%vel(l)%a1 *lbm%vel(l)%coo(y) * f_microions/D_iter
+            !endif
+            !write(305,*) j, flux_site_plus(:,j,:)
+            !write(306,*) j, flux_site_minus(:,j,:)
+            ! End debug
           else if( node(i,j,k)%nature ==fluid .and. node(ip,jp,kp)%nature == solid) then
              exp_dphi = exp(phi_tot(ip,jp,kp)-phi_tot(i,j,k))
             ! here is a very bizarre trick to correct for the jump in the external potential (elec_slope)
-            if( i == lx .and. ip == 1  ) exp_dphi = exp_dphi* exp( elec_slope(x)* (lx+1) ) ! Ade : we added +1 here and below
-            if( j == ly .and. jp == 1  ) exp_dphi = exp_dphi* exp( elec_slope(y)* (ly+1) )
-            if( k == lz .and. kp == 1  ) exp_dphi = exp_dphi* exp( elec_slope(z)* (lz+1) )
-            if( i == 1  .and. ip == lx ) exp_dphi = exp_dphi* exp(-elec_slope(x)* (lx+1) )
-            if( j == 1  .and. jp == ly ) exp_dphi = exp_dphi* exp(-elec_slope(y)* (ly+1) )
-            if( k == 1  .and. kp == lz ) exp_dphi = exp_dphi* exp(-elec_slope(z)* (lz+1) )
+            if( i == lx .and. ip == 1  ) exp_dphi = exp_dphi* exp( elec_slope(x)* (lx) ) ! Ade : we added +1 here and below
+            if( j == ly .and. jp == 1  ) exp_dphi = exp_dphi* exp( elec_slope(y)* (ly) )
+            if( k == lz .and. kp == 1  ) exp_dphi = exp_dphi* exp( elec_slope(z)* (lz) )
+            if( i == 1  .and. ip == lx ) exp_dphi = exp_dphi* exp(-elec_slope(x)* (lx) )
+            if( j == 1  .and. jp == ly ) exp_dphi = exp_dphi* exp(-elec_slope(y)* (ly) )
+            if( k == 1  .and. kp == lz ) exp_dphi = exp_dphi* exp(-elec_slope(z)* (lz) )
 
 !            dphi = phi(ip,jp,kp)-phi(i,j,k)
 
@@ -168,7 +183,8 @@ subroutine smolu
   !ENDDO
   !close(1616)
   !lose(1717)
-  !close(1718)
+  close(305)
+  close(306)
 
   ! update concentrations. Smoluchowski part.
   where(node%nature==fluid)
@@ -176,9 +192,10 @@ subroutine smolu
     c_minus = c_minus + flux_site_minus
   end where
 
+
   ! normalize by volume of fluid phase
   if( time > 0 ) then
-    n_fluidsites = sum(node%nature, mask=node%nature==fluid)
+    n_fluidsites = count(node%nature==fluid)!sum(node%nature, mask=(node%nature==fluid))
     el_curr_x = el_curr_x / n_fluidsites
     el_curr_y = el_curr_y / n_fluidsites
     el_curr_z = el_curr_z / n_fluidsites
@@ -186,6 +203,16 @@ subroutine smolu
     ion_curr_y = ion_curr_y / n_fluidsites
     ion_curr_z = ion_curr_z / n_fluidsites
   end if
+  ! Ade : Debug 
+  write(455,*) '##############################################'
+  write(456,*) '##############################################'
+  write(457,*) '##############################################'
+  write(455,*) ion_curr_x, el_curr_x
+  write(456,*) ion_curr_y, el_curr_y
+  write(457,*) ion_curr_z, el_curr_z
+close(455)
+close(456)
+close(457)
 
   ! check that the sum of all fluxes is zero
   if( abs(sum( flux_site_plus,mask=node%nature==fluid)) > 1.0e-12 .or. &

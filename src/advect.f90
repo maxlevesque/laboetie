@@ -1,7 +1,7 @@
 ! Advect charge density using the volumetric interpretation of the lattice boltzmann
 subroutine advect
   use precision_kinds, only: dp, i2b
-  use constants, only: x, y, z
+  use constants, only: x, y, z, zerodp
   use system, only: c_plus, c_minus, flux_site_minus, flux_site_plus, el_curr_x, el_curr_y, el_curr_z, &
   ion_curr_x, ion_curr_y, ion_curr_z, fluid, pbc, supercell, node
   use myallocations
@@ -10,8 +10,13 @@ subroutine advect
   integer(i2b) :: i, j, k, ix, iy, iz, ip, jp, kp, ip_all(-1:1), jp_all(-1:1), kp_all(-1:1)
   real(dp) :: vx, vy, vz, ax, ay, az
   real(dp) :: flux_link_minus, flux_link_plus
-  call allocateReal3D( flux_site_minus )
-  call allocateReal3D( flux_site_plus )
+  !call allocateReal3D( flux_site_minus )
+  !call allocateReal3D( flux_site_plus )
+  if (.not. allocated(flux_site_plus)) call allocateReal3D(flux_site_plus)
+  if (.not. allocated(flux_site_minus)) call allocateReal3D(flux_site_minus)
+  
+  flux_site_plus = zerodp
+  flux_site_minus = zerodp
 
   ! Ade : This is a temporary test. To be removed
   !-------------------- Ade --------------------------- 
@@ -19,6 +24,12 @@ subroutine advect
   if (.not. allocated(c_plus)) call allocateReal3D(c_plus)
   if (.not. allocated(c_minus)) call allocateReal3D( c_minus)
   !-------------------- Ade --------------------------- 
+
+  ! Ade: for Debug
+  open(415, file = "output/IonCurrX.dat")
+  open(416, file = "output/IonCurrY.dat")
+  open(417, file = "output/IonCurrZ.dat")
+  ! end debug
 
   !   THIS IS VERY CRIPTIC...
   !   What I am doing is what discussed with you.
@@ -43,21 +54,32 @@ subroutine advect
     el_curr_x = 0._dp
     el_curr_y = 0._dp
     el_curr_z = 0._dp
-  else
-    el_curr_x  = -sum( node%solventFlux(x)*( c_plus - c_minus ) , mask=node%nature==fluid)
-    el_curr_y  = -sum( node%solventFlux(y)*( c_plus - c_minus ) , mask=node%nature==fluid)
-    el_curr_z  = -sum( node%solventFlux(z)*( c_plus - c_minus ) , mask=node%nature==fluid)
+  else ! Ade : the triple do loop is needed because of /node(i,j,k)%solventDensity
+      el_curr_x  = -sum( node%solventFlux(x)/node%solventDensity*( c_plus - c_minus ) , mask=node%nature==fluid) ! Ade : do node%solventFlux(x)/node%density. DONE
+      el_curr_y  = -sum( node%solventFlux(y)/node%solventDensity*( c_plus - c_minus ) , mask=node%nature==fluid)
+      el_curr_z  = -sum( node%solventFlux(z)/node%solventDensity*( c_plus - c_minus ) , mask=node%nature==fluid)
   end if
 
   if (all(abs(c_plus+c_minus)<=epsilon(1._dp))) then
-    el_curr_x = 0._dp
-    el_curr_y = 0._dp
-    el_curr_z = 0._dp
+    ion_curr_x = 0._dp
+    ion_curr_y = 0._dp
+    ion_curr_z = 0._dp
   else
-    ion_curr_x  = -sum( node%solventFlux(x)*( c_plus + c_minus ) , mask=node%nature==fluid)
-    ion_curr_y  = -sum( node%solventFlux(y)*( c_plus + c_minus ) , mask=node%nature==fluid)
-    ion_curr_z  = -sum( node%solventFlux(z)*( c_plus + c_minus ) , mask=node%nature==fluid)
+      ion_curr_x  = -sum( node%solventFlux(x)/node%solventDensity*( c_plus + c_minus ) , mask=node%nature==fluid)
+      ion_curr_y  = -sum( node%solventFlux(y)/node%solventDensity*( c_plus + c_minus ) , mask=node%nature==fluid)
+      ion_curr_z  = -sum( node%solventFlux(z)/node%solventDensity*( c_plus + c_minus ) , mask=node%nature==fluid)
   end if
+
+
+  ! Ade : Debug 
+  write(415,*) '##############################################'
+  write(416,*) '##############################################'
+  write(417,*) '##############################################'
+  write(415,*) ion_curr_x, el_curr_x
+  write(416,*) ion_curr_y, el_curr_y
+  write(417,*) ion_curr_z, el_curr_z
+
+  !End Debug
 
   ! compute concentration before advection step
   c_plus_total_old = sum( c_plus)
@@ -105,20 +127,26 @@ subroutine advect
         kp_all(:) = [(pbc(k+iz,z),iz=-1,1)]
         
         ! velocities
-        vx = node(i,j,k)%solventFlux(x)
-        vy = node(i,j,k)%solventFlux(y)
-        vz = node(i,j,k)%solventFlux(z)
+        if(node(i,j,k)%nature==fluid) then ! Ade : the if structure is to avoid division by zero since solventDensity = 0 in solid nodes
+            vx = node(i,j,k)%solventFlux(x)/node(i,j,k)%solventDensity ! Ade : divide again by node%density. DONE
+            vy = node(i,j,k)%solventFlux(y)/node(i,j,k)%solventDensity
+            vz = node(i,j,k)%solventFlux(z)/node(i,j,k)%solventDensity
+        else
+            vx = node(i,j,k)%solventFlux(x)
+            vy = node(i,j,k)%solventFlux(y)
+            vz = node(i,j,k)%solventFlux(z)
+        endif 
         do ix= -1, 1 ! TODO improve here by getting things out of useless loops
           ax = vx * real(ix,dp)
           do iy= -1, 1
             ay = vy * real(iy,dp)
             do iz= -1, 1
-              ip = ip_all(ix) ! Ade: there is a problem with ip!! The number is huge
+              ip = ip_all(ix) 
               jp = jp_all(iy)
               kp = kp_all(iz)
               az = vz * real(iz,dp)
               ! check if link is accessible
-              if (all([ax,ay,az]>=0._dp) .and. node(i,j,k)%nature==node(ip,jp,kp)%nature) then ! link is accessible
+              if (all([ax,ay,az]>=0._dp) .and. node(i,j,k)%nature==fluid .and. node(ip,jp,kp)%nature==fluid) then ! link is accessible
                 if( ix == 0 ) ax = 1.0_dp - abs(vx)
                 if( iy == 0 ) ay = 1.0_dp - abs(vy)
                 if( iz == 0 ) az = 1.0_dp - abs(vz)
@@ -150,6 +178,10 @@ subroutine advect
   ! compute concentrations after advection
   c_minus_total_new = sum(c_minus)
   c_plus_total_new = sum(c_plus)
+
+  close(415)
+  close(416)
+  close(417)
 
   ! check that total concentration has not changed
   !if( abs( c_minus_total_new - c_minus_total_old ) > 1.e-8 .or. abs( c_plus_total_new - c_plus_total_old ) > 1.e-8 ) then ! TODO magic number

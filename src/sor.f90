@@ -30,11 +30,20 @@ subroutine sor
     real(kind=dp), dimension(:,:,:), allocatable :: phitmp, phiR, phi_old
 
     open(105, file='output/anorm.dat')
-    open(106, file='output/phiAlongTIME.dat')
-    open(107, file='output/ELLE.dat')
-    open(108, file='output/PHITMP.dat')
-    open(109, file='output/PHIsor.dat')
-    open(110, file='output/PHIsor1.dat')
+    !open(106, file='output/phiAlongTIME.dat')
+    !open(107, file='output/ELLE.dat')
+    !open(108, file='output/PHITMP.dat')
+    !open(109, file='output/PHIsor.dat')
+    !open(110, file='output/PHIsor1.dat')
+    
+     ! Ade : The piece 7 lines below were at line 61. I moved them here 
+    ! if the system wear no charge, the potential is zero.
+    if( tot_sol_charge==0.0_dp ) then
+        if(.not.allocated(phi)) call allocateReal3D(phi)
+        phi = 0.0_dp
+        return ! phi has been computed, go on !
+    end if
+    
     call allocateReal3D( phitmp )
     geometrie = getinput%int('geometryLabel',-1)
     if (.not. allocated(phi_old)) call allocateReal3D(phi_old)
@@ -43,18 +52,18 @@ subroutine sor
     ! Ade : the lines below are not working
     kmin = supercell%geometry%dimensions%indiceMin(z)
     kmax = supercell%geometry%dimensions%indiceMax(z)
-        do k = kmin, kmax
-            write(110,*) k, 'phi = ', phi(:,:,k)
-        end do
+        !do k = kmin, kmax
+        !    write(110,*) k, 'phi = ', phi(:,:,k)
+        !end do
     ! Ade : end
 
     !print*, 'timestep = ', timestep
     ! if the system wear no charge, the potential is zero.
-    if( tot_sol_charge==0.0_dp ) then
-        if(.not.allocated(phi)) call allocateReal3D(phi)
-        phi = 0.0_dp
-        return ! phi has been computed, go on !
-    end if
+    !if( tot_sol_charge==0.0_dp ) then
+    !    if(.not.allocated(phi)) call allocateReal3D(phi)
+    !    phi = 0.0_dp
+    !    return ! phi has been computed, go on !
+    !end if
 
     ! Ade : Block 1
     anormf = 0.0_dp
@@ -88,23 +97,23 @@ subroutine sor
           do k = kmin, kmax
             do j = jmin, jmax
                 do i = imin, imax 
-                write(108,*) 'i = ', i
+                !write(108,*) 'i = ', i
             phitmp(i,j,k) = zerodp
             phistar = 0.0_dp
-            write(107,*) '# l       pmin     qmin     rmin     phistar'
+            !write(107,*) '# l       pmin     qmin     rmin     phistar'
             do l= lbm%lmin, lbm%lmax               ! Ade: 22/03/17 the following lines were using the imin, jmin, kmin variables
                                                    ! which were already being used (see lines above)  
                 pmin = pbc(i-lbm%vel(l)%coo(x),x)  ! Ade : does fortran count from the first velocity or the second?
                 qmin = pbc(j-lbm%vel(l)%coo(y),y)  ! Compare with C-code
                 rmin = pbc(k-lbm%vel(l)%coo(z),z)
                 phistar = phistar + lbm%vel(l)%a0 * phi(pmin,qmin,rmin)   
-                write(107,*) l, pmin, qmin, rmin, phistar, lbm%vel(l)%a0, phi(pmin,qmin,rmin)
+                !write(107,*) l, pmin, qmin, rmin, phistar, lbm%vel(l)%a0, phi(pmin,qmin,rmin)
             end do
             phistar = phistar + factor*(c_plus(i,j,k)-c_minus(i,j,k)) ! see PRE64, Horbach: Eq. 17
 
             phiold = phi(i,j,k)
             phitmp(i,j,k) = omega*phistar +(1.0_dp-omega)*phiold
-            write(108,*) 'phitmp = ', phitmp
+            !write(108,*) 'phitmp = ', phitmp
             anorm = anorm + abs(phistar-phiold)
                 end do
           end do
@@ -119,9 +128,9 @@ subroutine sor
 
     
         ! ********** OUTPUT ******************
-        do k = kmin, kmax
-            write(106,*) k, 'phitmp =', phitmp(:,:,k), 'phi = ', phi(:,:,k)
-        end do
+        !do k = kmin, kmax
+        !    write(106,*) k, 'phitmp =', phitmp(:,:,k), 'phi = ', phi(:,:,k)
+        !end do
         ! ********** end OUTPUT *************
 
         !if(anorm <= eps*anormf) exit convergenceloop
@@ -157,21 +166,21 @@ subroutine sor
 
     end do convergenceloop
     ! Ade : end FIVE
-        do k = kmin, kmax
+        !do k = kmin, kmax
             !write(109,*) k, (phitmp(1,1,k))
-            write(109,*) k, (phitmp(:,:,k))
-        end do
+            !write(109,*) k, (phitmp(:,:,k))
+        !end do
 
     print*,'SOR converged in',iter-1,'steps'
     print*,'with anormf0 = ',anormf0
 
     !anormf0 = sum(abs(phi)) ! Ade : Why do we have this here, whilst it is absent in the C-code????
     close(105)
-    close(106)
-    close(107)
-    close(108)
-    close(109)
-    close(110)
+    !close(106)
+    !close(107)
+    !close(108)
+    !close(109)
+    !close(110)
 
     ! ADE : Maybe add a charge test over here
 end subroutine sor

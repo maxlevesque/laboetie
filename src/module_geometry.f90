@@ -3,6 +3,7 @@ module geometry
     use precision_kinds ! all precision kinds defined in the dedicated module
     use system, only: fluid, solid, supercell, node
     use constants, only: x, y, z
+    use module_input, only: getinput
 
     implicit none
 
@@ -294,7 +295,7 @@ SUBROUTINE CONSTRUCT_CYLINDER
   implicit none
   real(dp) :: radius ! radius of cylinder
   real(dp), dimension(2) :: rnode, rorigin ! coordinates of each node and center of cylinder in x,y coordinates
-  integer(i2b) :: i, j ! dummy
+  integer(i2b) :: i, j, width ! dummy
             integer(i2b) :: lx, ly, lz
             lx = supercell%geometry%dimensions%indiceMax(x)
             ly = supercell%geometry%dimensions%indiceMax(y)
@@ -302,7 +303,11 @@ SUBROUTINE CONSTRUCT_CYLINDER
   if( lx /= ly) stop 'wall=2 is for cylinders, which should have same lx and ly'
   if( lx<3 ) stop 'the diameter of the cylinder (lx) should be greater than 3'
   rorigin = [ real(lx+1,dp)/2.0_dp, real(ly+1,dp)/2.0_dp ]
-  radius = real(lx-1,dp)/2.0_dp
+  width = getinput%int("width", defaultvalue=2) ! Ade : solid width. This parameter is used to make smaller tubes
+                                                ! within our box of simulation. This is usefull as error increases
+                                                ! if w/2 = delta_x. Error is small if w/2 = 50*delta_x. Please read
+                                                ! Amael Obliger thesis p 46.
+  radius = real(lx-width,dp)/2.0_dp
 
   do i = 1, lx
     do j = 1, ly

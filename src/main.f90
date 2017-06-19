@@ -2,12 +2,14 @@ PROGRAM main
 
   use mod_time, only: tick, tock
   use io, ONLY: print_tail
+  use module_input, only: getinput
 
   IMPLICIT NONE
   
   INTEGER :: t
   character(8)  :: date
   character(10) :: time
+  LOGICAL :: RestartPNP = .TRUE.
 
   CALL tick(t)
 
@@ -23,8 +25,11 @@ PROGRAM main
   ! Nernst-Planck by Link-Flux without advection.
   ! THIS DONT WORK RIGHT NOW
   !
-  CALL poisson_nernst_planck
-
+  RestartPNP = getinput%log("RestartPNP", .TRUE.)
+  print*, '&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&'
+  print *, ' RestartPNP = ', RestartPNP
+  print*, '&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&'
+  if (RestartPNP) CALL poisson_nernst_planck
 
   CALL equilibration
 
