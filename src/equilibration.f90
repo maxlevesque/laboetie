@@ -227,14 +227,14 @@ SUBROUTINE equilibration
         endif
 
         !
-        ! Print sdtout timestep, etc
+        ! Print sdtout timestep, etc.
         !
         if( modulo(t, print_frequency) == 0) PRINT*, t, real(l2err),"(target",real(target_error,4),")"
 
         !
-        ! WRITE velocity profiles
+        ! Print velocity profiles, etc.
         !
-        if( modulo(t, print_files_frequency) == 0 .or. t == 1) THEN
+        if( modulo(t, print_files_frequency) == 0 ) then
             WRITE(66,*)"# timestep",t
             WRITE(67,*)"# timestep",t
             WRITE(68,*)"# timestep",t
@@ -256,7 +256,7 @@ SUBROUTINE equilibration
             WRITE(66,*)
             WRITE(67,*)
             WRITE(68,*)
-        END IF
+        end if
 
         !
         ! Compensate_f_ext is an option to have a local force one could apply on a given node (only the central node for now)
