@@ -1,7 +1,7 @@
 ! Here is a smolu with diffusion + electrostatic part only
 ! The objective is to end up in a situation where equilibrium
-! distribution of solutes (c_plus and c_minus) is found,
-! ie in which the total flux of solutes is zero.
+! distribution of salt solutes (c_plus and c_minus) is found,
+! i.e. in which the total flux of the solutes is zero.
 
 subroutine just_eq_smolu
     use precision_kinds
