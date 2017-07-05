@@ -68,6 +68,7 @@ endif()
 
 # set source files list
 set(laboetie_SRCS
+  src/module_bounceback.f90
   src/advect.f90
   src/backup_phi_c_plus_c_minus.f90
   src/charges_init.f90

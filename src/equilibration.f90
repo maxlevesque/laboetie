@@ -7,6 +7,8 @@ SUBROUTINE equilibration
     USE constants, only: x, y, z, zerodp
     USE mod_time, only: tick, tock
     USE myallocations
+    use module_bounceback, only: bounceback
+
 
     implicit none
     integer :: t,i,j,k,l,ip,jp,kp, lmin, lmax, timer(100), g, ng, pdr, pd, ios, px, py, pz, pCoord(3)
@@ -300,10 +302,8 @@ SUBROUTINE equilibration
         !##################
 
         call collide(n, density, jx, jy, jz, F1, F2, F3)
-        !call collide(n, density, jx, jy, jz, f_ext_x, f_ext_y, f_ext_z) ! Ade : There is a problem in solute_force
 
-        !--------------------------------- ADE -----------------------------------------------------------------
-        
+
         ! print velocity profile if you need/want it
         ! if( modulo(t, print_frequency) == 0) then
         !    call velocity_profiles(t) ! print velocity profiles
@@ -312,25 +312,8 @@ SUBROUTINE equilibration
         !
         ! Bounce back (boundpm) to simplify propagation step
         !
-        do concurrent(l=lmin:lmax:2)
-            do concurrent(k=1:lz)
-                kp = kl(l,k)
-                !kp=pbc(k+cz(l),z)
-                do concurrent(j=1:ly)
-                    jp = jl(l,j)
-                    !jp=pbc(j+cy(l),y)
-                    do concurrent(i=1:lx)
-                        ip = il(l,i)
-                        !ip=pbc(i+cx(l),x)
-                        if( nature(i,j,k) /= nature(ip,jp,kp) ) then
-                            n_loc = n(i,j,k,l)
-                            n(i,j,k,l) = n(ip,jp,kp,l_inv(l))
-                            n(ip,jp,kp,l_inv(l)) = n_loc
-                        end if
-                    end do
-                end do
-            end do
-        end do
+        call bounceback(n, nature)
+
 
         !###############
         !# PROPAGATION #
