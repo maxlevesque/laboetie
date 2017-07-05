@@ -5,14 +5,13 @@ subroutine supercell_definition
   use constants, only: x, y, z
   use system, only: fluid, solid, pbc, supercell, node
   use module_input, only: getinput
-  use geometry, only: construct_slit, construct_cylinder, construct_cc, construct_disc_benichou,&
+  use geometry, only: construct_cylinder, construct_cc, construct_disc_benichou,&
                       construct_sinusoidal_walls_2d, CONSTRUCT_PLANES_WITH_VARIOUS_RADIUS_2D,&
                       CONSTRUCT_TUBE_WITH_VARYING_DIAMETER, CONSTRUCT_SPHERICAL_CAVITY,&
                       CONSTRUCT_SPHERE_BENICHOU,&
                       CONSTRUCT_XUDONG_VINCENT_MARIE_CYL_BETWEEN_WALLS,&
                       construct_custom,&
-                      CONSTRUCT_PBM, construct_slit_2sheets, construct_slit_3sheets,&
-                      construct_slit_4sheets
+                      CONSTRUCT_PBM, construct_slit_Nsheets
   use io, only: print_supercell_xsf
   use mod_lbmodel, only: lbm
 
@@ -54,7 +53,7 @@ subroutine supercell_definition
   case (0) ! custom geometry
     call construct_custom
   case (1) ! supercell%geometry%label = 1 is two solid walls normal to Z axis.
-    call construct_slit
+    call construct_slit_Nsheets(1)
   case (2) ! supercell%geometry%label = 2 => cylinder around Z axis.
     call construct_cylinder
   case (3) ! supercell%geometry%label = 3 => solid spheres in cubic face centred unit cell with at contact
@@ -76,11 +75,11 @@ subroutine supercell_definition
   case (11)
     call CONSTRUCT_PBM
   case (12)
-    call construct_slit_2sheets
+    call construct_slit_Nsheets(2)
   case (13)
-    call construct_slit_3sheets
+    call construct_slit_Nsheets(3)
   case (14)
-    call construct_slit_4sheets
+    call construct_slit_Nsheets(4)
   case default
     stop 'supercell%geometry%label tag in input file is invalid'
   end select
