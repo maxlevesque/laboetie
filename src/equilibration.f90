@@ -27,6 +27,7 @@ SUBROUTINE equilibration
     integer(i2b) :: n1,n2,n3 ! Ade : dummy for reading purposes
     character*200 :: ifile, ifile2
     LOGICAL :: RestartPNP = .TRUE.
+    integer :: maxEquilibrationTimestep
 
     open(316, file = "output/soluteForceEqX.dat")
     open(323, file = "output/soluteForceEqY.dat")
@@ -90,7 +91,7 @@ SUBROUTINE equilibration
     !
     ! WRITE velocity profiles to terminal every that number of steps
     !
-    print_files_frequency = getinput%int("print_files_frequency", HUGE(1))
+    print_files_frequency = getinput%int( "print_files_frequency", defaultvalue = huge(1) )
 
     print_every = getinput%int("print_every", defaultvalue=0) ! reads from lb.in file
                                                                  ! the frequency of printing time
@@ -176,16 +177,17 @@ SUBROUTINE equilibration
 
     convergence_reached_without_fext = .false.
     convergence_reached_with_fext = .false.
-    compensate_f_ext = getinput%log("compensate_f_ext",.false.)
+    
+    compensate_f_ext = getinput%log( "compensate_f_ext", defaultvalue = .false.)
     if(compensate_f_ext) then
-        open(79,file="./output/v_centralnode.dat")
-        open(80,file="./output/rho_centralnode.dat")
+        open(79, file = "./output/v_centralnode.dat")
+        open(80, file = "./output/rho_centralnode.dat")
     endif
 
-    write_total_mass_flux = getinput%log("write_total_mass_flux", .FALSE.)
-    IF( write_total_mass_flux ) THEN
-        OPEN( 65, FILE="output/total_mass_flux.dat" )
-    END IF
+    write_total_mass_flux = getinput%log( "write_total_mass_flux", defaultvalue = .false.)
+    if( write_total_mass_flux ) THEN
+        open(65, file = "./output/total_mass_flux.dat" )
+    end if
 
 
 
@@ -199,41 +201,40 @@ SUBROUTINE equilibration
     ! ADE : We initialise tfext, which is the time from when the force f_ext is applied
     ! upon a certain number of nodes. 
     tfext = HUGE(tfext)
-    ! We also initialise l2err, the convergence error
+    ! We also init l2err, the convergence error
     l2err = -1
+
+
+    maxEquilibrationTimestep = getinput%int( 't_equil' , defaultvalue = -1)
+    ! We start by equilibrating the densities, fluxes and other moments without the external forces.
+    ! This equilibration step is done up to equilibration 
+    ! or if the timestep t gets higher than a maximum value called maxEquilibrationTimestep
+
 
     !
     ! TIME STEPS (in lb units)
     !
-    do t=1,HUGE(t)
+    do t = 1, huge(t)
 
-
-        !--------------------------------- Ade --------------------------------------------------------------
-        if (t<t_equil) then
+        if( t < maxEquilibrationTimestep ) then
             f_ext_x = zerodp
             f_ext_y = zerodp
             f_ext_z = zerodp
         else
-            f_ext_x = f_ext_loc(1)
+            f_ext_x = f_ext_loc(1) ! Max: as I understand this, f_ext_loc(1:3)=0 but if convergence is reached. Once convergence is reached, we read f_ext_loc from input file.
             f_ext_y = f_ext_loc(2)
             f_ext_z = f_ext_loc(3)
         endif
-        !--------------------------------- Ade --------------------------------------------------------------
-
-        !-------------------------------- Ade -----------------------------------------------------------
-        !print*, 2, SUM(c_plus(:,:,2))
-        ! This is a debugging test
-        !-------------------------------- Ade -----------------------------------------------------------
 
         !
         ! Print sdtout timestep, etc
         !
-        IF( MODULO(t, print_frequency) == 0) PRINT*, t, real(l2err),"(target",real(target_error,4),")"
+        if( modulo(t, print_frequency) == 0) PRINT*, t, real(l2err),"(target",real(target_error,4),")"
 
         !
         ! WRITE velocity profiles
         !
-        IF( MODULO(t, print_files_frequency) == 0 .OR. t==1) THEN
+        if( modulo(t, print_files_frequency) == 0 .or. t == 1) THEN
             WRITE(66,*)"# timestep",t
             WRITE(67,*)"# timestep",t
             WRITE(68,*)"# timestep",t
