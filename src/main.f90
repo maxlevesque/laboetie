@@ -4,12 +4,12 @@ PROGRAM main
   use io, ONLY: print_tail
   use module_input, only: getinput
 
-  IMPLICIT NONE
+  implicit none
   
-  INTEGER :: t
+  integer :: t
   character(8)  :: date
   character(10) :: time
-  LOGICAL :: RestartPNP = .TRUE.
+  logical :: RestartPNP
 
   CALL tick(t)
 
@@ -19,7 +19,6 @@ PROGRAM main
   CALL init_simu
 
   !
-  ! system equilibration: -D_equil <= time <= 0 ! Ade : this is not true. The time is now always positive
   ! one solves coupled Poisson and Nernst-Planck equations without solvant flux nor external forces
   ! one then arrives at Poisson-Boltzmann distribution. For now, Poisson is solved using SOR and
   ! Nernst-Planck by Link-Flux without advection.
