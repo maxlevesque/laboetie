@@ -8,6 +8,7 @@ SUBROUTINE equilibration
     USE mod_time, only: tick, tock
     USE myallocations
     use module_bounceback, only: bounceback
+    use module_propagation, only: propagation
 
 
     implicit none
@@ -318,23 +319,7 @@ SUBROUTINE equilibration
         !###############
         !# PROPAGATION #
         !###############
-        !$OMP PARALLEL DO DEFAULT(NONE) &
-        !$OMP SHARED(n,lz,ly,lx,lmin,lmax,cz,cy,cx,il,jl,kl) &
-        !$OMP PRIVATE(l,k,j,i,ip,jp,kp,n_old)
-        do l=lmin,lmax
-            n_old = n(:,:,:,l)
-            do k=1,lz
-                kp = kl(l,k)
-                do j=1,ly
-                    jp = jl(l,j)
-                    do i=1,lx
-                        ip = il(l,i)
-                        n(ip,jp,kp,l) = n_old(i,j,k)
-                    end do
-                end do
-            end do
-        end do
-        !$OMP END PARALLEL DO
+        call propagation(n, lmin, lmax, lx, ly, lz, il, jl, kl)
 
         !
         ! The populations are probabilities and thus must never be negative
@@ -347,9 +332,7 @@ SUBROUTINE equilibration
         !
         density = SUM(n,4)
 
-        !###########################
-        !# WRITE the total density #
-        !###########################
+        ! WRITE the total density
         IF( write_total_mass_flux ) THEN
             WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ])
         END IF
