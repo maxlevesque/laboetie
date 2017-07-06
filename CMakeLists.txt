@@ -70,7 +70,7 @@ endif()
 set(laboetie_SRCS
   src/module_propagation.f90
   src/module_bounceback.f90
-  src/advect.f90
+  src/module_advect.f90
   src/backup_phi_c_plus_c_minus.f90
   src/charges_init.f90
   src/charge_test.f90

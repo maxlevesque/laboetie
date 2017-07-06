@@ -1,4 +1,10 @@
 ! Advect charge density using the volumetric interpretation of the lattice boltzmann
+module module_advect
+    implicit none
+    private
+    public :: advect
+contains
+
 subroutine advect
   
   use precision_kinds, only: dp
@@ -150,4 +156,6 @@ subroutine advect
   !if( abs( c_minus_total_new - c_minus_total_old ) > 1.e-8 .or. abs( c_plus_total_new - c_plus_total_old ) > 1.e-8 ) then ! TODO magic number
   !  stop 'Total concentration has changed in advect.f90. STOP but unsure STOP is needed'
   !end if
+
 end subroutine advect
+end module module_advect

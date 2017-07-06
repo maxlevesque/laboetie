@@ -9,7 +9,7 @@ SUBROUTINE equilibration
     USE myallocations
     use module_bounceback, only: bounceback
     use module_propagation, only: propagation
-
+    use module_advect, only: advect
 
     implicit none
     integer :: t,i,j,k,l,ip,jp,kp, lmin, lmax, timer(100), g, ng, pdr, pd, ios, px, py, pz, pCoord(3)
@@ -321,7 +321,7 @@ SUBROUTINE equilibration
         IF( ANY(n<0) ) ERROR STOP "In equilibration, the population n(x,y,z,vel) < 0"
 
         !
-        ! Update densities after the propagation and check it
+        ! Finally update densities after the propagation and check it
         ! Densities are the sum of all velocities of a local population
         !
         density = SUM(n,4)
@@ -362,9 +362,9 @@ SUBROUTINE equilibration
         node%solventflux(x) = jx
         node%solventflux(y) = jy
         node%solventflux(z) = jz
-        !node%nature = nature ! Ade : Do I actually need this line here ????
 
         call advect
+
         call sor ! TODO    ! compute phi with the Successive Overrelation Routine (SOR)
         ! --------------------------- Ade : 13/02/2017 ---------------------------------------------------------------
         !write(325,*) '# t = ', t
