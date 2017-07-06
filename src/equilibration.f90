@@ -104,7 +104,7 @@ SUBROUTINE equilibration
     ! Max : I had 1.D-8 before ADE's modification (June 21)
     target_error = getinput%dp("target_error", 1.D-10)
 
-    allocate( density(lx,ly,lz), source=node%solventdensity, stat=ios)
+    allocate( density(lx,ly,lz), source=sum(n,4), stat=ios)
     if (ios /= 0) stop "density: Allocation request denied"
 
     allocate( l_inv(lmin:lmax) , stat=ios)
@@ -358,12 +358,11 @@ SUBROUTINE equilibration
 
         ! Ade: we need to assign the correct table to node%solventflux as it is being called by other following
         ! subroutines (e.g. advect )
-        node%solventdensity = density
         node%solventflux(x) = jx
         node%solventflux(y) = jy
         node%solventflux(z) = jz
 
-        call advect
+        call advect( density )
 
         call sor    ! compute the electric potential phi with the Successive OverRelation method (SOR)
 
@@ -757,10 +756,8 @@ END DO
  close(389)
 
   ! put back arrays into original types
-  node%solventdensity = density
   node%solventflux(x) = jx
   node%solventflux(y) = jy
   node%solventflux(z) = jz
-  node%nature = nature
 
 end subroutine equilibration

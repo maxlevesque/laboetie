@@ -27,13 +27,14 @@ MODULE moment_propagation
     !
     !
     !
-SUBROUTINE init
+SUBROUTINE init( solventDensity )
 
     USE system, ONLY: phi, fluid, solid, n, node
     use module_input, ONLY: getinput
 
     IMPLICIT NONE
 
+    real(dp), intent(in) :: solventDensity(:,:,:)
     real(dp) :: boltz_weight, Pstat, scattprop, scattprop_p, fermi, exp_dphi, exp_min_dphi, sum_of_boltz_weight, rho
     real(dp) :: n_loc(lbm%lmin:lbm%lmax)
     integer :: i, j, k, l, l_inv, ip, jp, kp, i_sum
@@ -111,7 +112,7 @@ SUBROUTINE init
         END IF
 
         n_loc(:) = n(:,i,j,k)
-        rho = node(i,j,k)%solventDensity
+        rho = solventDensity(i,j,k)
 
         sum_of_boltz_weight = sum_of_boltz_weight + boltz_weight
         i_sum = i_sum +1
@@ -130,7 +131,7 @@ SUBROUTINE init
 
             l_inv = lbm%vel(l)%inv ! comes to r
             scattprop_p = calc_scattprop( &
-              n(l_inv,ip,jp,kp), node(ip,jp,kp)%solventDensity, lbm%vel(l_inv)%a0, lambda, 1.0_dp-fermi)
+              n(l_inv,ip,jp,kp), solventDensity(ip,jp,kp), lbm%vel(l_inv)%a0, lambda, 1.0_dp-fermi)
             Propagated_Quantity(:,i,j,k,tini+1) = Propagated_Quantity(:,i,j,k,tini+1) &
               + exp_min_dphi * scattprop_p * lbm%vel(l_inv)%coo(:) * boltz_weight
         end do
@@ -161,11 +162,12 @@ SUBROUTINE init
     !
     !
     !
-    SUBROUTINE PROPAGATE(it, is_converged)
+    SUBROUTINE PROPAGATE(it, is_converged, solventDensity)
 
       use system, only: fluid, solid, n, node
       use module_input, only: getinput
       implicit none
+      real(dp), intent(in) :: solventDensity(:,:,:)
       integer(i2b), intent(in) :: it
       real(dp) :: fermi, fractionOfParticleRemaining, scattprop, scattprop_p, exp_dphi, rho, n_loc(lbm%lmin:lbm%lmax)
       integer(i2b), parameter :: now=0, next=1, past=-1
@@ -174,7 +176,7 @@ SUBROUTINE init
         jp_all(lbm%lmin:lbm%lmax), kp_all(lbm%lmin:lbm%lmax)
       integer(i2b), save, allocatable :: c(:,:), l_inv(:)
       integer(kind(fluid)), save, allocatable :: nature(:,:,:)
-      real(dp), save, allocatable :: density(:,:,:), a0(:)
+      real(dp), allocatable :: a0(:)
       logical :: error
       logical, save, allocatable :: interfacial(:,:,:)
       logical, intent(out) :: is_converged
@@ -192,7 +194,6 @@ SUBROUTINE init
       end if
       if (.not. allocated(a0)) allocate(a0(ll:lu), source=lbm%vel(:)%a0)
       if (.not. allocated(l_inv)) allocate(l_inv(ll:lu), source=lbm%vel(:)%inv)
-      if (.not. allocated(density)) allocate (density(lx,ly,lz), source=node(:,:,:)%solventDensity)
       if (.not. allocated(nature)) allocate (nature(lx,ly,lz), source=node(:,:,:)%nature)
       if (.not. allocated(interfacial)) allocate (interfacial(lx,ly,lz), source=node(:,:,:)%isInterfacial)
 
@@ -201,7 +202,7 @@ SUBROUTINE init
 !$OMP PARALLEL DO PRIVATE(i,j,k,l,ip,jp,kp,fermi,scattprop,l_inv_loc,scattprop_p,n_loc,u_star) &
 !$OMP PRIVATE(ip_all,jp_all,kp_all,fractionOfParticleRemaining,Propagated_Quantity_loc) &
 !$OMP SHARED(nature,n,lambda,Propagated_Quantity,l_inv,a0,c,ll,lu,lx,ly,lz,considerAdsorption,tracer) &
-!$OMP SHARED(Propagated_Quantity_Adsorbed,density,interfacial,error) &
+!$OMP SHARED(Propagated_Quantity_Adsorbed,solventDensity,interfacial,error) &
 !$OMP REDUCTION(+:vacf) &
 !$OMP DEFAULT(NONE)
       do k=1,lz ! we parallelize over k. If system is 30x30x1 parallelization is useless!
@@ -221,11 +222,11 @@ SUBROUTINE init
               kp = kp_all(l)
               if ( nature(ip,jp,kp) /= fluid ) cycle
               fermi = 1.0_dp/(1.0_dp + calc_exp_dphi(i,j,k,ip,jp,kp))
-              scattprop = calc_scattprop( n_loc(l), density(i,j,k), a0(l), lambda, fermi) ! scattering probability at r
+              scattprop = calc_scattprop( n_loc(l), solventDensity(i,j,k), a0(l), lambda, fermi) ! scattering probability at r
               fractionOfParticleRemaining = fractionOfParticleRemaining - scattprop ! what is scattered away is not found anymore at r
               u_star(:) = u_star(:) + scattprop*c(:,l)
               l_inv_loc = l_inv(l)
-              scattprop_p = calc_scattprop( n(l_inv_loc,ip,jp,kp), density(ip,jp,kp), a0(l_inv_loc), lambda, 1.0_dp-fermi)
+              scattprop_p = calc_scattprop( n(l_inv_loc,ip,jp,kp), solventDensity(ip,jp,kp), a0(l_inv_loc), lambda, 1.0_dp-fermi)
               Propagated_Quantity_loc(:) = Propagated_Quantity_loc(:) + Propagated_Quantity(:,ip,jp,kp,now)*scattprop_p
             end do
             Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity_loc(:)

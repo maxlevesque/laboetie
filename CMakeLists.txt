@@ -99,7 +99,6 @@ set(laboetie_SRCS
   src/smolu.f90
   src/sor.f90
   src/supercell_definition.f90
-  src/velocity_profiles.f90
 #  src/module_mpi.F90
 )
 

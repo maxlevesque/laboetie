@@ -9,7 +9,7 @@ SUBROUTINE init_simu
 
     IMPLICIT NONE
 
-    REAL(dp) :: svden
+    REAL(dp) :: initialSolventDensity
     integer :: l
 
     CALL print_header
@@ -28,16 +28,14 @@ SUBROUTINE init_simu
     ! Init Solvent density
     ! but in the solid, where it is 0
     !
-    svden = getinput%dp("initialSolventDensity", 1._dp)
-    WHERE( node%nature /= solid )
-        node%solventdensity = svden
-    ELSEWHERE
-        node%solventdensity = 0
-    END WHERE
-    do l= lbm%lmin, lbm%lmax
-      n(:,:,:,l) = node%solventdensity * lbm%vel(l)%a0
+    initialSolventDensity = getinput%dp("initialSolventDensity", 1._dp)
+    do l = lbm%lmin, lbm%lmax
+        WHERE( node%nature /= solid )
+            n(:,:,:,l) = initialSolventDensity * lbm%vel(l)%a0
+        ELSEWHERE
+            n(:,:,:,l) = 0
+        END WHERE
     end do
-
 
     CALL charges_init    ! init charge distribution
 

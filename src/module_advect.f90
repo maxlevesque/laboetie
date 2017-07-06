@@ -5,7 +5,7 @@ module module_advect
     public :: advect
 contains
 
-subroutine advect
+subroutine advect( solventDensity)
   
   use precision_kinds, only: dp
   use constants, only: x, y, z
@@ -15,6 +15,7 @@ subroutine advect
   
   implicit none
   
+  real(dp), intent(in) :: solventDensity(:,:,:)
   integer :: i, j, k, ix, iy, iz, ip, jp, kp, ip_all(-1:1), jp_all(-1:1), kp_all(-1:1)
   real(dp) :: vx, vy, vz, ax, ay, az
   real(dp) :: flux_link_minus, flux_link_plus
@@ -56,9 +57,9 @@ subroutine advect
       el_curr_y = 0._dp
       el_curr_z = 0._dp
   else
-      el_curr_x  = -sum( node%solventFlux(1)/node%solventDensity*( c_plus - c_minus ) , mask=node%nature==fluid)
-      el_curr_y  = -sum( node%solventFlux(2)/node%solventDensity*( c_plus - c_minus ) , mask=node%nature==fluid)
-      el_curr_z  = -sum( node%solventFlux(3)/node%solventDensity*( c_plus - c_minus ) , mask=node%nature==fluid)
+      el_curr_x  = -sum( node%solventFlux(1)/solventDensity*( c_plus - c_minus ) , mask=node%nature==fluid)
+      el_curr_y  = -sum( node%solventFlux(2)/solventDensity*( c_plus - c_minus ) , mask=node%nature==fluid)
+      el_curr_z  = -sum( node%solventFlux(3)/solventDensity*( c_plus - c_minus ) , mask=node%nature==fluid)
   end if
 
   if (all(abs(c_plus+c_minus)<=epsdp)) then
@@ -66,9 +67,9 @@ subroutine advect
       ion_curr_y = 0._dp
       ion_curr_z = 0._dp
   else
-      ion_curr_x  = -sum( node%solventFlux(1)/node%solventDensity*( c_plus + c_minus ) , mask=node%nature==fluid)
-      ion_curr_y  = -sum( node%solventFlux(2)/node%solventDensity*( c_plus + c_minus ) , mask=node%nature==fluid)
-      ion_curr_z  = -sum( node%solventFlux(3)/node%solventDensity*( c_plus + c_minus ) , mask=node%nature==fluid)
+      ion_curr_x  = -sum( node%solventFlux(1)/solventDensity*( c_plus + c_minus ) , mask=node%nature==fluid)
+      ion_curr_y  = -sum( node%solventFlux(2)/solventDensity*( c_plus + c_minus ) , mask=node%nature==fluid)
+      ion_curr_z  = -sum( node%solventFlux(3)/solventDensity*( c_plus + c_minus ) , mask=node%nature==fluid)
   end if
 
 
@@ -93,9 +94,9 @@ subroutine advect
 
         ! velocities
         if( natureNodeijk == fluid) then ! Avoid division by zero where solventDensity is 0, i.e. in solid nodes
-            vx = node(i,j,k)%solventFlux(1) / node(i,j,k)%solventDensity
-            vy = node(i,j,k)%solventFlux(2) / node(i,j,k)%solventDensity
-            vz = node(i,j,k)%solventFlux(3) / node(i,j,k)%solventDensity
+            vx = node(i,j,k)%solventFlux(1) / solventDensity(i,j,k)
+            vy = node(i,j,k)%solventFlux(2) / solventDensity(i,j,k)
+            vz = node(i,j,k)%solventFlux(3) / solventDensity(i,j,k)
         else
             vx = node(i,j,k)%solventFlux(1)
             vy = node(i,j,k)%solventFlux(2)

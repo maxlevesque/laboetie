@@ -44,9 +44,7 @@ module system
 
     type type_latticenode
         integer(kind(fluid)) :: nature ! solid liquid
-!        real(dp), dimension(x:z) :: normal ! vector normal to interface if interfacial site
         logical :: isInterfacial
-        real(dp) :: solventDensity ! mass rho
         real(dp), dimension(x:z) :: solventFlux ! flux j
     end type
 
