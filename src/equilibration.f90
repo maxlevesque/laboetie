@@ -301,18 +301,12 @@ SUBROUTINE equilibration
         !##################
         !# Collision step #
         !##################
-
         call collide(n, density, jx, jy, jz, F1, F2, F3)
 
 
-        ! print velocity profile if you need/want it
-        ! if( modulo(t, print_frequency) == 0) then
-        !    call velocity_profiles(t) ! print velocity profiles
-        ! end if
-
-        !
-        ! Bounce back (boundpm) to simplify propagation step
-        !
+        !###############
+        !# Bounce Back # to simplify propagation
+        !###############
         call bounceback(n, nature)
 
 
@@ -321,9 +315,9 @@ SUBROUTINE equilibration
         !###############
         call propagation(n, lmin, lmax, lx, ly, lz, il, jl, kl)
 
-        !
-        ! The populations are probabilities and thus must never be negative
-        !
+        !###############
+        !# CHECK POPULATIONS POSITIVE
+        !###############
         IF( ANY(n<0) ) ERROR STOP "In equilibration, the population n(x,y,z,vel) < 0"
 
         !
@@ -333,9 +327,7 @@ SUBROUTINE equilibration
         density = SUM(n,4)
 
         ! WRITE the total density
-        IF( write_total_mass_flux ) THEN
-            WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ])
-        END IF
+        IF( write_total_mass_flux ) WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ])
 
         !
         ! backup moment density (velocities) to test convergence at the end of the timestep
@@ -344,45 +336,25 @@ SUBROUTINE equilibration
         jy_old = jy
         jz_old = jz
 
-        !IF( MODULO(t, print_frequency) == 0) PRINT*,  t, "before", jz(1,1,1)
 
         ! update momentum densities after the propagation
         ! this is completely local in space and my be parallelized very well
-        ! !$OMP PARALLEL DO DEFAULT(NONE)&
-        ! !$OMP PRIVATE(l)&
-        ! !$OMP SHARED(lmin,lmax,n,cx,cy,cz)&
-        ! !$OMP REDUCTION(+:jx)&
-        ! !$OMP REDUCTION(+:jy)&
-        ! !$OMP REDUCTION(+:jz)
-        ! do l=lmin,lmax
-        !     jx = jx +n(:,:,:,l)*cx(l)
-        !     jy = jy +n(:,:,:,l)*cy(l)
-        !     jz = jz +n(:,:,:,l)*cz(l)
-        ! end do
-        ! !$OMP END PARALLEL DO
-        ! jx=jx/2
-        ! jy=jy/2
-        ! jz=jz/2
-        ! BEN+MAX: 12/07/2016 change the way we integrate n_l*c_l
-        !jx=0
-        !jy=0
-        !jz=0
-        !jx=f_ext_x/2._dp
-        !jy=f_ext_y/2._dp
-        !jz=f_ext_z/2._dp
-
-        jx = F1/2._dp ! Ade : 30/05/17 there was a mistake here. Only f_ext was divided
-        jy = F2/2._dp ! by 2.0_dp
+        jx = F1/2._dp
+        jy = F2/2._dp
         jz = F3/2._dp
+        !$OMP PARALLEL DO DEFAULT(NONE)&
+        !$OMP PRIVATE(l)&
+        !$OMP SHARED(lmin,lmax,n,cx,cy,cz)&
+        !$OMP REDUCTION(+:jx)&
+        !$OMP REDUCTION(+:jy)&
+        !$OMP REDUCTION(+:jz)
         do l=lmin,lmax
             jx = jx +n(:,:,:,l)*cx(l)
             jy = jy +n(:,:,:,l)*cy(l)
             jz = jz +n(:,:,:,l)*cz(l)
         end do
+        !$OMP END PARALLEL DO
 
-        !IF( MODULO(t, print_frequency) == 0) PRINT*,  t, "after ", jz(1,1,1)
-        
-        !--------------------------------- ADE -----------------------------------------------------------------
 
         ! Ade: we need to assign the correct table to node%solventflux as it is being called by other following
         ! subroutines (e.g. advect )
