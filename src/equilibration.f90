@@ -28,7 +28,7 @@ SUBROUTINE equilibration
     integer, allocatable :: il(:,:), jl(:,:), kl(:,:), l_inv(:)
     integer(i2b) :: lx, ly, lz, half
     integer(i2b) :: n1,n2,n3 ! Ade : dummy for reading purposes
-    character*200 :: ifile, ifile2
+    character(200) :: ifile, ifile2
     LOGICAL :: RestartPNP = .TRUE.
     integer :: maxEquilibrationTimestep
 
@@ -365,29 +365,12 @@ SUBROUTINE equilibration
 
         call advect
 
-        call sor ! TODO    ! compute phi with the Successive Overrelation Routine (SOR)
-        ! --------------------------- Ade : 13/02/2017 ---------------------------------------------------------------
-        !write(325,*) '# t = ', t
-        !DO k=1,lz
-        !    write(325,*) k, SUM(phi(:,:,k)) 
-        !END DO
+        call sor    ! compute the electric potential phi with the Successive OverRelation method (SOR)
 
-        DO k=1,lz
-          write(389,*) k, sum(c_plus(:,:,k))
-          write(390,*) k, sum(phi(:,:,k))
-        ENDDO
-        ! --------------------------- Ade : 13/02/2017 ---------------------------------------------------------------
         call electrostatic_pot ! Ade: The routine is called in order to compute Phi_tot which is used in smolu
-        !WRITE(387,*) '# t = ', t
-        !half = lz/2
-        !DO k=1,ly
-        !    WRITE(387,*) k, (phi_tot(:,k,half))
-        !ENDDO
+
         call smolu
-        !WRITE(388,*) '# t = ', t
-        !DO k=1,ly
-        !    WRITE(388,*) k, (phi_tot(:,k,half))
-        !ENDDO
+
         call charge_test
         write(1325,*) '# Iteration ', t
         write(1326,*) '# Iteration ', t
@@ -615,35 +598,34 @@ SUBROUTINE equilibration
         ! (j = rho*v), so that we can observe the trainsient time behaviour of the flow field.
 
         !print*, 't=',t,'mod=',mod(t,print_every) 
-	if ((print_every.gt.0).and.(mod(t,print_every)==0)) then ! we divide "print_every" by the iteration time step. When remainder is zero
+        if ((print_every.gt.0).and.(mod(t,print_every)==0)) then ! we divide "print_every" by the iteration time step. When remainder is zero
 	                                                         ! the velocity field is written on vel-fieldTIME_*.dat (*=1,2,3,4,....)
-         if( compensate_f_ext ) then
-		    write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
-		    !print*,TRIM(ADJUSTL(ifile))
-		    open(92,file=TRIM(ADJUSTL(ifile)))
-		    do i=1,lx
-			  do k=1,lz
-			    WRITE(92,*) i, k, jx(i,py,k), jz(i,py,k)
-			    !print*, i, k, jx(i,py,k), jz(i,py,k)
-			  end do
-		    end do
-		   close(92)
-         else
-		    write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
-		    !print*,TRIM(ADJUSTL(ifile))
-		    open(92,file=TRIM(ADJUSTL(ifile)))
-              GL = getinput%int("geometryLabel", defaultvalue=0) ! if GL=-1 =>bulk case
-              if(GL==2) then 
+        if( compensate_f_ext ) then
+            write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
+            open(92,file=TRIM(ADJUSTL(ifile)))
+            do i=1,lx
+                do k=1,lz
+                    WRITE(92,*) i, k, jx(i,py,k), jz(i,py,k)
+                    !print*, i, k, jx(i,py,k), jz(i,py,k)
+                end do
+            end do
+            close(92)
+        else
+            write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
+            !print*,TRIM(ADJUSTL(ifile))
+            open(92,file=TRIM(ADJUSTL(ifile)))
+            GL = getinput%int("geometryLabel", defaultvalue=0) ! if GL=-1 =>bulk case
+            if(GL==2) then 
                 do j=1,ly
                     WRITE(92,*) j, sum(jx(:,j,:)), sum(jy(:,j,:)), sum(jz(:,j,:))
                 end do
-              else
+            else
                 do k=1,lz
                     WRITE(92,*) k, sum(jx(:,:,k)), sum(jy(:,:,k)), sum(jz(:,:,k))
                 end do
-              endif 
-		   close(92)
-		 endif
+            end if 
+            close(92)
+        end if
 		! ----------------------------- Ade -----------------------------------------------
 		! ADE : I added the following part for debugging purposes
 		!write(ifile2,'(a,i0,a)') './output/c_plus_alongZTIME_', t,'.dat'
