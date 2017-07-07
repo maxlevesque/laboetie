@@ -23,7 +23,7 @@ module system
 
     ! time
     integer(i2b) :: time ! time in simu, from 0 to tmax
-    integer(i2b) :: t_equil, tmom, tmax ! 0->t_equil; t_equil->tmom; t_mom->tmax
+    integer(i2b) :: tmom, tmax !;t_mom->tmax
     ! equilibration
     integer(i2b) :: D_equil ! number of equilibration steps whithout constraints nor flux
     integer(i2b) :: D_iter
