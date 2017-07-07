@@ -1,11 +1,13 @@
 module module_equilibration
     implicit none
+    private
+    public equilibration
 contains
 
 SUBROUTINE equilibration( jx, jy, jz)
 
     USE precision_kinds, only: i2b, dp, sp
-    USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, t_equil, c_plus, c_minus, phi, Phi_tot
+    USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, c_plus, c_minus, phi, Phi_tot
     use module_collision, only: collide
     use module_input, only: getinput
     USE constants, only: x, y, z, zerodp
