@@ -99,11 +99,7 @@ SUBROUTINE equilibration( jx, jy, jz)
         l_inv(l) = lbm%vel(l)%inv
     end do
 
-    !--------------------------------- ADE -----------------------------------------------------------------
-    ! ADE : we allocate solute_force
     if(.not.allocated(solute_force)) allocate(solute_force(lx,ly,lz,x:z),source=0.0_dp)
-    !--------------------------------- ADE -----------------------------------------------------------------
-
     allocate( jx_old (lx,ly,lz), source=0._dp )
     allocate( jy_old (lx,ly,lz), source=0._dp )
     allocate( jz_old (lx,ly,lz), source=0._dp )
@@ -388,16 +384,10 @@ SUBROUTINE equilibration( jx, jy, jz)
         end if
 
 
-        ! !print*,g,tock(timer(g)); g=g+1; call tick(timer(g)) !11
-
-
         !#####################
         !# check convergence #
         !#####################
-        ! count the number of times the array is not zero
-        !n1 = count(abs(jx_old)>1.0d-6)
-        !n2 = count(abs(jy_old)>1.0d-6)
-        !n3 = count(abs(jz_old)>1.0d-6)
+
         open(13,file="./output/l2err.dat")
         l2err = maxval([maxval(abs(jx-jx_old)), &
                         maxval(abs(jy-jy_old)), &
@@ -540,7 +530,6 @@ SUBROUTINE equilibration( jx, jy, jz)
                    f_ext_z = zerodp
                  end where
                 endif
-                ! ADE : end of modification
 
                 where(nature/=fluid)
                   f_ext_x = zerodp
@@ -588,20 +577,23 @@ SUBROUTINE equilibration( jx, jy, jz)
             end if 
             close(92)
         end if
-		! ----------------------------- Ade -----------------------------------------------
-		! ADE : I added the following part for debugging purposes
-		!write(ifile2,'(a,i0,a)') './output/c_plus_alongZTIME_', t,'.dat'
-		!open(3180, file=TRIM(ADJUSTL(ifile2)))
-		!DO k=supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
-		!    WRITE(3180,*) k, SUM(c_plus(:,:,k))
-		!ENDDO
-		!close(3180)
-		! ----------------------------- Ade -----------------------------------------------
     endif
-        ! ADE : end of modification
-
 
   end do ! end of temporal loop
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ! **********************************************
@@ -642,6 +634,12 @@ else
         WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps) ,1)
     END DO
 end if
+  CLOSE(68)
+  CLOSE(58)
+    CLOSE(67)
+    CLOSE(57)
+    CLOSE(66)
+    CLOSE(56)
  
  ! 2. Solute Force
  DO k=1,lz
@@ -651,31 +649,28 @@ end if
      write(1323,*) k, SUM(solute_force(:,:,k,2)) 
      write(1324,*) k, SUM(solute_force(:,:,k,3)) 
  ENDDO 
+  close(1316)
+  close(1323)
+  close(1324)
 
  ! 3. Potential PHI
 DO k=1,lz
     write(325,*) k, SUM(phi(:,:,k)) 
 END DO
+  close(325)
 
   close(79)
   close(80)
   CLOSE(65)
-  CLOSE(66)
-  CLOSE(67)
-  CLOSE(68)
-  CLOSE(56)
-  CLOSE(57)
-  CLOSE(58)
   CLOSE(89)
   CLOSE(90)
   CLOSE(91)
   close(316)
   close(323)
   close(324)
-  close(325)
-  close(1316)
-  close(1323)
-  close(1324)
+ close(387)
+ close(388)
+ close(389)
   close(1325)
   close(1326)
   close(1327)
@@ -710,9 +705,6 @@ END DO
     close(90)
     close(91)
   end if
- close(387)
- close(388)
- close(389)
 
 end subroutine equilibration
 end module module_equilibration
