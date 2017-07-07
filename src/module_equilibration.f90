@@ -6,7 +6,7 @@ contains
 
 SUBROUTINE equilibration( jx, jy, jz)
 
-    USE precision_kinds, only: i2b, dp, sp
+    USE precision_kinds, only: dp
     USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, phi
     use module_collision, only: collide
     use module_input, only: getinput
@@ -17,7 +17,7 @@ SUBROUTINE equilibration( jx, jy, jz)
 
     implicit none
     real(dp), intent(inout), dimension(:,:,:) :: jx, jy, jz
-    integer :: t,i,j,k,l, lmin, lmax, pdr, pd, ios, px, py, pz, pCoord(3)
+    integer :: t,i,j,k,l, lmin, lmax, pdr, pd, ios, px, py, pz, pCoord(3), lx, ly, lz
     integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency, GL, print_every
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
     real(dp) :: f_ext_loc(3), l2err, target_error, Jxx, Jyy, Jzz
@@ -28,7 +28,6 @@ SUBROUTINE equilibration( jx, jy, jz)
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
     LOGICAL :: write_total_mass_flux
     integer, allocatable :: il(:,:), jl(:,:), kl(:,:), l_inv(:)
-    integer(i2b) :: lx, ly, lz
     character(200) :: ifile
     LOGICAL :: RestartPNP = .TRUE.
     integer :: maxEquilibrationTimestep
@@ -322,12 +321,7 @@ SUBROUTINE equilibration( jx, jy, jz)
             write(1326,*) k, SUM(solute_force(:,:,k,2)) 
             write(1327,*) k, SUM(solute_force(:,:,k,3)) 
         ENDDO 
-        ! Ade : 19/03/17 three lines below for debugging purposes. To be removed
-        do j=1,ly
-            write(1328,*) j, solute_force(max(lx/2,1),j,max(lz/2,1),2)
-        ENDDO
 
-        ! Future work : Write some stuff out for postprocessing
 
 
         !--------------------------------- ADE -----------------------------------------------------------------
