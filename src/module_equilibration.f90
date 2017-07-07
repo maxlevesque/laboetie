@@ -158,9 +158,7 @@ SUBROUTINE equilibration( jx, jy, jz)
     endif
 
     write_total_mass_flux = getinput%log( "write_total_mass_flux", defaultvalue = .false.)
-    if( write_total_mass_flux ) THEN
-        open(65, file = "./output/total_mass_flux.dat" )
-    end if
+        if( write_total_mass_flux ) open(65, file = "./output/total_mass_flux.dat" )
 
 
 
@@ -286,7 +284,7 @@ SUBROUTINE equilibration( jx, jy, jz)
         call propagation(n, lmin, lmax, lx, ly, lz, il, jl, kl)
 
         !###############
-        !# CHECK POPULATIONS POSITIVE
+        !# CHECK POPULATIONS ARE POSITIVE
         !###############
         IF( ANY(n<0) ) ERROR STOP "In equilibration, the population n(x,y,z,vel) < 0"
 
@@ -306,24 +304,7 @@ SUBROUTINE equilibration( jx, jy, jz)
         jy_old = jy
         jz_old = jz
 
-
-        ! update momentum densities after the propagation
-        ! this is completely local in space and my be parallelized very well
-        jx = F1/2._dp
-        jy = F2/2._dp
-        jz = F3/2._dp
-        !$OMP PARALLEL DO DEFAULT(NONE)&
-        !$OMP PRIVATE(l)&
-        !$OMP SHARED(lmin,lmax,n,cx,cy,cz)&
-        !$OMP REDUCTION(+:jx)&
-        !$OMP REDUCTION(+:jy)&
-        !$OMP REDUCTION(+:jz)
-        do l=lmin,lmax
-            jx = jx +n(:,:,:,l)*cx(l)
-            jy = jy +n(:,:,:,l)*cy(l)
-            jz = jz +n(:,:,:,l)*cz(l)
-        end do
-        !$OMP END PARALLEL DO
+        call update_solventCurrent( jx, jy, jz, n, cx, cy, cz, F1, F2, F3)
 
         call advect( density, jx, jy, jz )
 
@@ -387,13 +368,30 @@ SUBROUTINE equilibration( jx, jy, jz)
         !#####################
         !# check convergence #
         !#####################
-
         open(13,file="./output/l2err.dat")
         l2err = maxval([maxval(abs(jx-jx_old)), &
                         maxval(abs(jy-jy_old)), &
                         maxval(abs(jz-jz_old)) &
                        ])
         write(13,*) t, l2err
+
+! convergence_reached = .false. ! by default
+! if( t > 2 ) then
+!     if( check_convergence( jx, jx_old ) ) then
+!         if( check_convergence( jy, jy_old ) ) then
+!             if( check_convergence( jz, jz_old ) ) then
+!                 convergence_reached = .true.
+!             end if
+!         end if
+!     end if
+! end if
+
+! pure function check_convergence( A, A_old, criteria )
+!     implicit none
+!     logical :: convergence_reached
+!     real(dp) :: l2err
+!     if( maxval(abs(A-A_old)) <= criteria ) check_convergence = .true.
+! end function check_convergence
 
         if( l2err <= target_error .and. t>2 ) then
           convergence_reached = .true.
@@ -431,7 +429,7 @@ SUBROUTINE equilibration( jx, jy, jz)
             !################
             !## READ f_ext ##
             !################
-            f_ext_loc = getinput%dp3("f_ext", [0._dp,0._dp,0._dp] )
+            f_ext_loc = getinput%dp3("f_ext", defaultvalue= [0._dp,0._dp,0._dp] )
 
             if(.not.compensate_f_ext) then ! the force is exerced everywhere with same intensity
               where(nature==fluid)
@@ -707,4 +705,33 @@ END DO
   end if
 
 end subroutine equilibration
+
+subroutine update_solventCurrent( jx, jy, jz, n, cx, cy, cz, F1, F2, F3)
+    use precision_kinds, only: dp
+    implicit none
+    real(dp), intent(inout), dimension(:,:,:) :: jx, jy, jz
+    real(dp), intent(in) :: n(:,:,:,:), F1(:,:,:), F2(:,:,:), F3(:,:,:)
+    integer, intent(in) :: cx(:), cy(:), cz(:)
+    integer :: lmin, lmax, l
+    lmin = lbound(cx,1)
+    lmax = ubound(cx,1)
+    ! update momentum densities after the propagation
+    ! this is completely local in space and my be parallelized very well
+    jx = F1/2._dp
+    jy = F2/2._dp
+    jz = F3/2._dp
+    !$OMP PARALLEL DO DEFAULT(NONE)&
+    !$OMP PRIVATE(l)&
+    !$OMP SHARED(lmin,lmax,n,cx,cy,cz)&
+    !$OMP REDUCTION(+:jx)&
+    !$OMP REDUCTION(+:jy)&
+    !$OMP REDUCTION(+:jz)
+    do l=lmin,lmax
+        jx = jx +n(:,:,:,l)*cx(l)
+        jy = jy +n(:,:,:,l)*cy(l)
+        jz = jz +n(:,:,:,l)*cz(l)
+    end do
+    !$OMP END PARALLEL DO
+end subroutine update_solventCurrent
+
 end module module_equilibration
