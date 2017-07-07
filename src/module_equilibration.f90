@@ -7,7 +7,7 @@ contains
 SUBROUTINE equilibration( jx, jy, jz)
 
     USE precision_kinds, only: i2b, dp, sp
-    USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, c_plus, c_minus, phi, Phi_tot
+    USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, phi
     use module_collision, only: collide
     use module_input, only: getinput
     USE constants, only: x, y, z, zerodp
@@ -19,23 +19,19 @@ SUBROUTINE equilibration( jx, jy, jz)
 
     implicit none
     real(dp), intent(inout), dimension(:,:,:) :: jx, jy, jz
-    integer :: t,i,j,k,l,ip,jp,kp, lmin, lmax, timer(100), g, ng, pdr, pd, ios, px, py, pz, pCoord(3)
+    integer :: t,i,j,k,l, lmin, lmax, pdr, pd, ios, px, py, pz, pCoord(3)
     integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency, GL, print_every
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
-    real(dp) :: n_loc, f_ext_loc(3), l2err, target_error, Jxx, Jyy, Jzz
-    REAL(dp) :: vmaxx, vmaxy, vmaxz, vmax
-    REAL(dp) :: vmaxx_old, vmaxy_old, vmaxz_old, vmax_old
-    real(dp), allocatable, dimension(:,:,:) :: density, n_old, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z,& 
-                                               F1, F2, F3
+    real(dp) :: f_ext_loc(3), l2err, target_error, Jxx, Jyy, Jzz
+    real(dp), allocatable, dimension(:,:,:) :: density, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z, F1, F2, F3
     real(dp), allocatable, dimension(:) :: a0, a1
     integer, allocatable, dimension(:) :: cx, cy, cz
     logical :: convergence_reached, compensate_f_ext, convergence_reached_without_fext, convergence_reached_with_fext, err
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
     LOGICAL :: write_total_mass_flux
     integer, allocatable :: il(:,:), jl(:,:), kl(:,:), l_inv(:)
-    integer(i2b) :: lx, ly, lz, half
-    integer(i2b) :: n1,n2,n3 ! Ade : dummy for reading purposes
-    character(200) :: ifile, ifile2
+    integer(i2b) :: lx, ly, lz
+    character(200) :: ifile
     LOGICAL :: RestartPNP = .TRUE.
     integer :: maxEquilibrationTimestep
 
