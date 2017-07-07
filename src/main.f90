@@ -6,6 +6,7 @@ PROGRAM main
   use module_input, only: getinput
   use system, only: supercell
   use module_equilibration, only: equilibration
+  use module_tracers, only: drop_tracers
 
   implicit none
   

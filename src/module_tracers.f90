@@ -4,7 +4,9 @@
 ! function, while making them not to change the equilibrium properties of the system.
 ! Imagine a very small droplet of radioactive particles, so few they do not change
 ! anything to the system, but numerous enough to be followed and make statistics.
-
+module module_tracers
+    implicit none
+contains
 SUBROUTINE drop_tracers( solventCurrentx, solventCurrenty, solventCurrentz)
 
     use precision_kinds, only: dp
@@ -128,3 +130,4 @@ contains
   end SUBROUTINE update_tracer_population
 
 end SUBROUTINE drop_tracers
+end module module_tracers
