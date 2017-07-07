@@ -77,7 +77,7 @@ set(laboetie_SRCS
   src/check_charge_distribution_equilibrium.f90
   src/drop_tracers.f90
   src/electrostatic_pot.f90
-  src/equilibration.f90
+  src/module_equilibration.f90
   src/init_simu.f90
   src/just_eq_smolu.f90
   src/main.f90
