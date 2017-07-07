@@ -45,7 +45,6 @@ module system
     type type_latticenode
         integer(kind(fluid)) :: nature ! solid liquid
         logical :: isInterfacial
-        real(dp), dimension(x:z) :: solventFlux ! flux j
     end type
 
     type type_supercell

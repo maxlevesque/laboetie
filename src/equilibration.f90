@@ -1,4 +1,8 @@
-SUBROUTINE equilibration
+module module_equilibration
+    implicit none
+contains
+
+SUBROUTINE equilibration( jx, jy, jz)
 
     USE precision_kinds, only: i2b, dp, sp
     USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, t_equil, c_plus, c_minus, phi, Phi_tot
@@ -12,13 +16,14 @@ SUBROUTINE equilibration
     use module_advect, only: advect
 
     implicit none
+    real(dp), intent(inout), dimension(:,:,:) :: jx, jy, jz
     integer :: t,i,j,k,l,ip,jp,kp, lmin, lmax, timer(100), g, ng, pdr, pd, ios, px, py, pz, pCoord(3)
     integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency, GL, print_every
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
-    real(dp) :: n_loc, f_ext_loc(3), l2err, target_error, djx, djy, djz, Jxx, Jyy, Jzz
+    real(dp) :: n_loc, f_ext_loc(3), l2err, target_error, Jxx, Jyy, Jzz
     REAL(dp) :: vmaxx, vmaxy, vmaxz, vmax
     REAL(dp) :: vmaxx_old, vmaxy_old, vmaxz_old, vmax_old
-    real(dp), allocatable, dimension(:,:,:) :: density, jx, jy, jz, n_old, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z,& 
+    real(dp), allocatable, dimension(:,:,:) :: density, n_old, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z,& 
                                                F1, F2, F3
     real(dp), allocatable, dimension(:) :: a0, a1
     integer, allocatable, dimension(:) :: cx, cy, cz
@@ -64,27 +69,8 @@ SUBROUTINE equilibration
     lx = supercell%geometry%dimensions%indiceMax(x)
     ly = supercell%geometry%dimensions%indiceMax(y)
     lz = supercell%geometry%dimensions%indiceMax(z)
-    !******************************
-    !******* Restart-PNP **********
-    !******************************
+
     RestartPNP = getinput%log("RestartPNP", .TRUE.)
-    !if(.not.RestartPNP) then
-    !    IF( .NOT. ALLOCATED(phi) ) CALL allocateReal3D(phi)
-    !   IF( .NOT. ALLOCATED(c_plus) ) CALL allocateReal3D(c_plus)
-    !    IF( .NOT. ALLOCATED(c_minus) ) CALL allocateReal3D(c_minus)
-    !    DO i=1,lx
-    !     DO j=1,ly
-    !      DO k=1,lz
-    !        read(1389,*) phi(i,j,k)
-    !        read(1390,*) c_plus(i,j,k)
-    !        read(1391,*) c_minus(i,j,k)
-    !      ENDDO
-    !     ENDDO
-    !    ENDDO
-    !endif
-    !******************************
-    !******* End of Restart-PNP ***
-    !******************************
 
     !
     ! Print info to terminal every that number of steps
@@ -118,21 +104,9 @@ SUBROUTINE equilibration
     if(.not.allocated(solute_force)) allocate(solute_force(lx,ly,lz,x:z),source=0.0_dp)
     !--------------------------------- ADE -----------------------------------------------------------------
 
-    allocate( jx     (lx,ly,lz), source=node%solventflux(x))
-    allocate( jx_old (lx,ly,lz) )
-    allocate( jy     (lx,ly,lz), source=node%solventflux(y))
-    allocate( jy_old (lx,ly,lz) )
-    allocate( jz     (lx,ly,lz), source=node%solventflux(z))
-    allocate( jz_old (lx,ly,lz) )
-    jx = 0
-    jy = 0
-    jz = 0
-    jx_old = 0
-    jy_old = 0
-    jz_old = 0
-    djx = 0.0
-    djy = 0.0
-    djz = 0.0
+    allocate( jx_old (lx,ly,lz), source=0._dp )
+    allocate( jy_old (lx,ly,lz), source=0._dp )
+    allocate( jz_old (lx,ly,lz), source=0._dp )
 
     OPEN(66, FILE="output/mass-flux_profile_along_z.dat")
     OPEN(67, FILE="output/mass-flux_profile_along_y.dat")
@@ -355,14 +329,7 @@ SUBROUTINE equilibration
         end do
         !$OMP END PARALLEL DO
 
-
-        ! Ade: we need to assign the correct table to node%solventflux as it is being called by other following
-        ! subroutines (e.g. advect )
-        node%solventflux(x) = jx
-        node%solventflux(y) = jy
-        node%solventflux(z) = jz
-
-        call advect( density )
+        call advect( density, jx, jy, jz )
 
         call sor    ! compute the electric potential phi with the Successive OverRelation method (SOR)
 
@@ -383,7 +350,7 @@ SUBROUTINE equilibration
         ENDDO 
         ! Ade : 19/03/17 three lines below for debugging purposes. To be removed
         do j=1,ly
-            write(1328,*) j, solute_force(lx/2,j,lz/2,2)
+            write(1328,*) j, solute_force(max(lx/2,1),j,max(lz/2,1),2)
         ENDDO
 
         ! Future work : Write some stuff out for postprocessing
@@ -432,14 +399,10 @@ SUBROUTINE equilibration
         !n2 = count(abs(jy_old)>1.0d-6)
         !n3 = count(abs(jz_old)>1.0d-6)
         open(13,file="./output/l2err.dat")
-        !if(n1/=0) djx = sum( abs(  (jx - jx_old)/jx_old ), mask= abs(jx_old)>1.0d-6) / real(n1,kind=dp)
-        !if(n2/=0) djy = sum( abs(  (jy - jy_old)/jy_old ), mask= abs(jy_old)>1.0d-6) / real(n2,kind=dp)
-        !if(n3/=0) djz = sum( abs(  (jz - jz_old)/jz_old ), mask= abs(jz_old)>1.0d-6) / real(n3,kind=dp)
         l2err = maxval([maxval(abs(jx-jx_old)), &
                         maxval(abs(jy-jy_old)), &
                         maxval(abs(jz-jz_old)) &
                        ])
-        !l2err = maxval([djx,djy,djz])
         write(13,*) t, l2err
 
         if( l2err <= target_error .and. t>2 ) then
@@ -654,22 +617,18 @@ SUBROUTINE equilibration
   WRITE(58,*)"# Steady state with convergence criteria", REAL(target_error)
 
   
-  GL = getinput%int("geometryLabel", defaultvalue=0) ! if GL=-1 =>bulk case
-  if (GL==2) then ! Cylindrical geometry
-   Jxx = 0
-   Jyy = 0
-   Jzz = 0
-   DO i=1,lx
-        Jxx = jx(i,ly/2,lz/2)
-        Jyy = jy(i,ly/2,lz/2)
-        Jzz = jz(i,ly/2,lz/2)
-        !Jxx = jx(lx/2,j,lz/2)
-        !Jyy = jy(lx/2,j,lz/2)
-        !Jzz = jz(lx/2,j,lz/2)
-    WRITE(67,*) i, Jxx, Jyy, Jzz
-    ENDDO
-        !WRITE(56,*) k, SUM(density(:,:,k),mask=node%nature==fluid)/ MAX( COUNT(density(:,:,k)>eps) ,1)
-  else
+GL = getinput%int("geometryLabel", defaultvalue=0) ! if GL=-1 =>bulk case
+if (GL==2) then ! Cylindrical geometry
+    Jxx = 0
+    Jyy = 0
+    Jzz = 0
+    DO i=1,lx
+        Jxx = jx(i,max(ly/2,1),max(lz/2,1))
+        Jyy = jy(i,max(ly/2,1),max(lz/2,1))
+        Jzz = jz(i,max(ly/2,1),max(lz/2,1))
+        WRITE(67,*) i, Jxx, Jyy, Jzz
+    END DO
+else
     DO k=1,lz
         WRITE(66,*) k, SUM(jx(:,:,k)), SUM(jy(:,:,k)), SUM(jz(:,:,k))
         WRITE(56,*) k, SUM(density(:,:,k))/ MAX( COUNT(density(:,:,k)>eps) ,1)
@@ -682,7 +641,7 @@ SUBROUTINE equilibration
         WRITE(68,*) k, SUM(jx(k,:,:)), SUM(jy(k,:,:)), SUM(jz(k,:,:))
         WRITE(58,*) k, SUM(density(k,:,:))/ MAX( COUNT(density(k,:,:)>eps) ,1)
     END DO
-  endif
+end if
  
  ! 2. Solute Force
  DO k=1,lz
@@ -697,10 +656,10 @@ SUBROUTINE equilibration
 DO k=1,lz
     write(325,*) k, SUM(phi(:,:,k)) 
 END DO
+
   close(79)
   close(80)
   CLOSE(65)
-  
   CLOSE(66)
   CLOSE(67)
   CLOSE(68)
@@ -755,9 +714,5 @@ END DO
  close(388)
  close(389)
 
-  ! put back arrays into original types
-  node%solventflux(x) = jx
-  node%solventflux(y) = jy
-  node%solventflux(z) = jz
-
 end subroutine equilibration
+end module module_equilibration

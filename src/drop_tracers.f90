@@ -5,15 +5,16 @@
 ! Imagine a very small droplet of radioactive particles, so few they do not change
 ! anything to the system, but numerous enough to be followed and make statistics.
 
-SUBROUTINE drop_tracers
+SUBROUTINE drop_tracers( solventCurrentx, solventCurrenty, solventCurrentz)
 
     use precision_kinds, only: dp
     USE system, only: n, elec_slope
-    USE moment_propagation, only: init, propagate, deallocate_propagated_quantity!, print_vacf, integrate_vacf!, not_yet_converged
+    USE moment_propagation, only: init, propagate, deallocate_propagated_quantity
     use module_input, ONLY: getinput
     use myallocations, only: allocateReal3D
 
     IMPLICIT NONE
+    real(dp), intent(in), dimension(:,:,:) :: solventCurrentx, solventCurrenty, solventCurrentz
     integer :: it, maximum_moment_propagation_steps
     logical :: is_converged
     real(dp), allocatable :: solventDensity(:,:,:)
@@ -27,10 +28,9 @@ SUBROUTINE drop_tracers
     PRINT*,'       step           VACF(x)                   VACF(y)                   VACF(z)'
     PRINT*,'       ----------------------------------------------------------------------------------'
 
-    allocate( solventDensity(size(n,1),size(n,2),size(n,3)) )
-    solventDensity = sum(n,4)
+    allocate( solventDensity(size(n,1),size(n,2),size(n,3)) , source=sum(n,4) )
 
-    CALL update_tracer_population( solventDensity) ! include elec_slope in population n
+    CALL update_tracer_population( solventDensity, solventCurrentx, solventCurrenty, solventCurrentz) ! include elec_slope in population n
     elec_slope = 0.0_dp ! turn the electric field off for the rest of mom_prop (included in n)
 
     ! add electrostatic potential computed by the SOR routine an external contribution
@@ -64,7 +64,7 @@ contains
   !
   !
   !
-  SUBROUTINE update_tracer_population( solventDensity)
+  SUBROUTINE update_tracer_population( solventDensity, solventCurrentx, solventCurrenty, solventCurrentz)
 
     use precision_kinds, only: dp, i2b
     use system, only: f_ext, fluid, elec_slope, supercell, lbm, x, y, z, node
@@ -73,8 +73,8 @@ contains
 
     implicit none
 
-    real(dp), intent(in) :: solventDensity(:,:,:)
-    integer(i2b) :: l, ll, lu, lx, ly, lz, i,j,k
+    real(dp), intent(in) :: solventDensity(:,:,:), solventCurrentx(:,:,:), solventCurrenty(:,:,:), solventCurrentz(:,:,:)
+    integer(i2b) :: l, ll, lu, lx, ly, lz, i, j, k
     type tracer
       real(dp) :: D ! diffusion coefficient
       real(dp) :: q ! charge
@@ -102,10 +102,10 @@ contains
     do concurrent (l=ll:lu, i=1:lx, j=1:ly, k=1:lz)
       if( node(i,j,k)%nature==fluid ) then
         n(l,i,j,k) = lbm%vel(l)%a0 *solventdensity(i,j,k) + lbm%vel(l)%a1 &
-          *sum( lbm%vel(l)%coo(:)*(node(i,j,k)%solventFlux(:) +f_ext(:) -solventDensity(i,j,k)*tr%q*tr%D*elec_slope(:) ) )
+          *sum( lbm%vel(l)%coo(:)*([solventCurrentx(i,j,k), solventCurrenty(i,j,k), solventCurrentz(i,j,k)] +f_ext(:) -solventDensity(i,j,k)*tr%q*tr%D*elec_slope(:) ) )
       else
         n(l,i,j,k) = lbm%vel(l)%a0 *solventdensity(i,j,k) + lbm%vel(l)%a1 &
-          *sum( lbm%vel(l)%coo(:)*node(i,j,k)%solventFlux(:))
+          *( lbm%vel(l)%coo(x)*solventCurrentx(i,j,k) + lbm%vel(l)%coo(y)*solventCurrenty(i,j,k) + lbm%vel(l)%coo(z)*solventCurrentz(i,j,k) )
       end if
     end do
 

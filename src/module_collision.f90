@@ -18,8 +18,7 @@ contains
     use mod_lbmodel, only: lbm
     use module_input, only: getinput
     implicit none
-    real(dp), intent(in) :: density(:,:,:), jx(:,:,:), jy(:,:,:), jz(:,:,:)
-    real(dp), intent(in) :: F1(:,:,:), F2(:,:,:), F3(:,:,:) !f_ext_x(:,:,:), f_ext_y(:,:,:), f_ext_z(:,:,:)
+    real(dp), intent(in) :: density(:,:,:), jx(:,:,:), jy(:,:,:), jz(:,:,:), F1(:,:,:), F2(:,:,:), F3(:,:,:)
     real(dp), intent(inout) :: n(:,:,:,:)
     integer :: l, lmin, lmax, nx, ny, nz
     real(dp), allocatable, dimension(:) :: a0, a1, a2, cx, cy, cz
@@ -116,6 +115,7 @@ contains
           neq(:,:,:) = &
           a0(l)*density &
           + a1(l)*( cx(l)*jx + cy(l)*jy + cz(l)*jz )
+
           n(:,:,:,l) = (1._dp-1._dp/relaxation_time)*n(:,:,:,l) &
           + (1._dp/relaxation_time)*neq &
           + (1._dp-1._dp/(2._dp*relaxation_time))*( &
