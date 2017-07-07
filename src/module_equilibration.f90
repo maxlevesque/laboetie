@@ -10,9 +10,7 @@ SUBROUTINE equilibration( jx, jy, jz)
     USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, phi
     use module_collision, only: collide
     use module_input, only: getinput
-    USE constants, only: x, y, z, zerodp
-    USE mod_time, only: tick, tock
-    USE myallocations
+    USE constants, only: x, y, z
     use module_bounceback, only: bounceback
     use module_propagation, only: propagation
     use module_advect, only: advect
@@ -34,6 +32,7 @@ SUBROUTINE equilibration( jx, jy, jz)
     character(200) :: ifile
     LOGICAL :: RestartPNP = .TRUE.
     integer :: maxEquilibrationTimestep
+    real(dp), parameter :: zerodp = 0._dp
 
     open(316, file = "output/soluteForceEqX.dat")
     open(323, file = "output/soluteForceEqY.dat")
