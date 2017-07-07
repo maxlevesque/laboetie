@@ -94,7 +94,6 @@ set(laboetie_SRCS
   src/module_system.f90
   src/module_time.f90
   src/poisson_nernst_planck.f90
-  src/propagation.f90
   src/smolu.f90
   src/sor.f90
   src/supercell_definition.f90
