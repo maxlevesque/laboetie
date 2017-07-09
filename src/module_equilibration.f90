@@ -20,7 +20,7 @@ SUBROUTINE equilibration( jx, jy, jz)
     integer :: t,i,j,k,l, lmin, lmax, pdr, pd, ios, px, py, pz, pCoord(3), lx, ly, lz
     integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency, GL, print_every
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
-    real(dp) :: f_ext_loc(3), l2err, target_error, Jxx, Jyy, Jzz
+    real(dp) :: fext_tmp(3), l2err, target_error, Jxx, Jyy, Jzz
     real(dp), allocatable, dimension(:,:,:) :: density, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z, F1, F2, F3
     real(dp), allocatable, dimension(:) :: a0, a1
     integer, allocatable, dimension(:) :: cx, cy, cz
@@ -33,6 +33,8 @@ SUBROUTINE equilibration( jx, jy, jz)
     integer :: maxEquilibrationTimestep
     real(dp), parameter :: zerodp = 0._dp
 
+
+    !! ADELCHI COULD YOU PLEASE REMOVE ALL THE UNNECESSERAY WRITINGS? TIME CONSUMING + MAKES THE CODE HARD TO READ
     open(316, file = "output/soluteForceEqX.dat")
     open(323, file = "output/soluteForceEqY.dat")
     open(324, file = "output/soluteForceEqZ.dat")
@@ -42,9 +44,7 @@ SUBROUTINE equilibration( jx, jy, jz)
     open(1325, file = "output/SFXtime.dat")
     open(1326, file = "output/SFYtime.dat")
     open(1327, file = "output/SFZtime.dat")
-    ! For debugging
     open(1328, file = "output/Ligne2Courant.dat")
-    ! end debugging
     open(325, file = "output/phi.dat")
     open(387, file = "output/phiAVANT.dat")
     open(388, file = "output/phiAPRES.dat")
@@ -115,7 +115,7 @@ SUBROUTINE equilibration( jx, jy, jz)
     allocate( F3(lx,ly,lz), source=zerodp)
     !--------------- Ade ----------------------
 
-    f_ext_loc = zerodp ! this is important and spagetty like... please read carefully before modifying this line
+    fext_tmp = zerodp ! this is important and spagetty like... please read carefully before modifying this line
     allocate( cx(lmax), source=lbm%vel(:)%coo(1))
     allocate( cy(lmax), source=lbm%vel(:)%coo(2))
     allocate( cz(lmax), source=lbm%vel(:)%coo(3))
@@ -182,9 +182,9 @@ SUBROUTINE equilibration( jx, jy, jz)
             f_ext_y = zerodp
             f_ext_z = zerodp
         else
-            f_ext_x = f_ext_loc(1) ! Max: as I understand this, f_ext_loc(1:3)=0 but if convergence is reached. Once convergence is reached, we read f_ext_loc from input file.
-            f_ext_y = f_ext_loc(2)
-            f_ext_z = f_ext_loc(3)
+            f_ext_x = fext_tmp(1) ! Max: as I understand this, fext_tmp(1:3)=0 but if convergence is reached. Once convergence is reached, we read fext_tmp from input file.
+            f_ext_y = fext_tmp(2)
+            f_ext_z = fext_tmp(3)
         endif
 
         !
@@ -346,18 +346,15 @@ SUBROUTINE equilibration( jx, jy, jz)
         !#####################
         call check_convergence(t, target_error, l2err, jx, jy, jz, jx_old, jy_old, jz_old, convergenceIsReached )
 
-        ! select your branch
+        ! First, we reach convergence without external forces.
+        ! Then, we turn on the external forces and iterate again until convergence
         if(convergenceIsReached) then
             ! was it converged with or without the external forces
-          if( .not.convergenceIsReached_without_fext ) then
-            convergenceIsReached_without_fext = .true.
-          else if( convergenceIsReached_without_fext ) then
-            convergenceIsReached_with_fext = .true.
-          else
-            print*,"ERROR: l.530 of equilibration.f90"
-            print*,"=====  I did not anticipate this possibility. Review your if tree."
-            stop
-          end if
+            if( .not.convergenceIsReached_without_fext ) then
+                convergenceIsReached_without_fext = .true.
+            else if( convergenceIsReached_without_fext ) then
+                convergenceIsReached_with_fext = .true.
+            end if
         end if
 
         !############################################
@@ -375,13 +372,13 @@ SUBROUTINE equilibration( jx, jy, jz)
             !################
             !## READ f_ext ##
             !################
-            f_ext_loc = getinput%dp3("f_ext", defaultvalue= [0._dp,0._dp,0._dp] )
+            fext_tmp = getinput%dp3("f_ext", defaultvalue= [0._dp,0._dp,0._dp] )
 
             if(.not.compensate_f_ext) then ! the force is exerced everywhere with same intensity
               where(nature==fluid)
-                f_ext_x = f_ext_loc(1)
-                f_ext_y = f_ext_loc(2)
-                f_ext_z = f_ext_loc(3)
+                f_ext_x = fext_tmp(1)
+                f_ext_y = fext_tmp(2)
+                f_ext_z = fext_tmp(3)
               end where
 
             else if(compensate_f_ext) then ! force applied to a central particle only
@@ -420,9 +417,9 @@ SUBROUTINE equilibration( jx, jy, jz)
                     do k=pz-pdr,pz+pdr
                       if( norm2(real([ i-(px), j-(py), k-(pz) ],dp)) > real(pd,dp)/2._dp ) cycle
                       if (nature(i,j,k)/=fluid) err=.true.
-                      f_ext_x(i,j,k) = f_ext_loc(1)
-                      f_ext_y(i,j,k) = f_ext_loc(2)
-                      f_ext_z(i,j,k) = f_ext_loc(3)
+                      f_ext_x(i,j,k) = fext_tmp(1)
+                      f_ext_y(i,j,k) = fext_tmp(2)
+                      f_ext_z(i,j,k) = fext_tmp(3)
                       l=l+1 ! ADE : One more point within the particle
                       WRITE(47,*)i,j,k ! use ListPointPlot3D[data,BoxRatios->{1,1,1}] in Mathematica to read this file
                       WRITE(14,*)l ! ADE : We write the number of lattice points occupied by the so-called particle
@@ -446,14 +443,14 @@ SUBROUTINE equilibration( jx, jy, jz)
                 ! the nodes, as we believe that the force will dissipate
                 ! within the walls
                 if (GL==-1) then
-                 where(f_ext_x==f_ext_loc(1) .and. f_ext_y==f_ext_loc(2).and.f_ext_z==f_ext_loc(3) )
-                  f_ext_x = -f_ext_loc(1)/(fluid_nodes) +f_ext_x/l
-                  f_ext_y = -f_ext_loc(2)/(fluid_nodes) +f_ext_y/l
-                  f_ext_z = -f_ext_loc(3)/(fluid_nodes) +f_ext_z/l
+                 where(f_ext_x==fext_tmp(1) .and. f_ext_y==fext_tmp(2).and.f_ext_z==fext_tmp(3) )
+                  f_ext_x = -fext_tmp(1)/(fluid_nodes) +f_ext_x/l
+                  f_ext_y = -fext_tmp(2)/(fluid_nodes) +f_ext_y/l
+                  f_ext_z = -fext_tmp(3)/(fluid_nodes) +f_ext_z/l
                  else where
-                  f_ext_x = -f_ext_loc(1)/(fluid_nodes)
-                  f_ext_y = -f_ext_loc(2)/(fluid_nodes)
-                  f_ext_z = -f_ext_loc(3)/(fluid_nodes)
+                  f_ext_x = -fext_tmp(1)/(fluid_nodes)
+                  f_ext_y = -fext_tmp(2)/(fluid_nodes)
+                  f_ext_z = -fext_tmp(3)/(fluid_nodes)
                  end where
                    if( any(abs([sum(f_ext_x)/fluid_nodes,sum(f_ext_y)/fluid_nodes,sum(f_ext_z)/fluid_nodes])> eps ) ) then
                      print*,"ERROR: l.215 of equilibration.f90"
@@ -464,7 +461,7 @@ SUBROUTINE equilibration( jx, jy, jz)
                      stop
                    end if
                 else
-                 where(f_ext_x==f_ext_loc(1) .and. f_ext_y==f_ext_loc(2) .and.f_ext_z==f_ext_loc(3) )
+                 where(f_ext_x==fext_tmp(1) .and. f_ext_y==fext_tmp(2) .and.f_ext_z==fext_tmp(3) )
                   f_ext_x = f_ext_x/l
                   f_ext_y = f_ext_y/l
                   f_ext_z = f_ext_z/l
