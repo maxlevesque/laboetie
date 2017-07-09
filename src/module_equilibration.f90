@@ -21,7 +21,7 @@ SUBROUTINE equilibration( jx, jy, jz)
     integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency, GL, print_every
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
     real(dp) :: fext_tmp(3), l2err, target_error, Jxx, Jyy, Jzz
-    real(dp), allocatable, dimension(:,:,:) :: density, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z, F1, F2, F3
+    real(dp), allocatable, dimension(:,:,:) :: density, jx_old, jy_old, jz_old, fextx, fexty, fextz, F1, F2, F3
     real(dp), allocatable, dimension(:) :: a0, a1
     integer, allocatable, dimension(:) :: cx, cy, cz
     logical :: convergenceIsReached, compensate_f_ext, convergenceIsReached_without_fext, convergenceIsReached_with_fext, err
@@ -106,9 +106,9 @@ SUBROUTINE equilibration( jx, jy, jz)
     OPEN(58, FILE="output/mean-density_profile_along_x.dat")
 
     allocate( nature (lx,ly,lz), source=node%nature)
-    allocate( f_ext_x(lx,ly,lz), source=zerodp)
-    allocate( f_ext_y(lx,ly,lz), source=zerodp)
-    allocate( f_ext_z(lx,ly,lz), source=zerodp)
+    allocate( fextx(lx,ly,lz), source=zerodp)
+    allocate( fexty(lx,ly,lz), source=zerodp)
+    allocate( fextz(lx,ly,lz), source=zerodp)
     !--------------- Ade ----------------------
     allocate( F1(lx,ly,lz), source=zerodp)
     allocate( F2(lx,ly,lz), source=zerodp)
@@ -178,13 +178,13 @@ SUBROUTINE equilibration( jx, jy, jz)
     do t = 1, huge(t)
 
         if( t < maxEquilibrationTimestep ) then
-            f_ext_x = zerodp
-            f_ext_y = zerodp
-            f_ext_z = zerodp
+            fextx = zerodp
+            fexty = zerodp
+            fextz = zerodp
         else
-            f_ext_x = fext_tmp(1) ! Max: as I understand this, fext_tmp(1:3)=0 but if convergence is reached. Once convergence is reached, we read fext_tmp from input file.
-            f_ext_y = fext_tmp(2)
-            f_ext_z = fext_tmp(3)
+            fextx = fext_tmp(1) ! Max: as I understand this, fext_tmp(1:3)=0 but if convergence is reached. Once convergence is reached, we read fext_tmp from input file.
+            fexty = fext_tmp(2)
+            fextz = fext_tmp(3)
         endif
 
         !
@@ -251,9 +251,9 @@ SUBROUTINE equilibration( jx, jy, jz)
         END DO
 
 
-        F1(:,:,:)  = f_ext_x(:,:,:) + solute_force(:,:,:,1)
-        F2(:,:,:)  = f_ext_y(:,:,:) + solute_force(:,:,:,2)
-        F3(:,:,:)  = f_ext_z(:,:,:) + solute_force(:,:,:,3) 
+        F1(:,:,:)  = fextx(:,:,:) + solute_force(:,:,:,1)
+        F2(:,:,:)  = fexty(:,:,:) + solute_force(:,:,:,2)
+        F3(:,:,:)  = fextz(:,:,:) + solute_force(:,:,:,3) 
 
 
         !##################
@@ -330,7 +330,7 @@ SUBROUTINE equilibration( jx, jy, jz)
                     open(91, file=filename2 )
                     do i=1,lx
                         do k=1,lz
-                            write(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
+                            write(90,*) i, k, fextx(i,py,k), fextz(i,py,k)
                             write(91,*) i, k, jx(i,py,k), jz(i,py,k)
                         end do
                     end do
@@ -376,9 +376,9 @@ SUBROUTINE equilibration( jx, jy, jz)
 
             if(.not.compensate_f_ext) then ! the force is exerced everywhere with same intensity
               where(nature==fluid)
-                f_ext_x = fext_tmp(1)
-                f_ext_y = fext_tmp(2)
-                f_ext_z = fext_tmp(3)
+                fextx = fext_tmp(1)
+                fexty = fext_tmp(2)
+                fextz = fext_tmp(3)
               end where
 
             else if(compensate_f_ext) then ! force applied to a central particle only
@@ -398,9 +398,9 @@ SUBROUTINE equilibration( jx, jy, jz)
                 end if
                 pdr = pd/2 ! nodes of the particle on the right (or left) of the particle center. If particle is diameter 3, we have 1 node on the left and 1 on the right, so pd=3, pdr=3/2=1
 
-                f_ext_x = zerodp
-                f_ext_y = zerodp
-                f_ext_z = zerodp
+                fextx = zerodp
+                fexty = zerodp
+                fextz = zerodp
 
                 l=0 ! ADE: l counts the number of node within the particle
                 err=.false.
@@ -417,9 +417,9 @@ SUBROUTINE equilibration( jx, jy, jz)
                     do k=pz-pdr,pz+pdr
                       if( norm2(real([ i-(px), j-(py), k-(pz) ],dp)) > real(pd,dp)/2._dp ) cycle
                       if (nature(i,j,k)/=fluid) err=.true.
-                      f_ext_x(i,j,k) = fext_tmp(1)
-                      f_ext_y(i,j,k) = fext_tmp(2)
-                      f_ext_z(i,j,k) = fext_tmp(3)
+                      fextx(i,j,k) = fext_tmp(1)
+                      fexty(i,j,k) = fext_tmp(2)
+                      fextz(i,j,k) = fext_tmp(3)
                       l=l+1 ! ADE : One more point within the particle
                       WRITE(47,*)i,j,k ! use ListPointPlot3D[data,BoxRatios->{1,1,1}] in Mathematica to read this file
                       WRITE(14,*)l ! ADE : We write the number of lattice points occupied by the so-called particle
@@ -443,39 +443,39 @@ SUBROUTINE equilibration( jx, jy, jz)
                 ! the nodes, as we believe that the force will dissipate
                 ! within the walls
                 if (GL==-1) then
-                 where(f_ext_x==fext_tmp(1) .and. f_ext_y==fext_tmp(2).and.f_ext_z==fext_tmp(3) )
-                  f_ext_x = -fext_tmp(1)/(fluid_nodes) +f_ext_x/l
-                  f_ext_y = -fext_tmp(2)/(fluid_nodes) +f_ext_y/l
-                  f_ext_z = -fext_tmp(3)/(fluid_nodes) +f_ext_z/l
+                 where(fextx==fext_tmp(1) .and. fexty==fext_tmp(2).and.fextz==fext_tmp(3) )
+                  fextx = -fext_tmp(1)/(fluid_nodes) +fextx/l
+                  fexty = -fext_tmp(2)/(fluid_nodes) +fexty/l
+                  fextz = -fext_tmp(3)/(fluid_nodes) +fextz/l
                  else where
-                  f_ext_x = -fext_tmp(1)/(fluid_nodes)
-                  f_ext_y = -fext_tmp(2)/(fluid_nodes)
-                  f_ext_z = -fext_tmp(3)/(fluid_nodes)
+                  fextx = -fext_tmp(1)/(fluid_nodes)
+                  fexty = -fext_tmp(2)/(fluid_nodes)
+                  fextz = -fext_tmp(3)/(fluid_nodes)
                  end where
-                   if( any(abs([sum(f_ext_x)/fluid_nodes,sum(f_ext_y)/fluid_nodes,sum(f_ext_z)/fluid_nodes])> eps ) ) then
+                   if( any(abs([sum(fextx)/fluid_nodes,sum(fexty)/fluid_nodes,sum(fextz)/fluid_nodes])> eps ) ) then
                      print*,"ERROR: l.215 of equilibration.f90"
                      print*,"=====  The compensation is not well-implemented."
-                     print*,"       sum(f_ext_x)=",sum(f_ext_x)
-                     print*,"       sum(f_ext_y)=",sum(f_ext_y)
-                     print*,"       sum(f_ext_z)=",sum(f_ext_z)
+                     print*,"       sum(fextx)=",sum(fextx)
+                     print*,"       sum(fexty)=",sum(fexty)
+                     print*,"       sum(fextz)=",sum(fextz)
                      stop
                    end if
                 else
-                 where(f_ext_x==fext_tmp(1) .and. f_ext_y==fext_tmp(2) .and.f_ext_z==fext_tmp(3) )
-                  f_ext_x = f_ext_x/l
-                  f_ext_y = f_ext_y/l
-                  f_ext_z = f_ext_z/l
+                 where(fextx==fext_tmp(1) .and. fexty==fext_tmp(2) .and.fextz==fext_tmp(3) )
+                  fextx = fextx/l
+                  fexty = fexty/l
+                  fextz = fextz/l
                  else where
-                   f_ext_x = zerodp
-                   f_ext_y = zerodp
-                   f_ext_z = zerodp
+                   fextx = zerodp
+                   fexty = zerodp
+                   fextz = zerodp
                  end where
                 endif
 
                 where(nature/=fluid)
-                  f_ext_x = zerodp
-                  f_ext_y = zerodp
-                  f_ext_z = zerodp
+                  fextx = zerodp
+                  fexty = zerodp
+                  fextz = zerodp
                 end where
 
                 print*,"       I have applied a compensating background"
@@ -639,7 +639,7 @@ END DO
     open(91,file="./output/vel-field_central.dat")
     do i=1,lx
       do k=1,lz
-        WRITE(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
+        WRITE(90,*) i, k, fextx(i,py,k), fextz(i,py,k)
         WRITE(91,*) i, k,      jx(i,py,k),      jz(i,py,k)
       end do
     end do
