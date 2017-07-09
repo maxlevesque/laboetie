@@ -328,29 +328,30 @@ SUBROUTINE equilibration( jx, jy, jz)
         !##################
         !# SINGULAR FORCE #
         !##################
-        if( compensate_f_ext .and. convergence_reached_without_fext .and. t==tfext) then
-            open(90,file="./output/f_ext-field_t0.dat")
-            open(91,file="./output/vel-field_central_t0.dat")
-            do i=1,lx
-                do k=1,lz
-                    WRITE(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
-                    WRITE(91,*) i, k, jx(i,py,k), jz(i,py,k)
+        if( compensate_f_ext .and. convergence_reached_without_fext ) then
+            if( t==tfext ) then
+                open(90,file="./output/f_ext-field_t0.dat")
+                open(91,file="./output/vel-field_central_t0.dat")
+                do i=1,lx
+                    do k=1,lz
+                        WRITE(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
+                        WRITE(91,*) i, k, jx(i,py,k), jz(i,py,k)
+                    end do
                 end do
-            end do
-            close(90)
-            close(91)
-        end if
-        if( compensate_f_ext .and. convergence_reached_without_fext .and. t==tfext+1) then
-            open(90,file="./output/f_ext-field_t1.dat")
-            open(91,file="./output/vel-field_central_t1.dat")
-            do i=1,lx
-                do k=1,lz
-                    WRITE(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
-                    WRITE(91,*) i, k, jx(i,py,k), jz(i,py,k)
+                close(90)
+                close(91)
+            else if( t==tfext+1 ) then
+                open(90,file="./output/f_ext-field_t1.dat")
+                open(91,file="./output/vel-field_central_t1.dat")
+                do i=1,lx
+                    do k=1,lz
+                        WRITE(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
+                        WRITE(91,*) i, k, jx(i,py,k), jz(i,py,k)
+                    end do
                 end do
-            end do
-            close(90)
-            close(91)
+                close(90)
+                close(91)
+            end if
         end if
 
 
