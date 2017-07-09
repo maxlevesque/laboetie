@@ -27,7 +27,7 @@ SUBROUTINE equilibration( jx, jy, jz)
     logical :: convergenceIsReached, compensate_f_ext, convergenceIsReached_without_fext, convergenceIsReached_with_fext, err
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
     LOGICAL :: write_total_mass_flux
-    integer, allocatable :: il(:,:), jl(:,:), kl(:,:), l_inv(:)
+    integer, allocatable :: il(:,:), jl(:,:), kl(:,:)
     character(200) :: ifile
     LOGICAL :: RestartPNP = .TRUE.
     integer :: maxEquilibrationTimestep
@@ -88,12 +88,6 @@ SUBROUTINE equilibration( jx, jy, jz)
 
     allocate( density(lx,ly,lz), source=sum(n,4), stat=ios)
     if (ios /= 0) stop "density: Allocation request denied"
-
-    allocate( l_inv(lmin:lmax) , stat=ios)
-    if (ios /= 0) stop "l_inv: Allocation request denied"
-    do l = lmin, lmax
-        l_inv(l) = lbm%vel(l)%inv
-    end do
 
     if(.not.allocated(solute_force)) allocate(solute_force(lx,ly,lz,x:z),source=0.0_dp)
     allocate( jx_old (lx,ly,lz), source=0._dp )
@@ -354,6 +348,7 @@ SUBROUTINE equilibration( jx, jy, jz)
 
         ! select your branch
         if(convergenceIsReached) then
+            ! was it converged with or without the external forces
           if( .not.convergenceIsReached_without_fext ) then
             convergenceIsReached_without_fext = .true.
           else if( convergenceIsReached_without_fext ) then
