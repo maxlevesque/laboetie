@@ -1,7 +1,7 @@
 ! In this routine one wants to be sure that the total charges the user
 ! asks as input (tot_sol_charge) is kept constant during the simulation
 
-pure subroutine charge_test
+pure subroutine check_charge_conservation
 
   use precision_kinds, only: dp, sp
   use system, only: c_plus, c_minus, tot_sol_charge, fluid, solid, supercell, node
@@ -25,7 +25,7 @@ pure subroutine charge_test
   if( abs(solid_charge-tot_sol_charge) > tolerance .or. abs(fluid_charge+tot_sol_charge) > tolerance ) then
     ! print*,'abs(solid_charge-tot_sol_charge) = ',abs(solid_charge-tot_sol_charge)
     ! print*,'abs(fluid_charge+tot_sol_charge) = ',abs(fluid_charge+tot_sol_charge)
-    error stop 'charge is not conserved. check charge_test.f90. stop'
+    error stop 'charge is not conserved. check check_charge_conservation.f90. stop'
   end if
 
-end subroutine charge_test
+end subroutine check_charge_conservation

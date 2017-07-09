@@ -73,7 +73,7 @@ set(laboetie_SRCS
   src/module_advect.f90
   src/backup_phi_c_plus_c_minus.f90
   src/charges_init.f90
-  src/charge_test.f90
+  src/check_charge_conservation.f90
   src/check_charge_distribution_equilibrium.f90
   src/module_tracers.f90
   src/electrostatic_pot.f90

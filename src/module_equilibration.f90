@@ -296,30 +296,25 @@ SUBROUTINE equilibration( jx, jy, jz)
         jx_old = jx
         jy_old = jy
         jz_old = jz
-        IF( write_total_mass_flux ) WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ])
+        if( write_total_mass_flux ) write(65,*) t, real([  sum(jx), sum(jy), sum(jz)  ])
 
         call update_solventCurrent( jx, jy, jz, n, cx, cy, cz, F1, F2, F3)
-
         call advect( density, jx, jy, jz )
-
         call sor               ! compute the electric potential phi with the Successive OverRelation method (SOR)
-
         call electrostatic_pot ! Ade: The routine is called in order to compute Phi_tot which is used in smolu
-
         call smolu
+        call check_charge_conservation
 
-        call charge_test
-
-        write(1325,*) '# Iteration ', t
-        write(1326,*) '# Iteration ', t
-        write(1327,*) '# Iteration ', t
-        DO k=1,lz
-            write(1325,*) k, SUM(solute_force(:,:,k,1)) ! Ade : The fluid is moving in the y-direction whenever a slit 
-                                                        ! case is imposed, as the walls are located at z = 0 and z = L
-                                                        ! which is the reason why we are observing F_y(z). 2=>y and k=>z
-            write(1326,*) k, SUM(solute_force(:,:,k,2)) 
-            write(1327,*) k, SUM(solute_force(:,:,k,3)) 
-        ENDDO 
+        ! write(1325,*) '# Iteration ', t
+        ! write(1326,*) '# Iteration ', t
+        ! write(1327,*) '# Iteration ', t
+        ! DO k=1,lz
+        !     write(1325,*) k, SUM(solute_force(:,:,k,1)) ! Ade : The fluid is moving in the y-direction whenever a slit 
+        !                                                 ! case is imposed, as the walls are located at z = 0 and z = L
+        !                                                 ! which is the reason why we are observing F_y(z). 2=>y and k=>z
+        !     write(1326,*) k, SUM(solute_force(:,:,k,2)) 
+        !     write(1327,*) k, SUM(solute_force(:,:,k,3)) 
+        ! ENDDO 
 
 
 
