@@ -18,13 +18,13 @@ SUBROUTINE equilibration( jx, jy, jz)
     implicit none
     real(dp), intent(inout), dimension(:,:,:) :: jx, jy, jz
     integer :: t,i,j,k,l, lmin, lmax, pdr, pd, ios, px, py, pz, pCoord(3), lx, ly, lz
-    integer :: fluid_nodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency, GL, print_every
+    integer :: countFluidNodes, print_frequency, supercellgeometrylabel, tfext, print_files_frequency, GL, print_every, countNodesInParticle
     integer(kind(fluid)), allocatable, dimension(:,:,:) :: nature
     real(dp) :: fext_tmp(3), l2err, target_error, Jxx, Jyy, Jzz
     real(dp), allocatable, dimension(:,:,:) :: density, jx_old, jy_old, jz_old, fextx, fexty, fextz, F1, F2, F3
     real(dp), allocatable, dimension(:) :: a0, a1
     integer, allocatable, dimension(:) :: cx, cy, cz
-    logical :: convergenceIsReached, compensate_f_ext, convergenceIsReached_without_fext, convergenceIsReached_with_fext, err
+    logical :: convergenceIsReached, compensate_f_ext, convergenceIsReached_without_fext, convergenceIsReached_with_fext
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
     LOGICAL :: write_total_mass_flux
     integer, allocatable :: il(:,:), jl(:,:), kl(:,:)
@@ -81,7 +81,7 @@ SUBROUTINE equilibration( jx, jy, jz)
     print_every = getinput%int("print_every", defaultvalue=0) ! reads from lb.in file
                                                                  ! the frequency of printing time
                                                                  ! the default value needs to be changed eventually
-    fluid_nodes = count( node%nature==fluid )
+    countFluidNodes = count( node%nature==fluid )
 
     ! Max : I had 1.D-8 before ADE's modification (June 21)
     target_error = getinput%dp("target_error", 1.D-10)
@@ -358,167 +358,165 @@ SUBROUTINE equilibration( jx, jy, jz)
         end if
 
         !############################################
-        !# Apply external contraints (f_ext) or not #
+        !# Apply external contraints
         !############################################
         if( convergenceIsReached ) then
 
-          ! if you are already converged without then with f_ext then quit time loop. Stationary state is found.
-          if( convergenceIsReached_without_fext .and. convergenceIsReached_with_fext .and. t>2) then
-            exit ! loop over time steps
+            ! if you are already converged without then with f_ext then quit time loop. Stationary state is found.
+            if( convergenceIsReached_without_fext .and. convergenceIsReached_with_fext .and. t>2) then
+                exit ! loop over time steps
 
-          ! if you have already converged without fext, but not yet with fext, then enable fext
-          else if(convergenceIsReached_without_fext .and. .not.convergenceIsReached_with_fext) then
-            tfext=t+1
-            !################
-            !## READ f_ext ##
-            !################
-            fext_tmp = getinput%dp3("f_ext", defaultvalue= [0._dp,0._dp,0._dp] )
+            ! if you have already converged without fext, but not yet with fext, then enable fext
+            else if(convergenceIsReached_without_fext .and. .not.convergenceIsReached_with_fext) then
+                tfext=t+1
+                !################
+                !## READ f_ext ##
+                !################
+                fext_tmp = getinput%dp3("f_ext", defaultvalue= [0._dp,0._dp,0._dp] )
 
-            if(.not.compensate_f_ext) then ! the force is exerced everywhere with same intensity
-              where(nature==fluid)
-                fextx = fext_tmp(1)
-                fexty = fext_tmp(2)
-                fextz = fext_tmp(3)
-              end where
+                if(.not. compensate_f_ext) then ! the force is applied everywhere with same intensity, i.e., homogeneously
+                    ! We also apply the extrnal forces on the solid nodes. Nobody cares about constraints on solid nodes since density is zero there.
+                    fextx = fext_tmp(1)
+                    fexty = fext_tmp(2)
+                    fextz = fext_tmp(3)
+                    ! It is overkill to have a whole array of the same value.
 
-            else if(compensate_f_ext) then ! force applied to a central particle only
-                pd = getinput%int("dominika_particle_diameter",1)
-                print*,"       Dominika's particle has diameter (lb units)", pd
-                if( modulo(pd,2)==0 ) then
-                  print*,"ERROR: l. 285 particle diameter must be odd"
-                  print*,"-----  It is now",pd
-                  stop
-                end if
+                else if(compensate_f_ext) then ! force applied to a central particle only
+                    pd = getinput%int("dominika_particle_diameter",1)
+                    print*,"       Dominika's particle has diameter (lb units)", pd
+                    if( modulo(pd,2)==0 ) then
+                        print*,"ERROR: l. 285 particle diameter must be odd"
+                        print*,"-----  It is now",pd
+                        stop
+                    end if
 
-                if(modulo(lx,2)==0 .or. modulo(ly,2)==0 .or. modulo(lz,2)==0) then
-                  print*,"ERROR: l.158 of equilibration.f90"
-                  print*,"=====  when compensate_f_ext, there should be odd number of nodes in all directions"
-                  print*,"lx, ly, lz =",lx,ly,lz
-                  stop
-                end if
-                pdr = pd/2 ! nodes of the particle on the right (or left) of the particle center. If particle is diameter 3, we have 1 node on the left and 1 on the right, so pd=3, pdr=3/2=1
+                    if(modulo(lx,2)==0 .or. modulo(ly,2)==0 .or. modulo(lz,2)==0) then
+                        print*,"ERROR: l.158 of equilibration.f90"
+                        print*,"=====  when compensate_f_ext, there should be odd number of nodes in all directions"
+                        print*,"lx, ly, lz =",lx,ly,lz
+                        stop
+                    end if
+                    pdr = pd/2 ! nodes of the particle on the right (or left) of the particle center. If particle is diameter 3, we have 1 node on the left and 1 on the right, so pd=3, pdr=3/2=1
 
-                fextx = zerodp
-                fexty = zerodp
-                fextz = zerodp
+                    fextx = zerodp
+                    fexty = zerodp
+                    fextz = zerodp
 
-                l=0 ! ADE: l counts the number of node within the particle
-                err=.false.
-                open(47,file="output/dominika_particle_shape.xyz")
-                open(14,file="output/NodesInParticle.dat")
-                ! ADE : We read the particle coordinates from lb.in
-                pCoord = getinput%int3("particle_coordinates", defaultvalue=[lx/2+1,ly/2+1,lz/2+1] )
-                px = pCoord(1)
-                py = pCoord(2)
-                pz = pCoord(3)
+                    pCoord = getinput%int3("particle_coordinates", defaultvalue=[lx/2+1,ly/2+1,lz/2+1] )
+                    px = pCoord(1)
+                    py = pCoord(2)
+                    pz = pCoord(3)
 
-                do i=px-pdr,px+pdr
-                  do j=py-pdr,py+pdr
-                    do k=pz-pdr,pz+pdr
-                      if( norm2(real([ i-(px), j-(py), k-(pz) ],dp)) > real(pd,dp)/2._dp ) cycle
-                      if (nature(i,j,k)/=fluid) err=.true.
-                      fextx(i,j,k) = fext_tmp(1)
-                      fexty(i,j,k) = fext_tmp(2)
-                      fextz(i,j,k) = fext_tmp(3)
-                      l=l+1 ! ADE : One more point within the particle
-                      WRITE(47,*)i,j,k ! use ListPointPlot3D[data,BoxRatios->{1,1,1}] in Mathematica to read this file
-                      WRITE(14,*)l ! ADE : We write the number of lattice points occupied by the so-called particle
+                    open(47, file = "./output/dominika_particle_shape.xyz")
+                    countNodesInParticle=0 ! ADE: l counts the number of node within the particle
+                    do k = pz-pdr, pz+pdr
+                        do j = py-pdr, py+pdr
+                            do i = px-pdr, px+pdr
+                                if( (i-px)**2+(j-py)**2+(k-pz)**2 > pdr**2 ) then
+                                    cycle ! node (i,j,k) is outside the particle 
+                                else
+                                    if ( nature(i,j,k) /= fluid ) then
+                                        error stop "The so-called Dominika's particle contains solid nodes"
+                                    end if
+                                    countNodesInParticle = countNodesInParticle + 1 ! One more node within the particle
+                                    fextx(i,j,k) = fext_tmp(1) ! apply the user requestd force to this node that is inside the particle
+                                    fexty(i,j,k) = fext_tmp(2)
+                                    fextz(i,j,k) = fext_tmp(3)
+                                    write(47,*) i, j, k ! use ListPointPlot3D[data,BoxRatios->{1,1,1}] in Mathematica to read this file
+                                end if
+                            end do
+                        end do
                     end do
-                  end do
-                end do
-                close(14)
-                close(47)
-                if(err.eqv..true.) then
-                  print*,"ERROR: l306 of equilibration.f90. Dominika's particle at a solid node"
-                  stop
-                end if
+                    close(47)
 
-                ! ADE: We distribute the total force upon the particle evenly
-                ! throughout the various nodes
-                GL = getinput%int("geometryLabel", defaultvalue=0) ! if GL=-1 =>bulk case
-                print*, " GL = ", GL
-                ! ADE : I modified the following lines
-                ! the idea is that whenever we have a slit kind of geometry,
-                ! we do not want to add a compensation force in the rest of
-                ! the nodes, as we believe that the force will dissipate
-                ! within the walls
-                if (GL==-1) then
-                 where(fextx==fext_tmp(1) .and. fexty==fext_tmp(2).and.fextz==fext_tmp(3) )
-                  fextx = -fext_tmp(1)/(fluid_nodes) +fextx/l
-                  fexty = -fext_tmp(2)/(fluid_nodes) +fexty/l
-                  fextz = -fext_tmp(3)/(fluid_nodes) +fextz/l
-                 else where
-                  fextx = -fext_tmp(1)/(fluid_nodes)
-                  fexty = -fext_tmp(2)/(fluid_nodes)
-                  fextz = -fext_tmp(3)/(fluid_nodes)
-                 end where
-                   if( any(abs([sum(fextx)/fluid_nodes,sum(fexty)/fluid_nodes,sum(fextz)/fluid_nodes])> eps ) ) then
-                     print*,"ERROR: l.215 of equilibration.f90"
-                     print*,"=====  The compensation is not well-implemented."
-                     print*,"       sum(fextx)=",sum(fextx)
-                     print*,"       sum(fexty)=",sum(fexty)
-                     print*,"       sum(fextz)=",sum(fextz)
-                     stop
-                   end if
-                else
-                 where(fextx==fext_tmp(1) .and. fexty==fext_tmp(2) .and.fextz==fext_tmp(3) )
-                  fextx = fextx/l
-                  fexty = fexty/l
-                  fextz = fextz/l
-                 else where
-                   fextx = zerodp
-                   fexty = zerodp
-                   fextz = zerodp
-                 end where
-                endif
+                    ! ADE: We distribute the total force upon the particle evenly
+                    ! throughout the various nodes
+                    GL = getinput%int("geometryLabel", defaultvalue=0) ! if GL=-1 =>bulk case
 
-                where(nature/=fluid)
-                  fextx = zerodp
-                  fexty = zerodp
-                  fextz = zerodp
-                end where
+                    ! ADE : I modified the following lines
+                    ! the idea is that whenever we have a slit kind of geometry,
+                    ! we do not want to add a compensation force in the rest of
+                    ! the nodes, as we believe that the force will dissipate
+                    ! within the walls
+                    if (GL==-1) then
+                        where(fextx==fext_tmp(1) .and. fexty==fext_tmp(2).and.fextz==fext_tmp(3) )
+                            fextx = -fext_tmp(1)/(countFluidNodes) + fext_tmp(1) / countNodesInParticle
+                            fexty = -fext_tmp(2)/(countFluidNodes) + fext_tmp(2) / countNodesInParticle
+                            fextz = -fext_tmp(3)/(countFluidNodes) + fext_tmp(3) / countNodesInParticle
+                        else where
+                            fextx = -fext_tmp(1)/(countFluidNodes)
+                            fexty = -fext_tmp(2)/(countFluidNodes)
+                            fextz = -fext_tmp(3)/(countFluidNodes)
+                        end where
+                        if( any(abs([sum(fextx)/countFluidNodes,sum(fexty)/countFluidNodes,sum(fextz)/countFluidNodes])> eps ) ) then
+                            print*,"ERROR: l.215 of equilibration.f90"
+                            print*,"=====  The compensation is not well-implemented."
+                            print*,"       sum(fextx)=",sum(fextx)
+                            print*,"       sum(fexty)=",sum(fexty)
+                            print*,"       sum(fextz)=",sum(fextz)
+                            stop
+                        end if
+                    else
+                        where(fextx==fext_tmp(1) .and. fexty==fext_tmp(2) .and.fextz==fext_tmp(3) )
+                            fextx = fextx / countNodesInParticle
+                            fexty = fexty / countNodesInParticle
+                            fextz = fextz / countNodesInParticle
+                        else where
+                            fextx = zerodp
+                            fexty = zerodp
+                            fextz = zerodp
+                        end where
+                    endif
 
-                print*,"       I have applied a compensating background"
-            end if
-          end if
-        end if
+                    where(nature/=fluid)
+                        fextx = zerodp
+                        fexty = zerodp
+                        fextz = zerodp
+                    end where
+
+                    print*," I have applied a compensating background"
+                end if ! compensate
+
+          end if  ! else if(convergenceIsReached_without_fext .and. .not.convergenceIsReached_with_fext) then
+        end if ! if( convergenceIsReached ) then
+        
+        
         !#########################
         !# END OF SINGULAR FORCE #
         !#########################
-     
-        ! ADE : I added the following lines in order to write every so often the flux/velocity field values
-        ! (j = rho*v), so that we can observe the trainsient time behaviour of the flow field.
-
-        !print*, 't=',t,'mod=',mod(t,print_every) 
-        if ((print_every.gt.0).and.(mod(t,print_every)==0)) then ! we divide "print_every" by the iteration time step. When remainder is zero
-	                                                         ! the velocity field is written on vel-fieldTIME_*.dat (*=1,2,3,4,....)
-        if( compensate_f_ext ) then
-            write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
-            open(92,file=TRIM(ADJUSTL(ifile)))
-            do i=1,lx
-                do k=1,lz
-                    WRITE(92,*) i, k, jx(i,py,k), jz(i,py,k)
-                    !print*, i, k, jx(i,py,k), jz(i,py,k)
+        if ((print_every.gt.0).and.(mod(t,print_every)==0)) then 
+            ! ADE : I added the following lines in order to write every so often the flux/velocity field values
+            ! (j = rho*v), so that we can observe the trainsient time behaviour of the flow field.
+            ! print*, 't=',t,'mod=',mod(t,print_every) 
+            ! we divide "print_every" by the iteration time step. When remainder is zero
+            ! the velocity field is written on vel-fieldTIME_*.dat (*=1,2,3,4,....)
+            if( compensate_f_ext ) then
+                write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
+                open(92,file=TRIM(ADJUSTL(ifile)))
+                do i=1,lx
+                    do k=1,lz
+                        WRITE(92,*) i, k, jx(i,py,k), jz(i,py,k)
+                        !print*, i, k, jx(i,py,k), jz(i,py,k)
+                    end do
                 end do
-            end do
-            close(92)
-        else
-            write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
-            !print*,TRIM(ADJUSTL(ifile))
-            open(92,file=TRIM(ADJUSTL(ifile)))
-            GL = getinput%int("geometryLabel", defaultvalue=0) ! if GL=-1 =>bulk case
-            if(GL==2) then 
-                do j=1,ly
-                    WRITE(92,*) j, sum(jx(:,j,:)), sum(jy(:,j,:)), sum(jz(:,j,:))
-                end do
+                close(92)
             else
-                do k=1,lz
-                    WRITE(92,*) k, sum(jx(:,:,k)), sum(jy(:,:,k)), sum(jz(:,:,k))
-                end do
-            end if 
-            close(92)
-        end if
-    endif
+                write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
+                !print*,TRIM(ADJUSTL(ifile))
+                open(92,file=TRIM(ADJUSTL(ifile)))
+                GL = getinput%int("geometryLabel", defaultvalue=0) ! if GL=-1 =>bulk case
+                if(GL==2) then 
+                    do j=1,ly
+                        WRITE(92,*) j, sum(jx(:,j,:)), sum(jy(:,j,:)), sum(jz(:,j,:))
+                    end do
+                else
+                    do k=1,lz
+                        WRITE(92,*) k, sum(jx(:,:,k)), sum(jy(:,:,k)), sum(jz(:,:,k))
+                    end do
+                end if 
+                close(92)
+            end if
+        endif
 
   end do ! end of temporal loop
 
