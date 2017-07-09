@@ -284,14 +284,11 @@ SUBROUTINE equilibration( jx, jy, jz)
         !###############
         IF( ANY(n<0) ) ERROR STOP "In equilibration, the population n(x,y,z,vel) < 0"
 
-        !
-        ! Finally update densities after the propagation and check it
-        ! Densities are the sum of all velocities of a local population
-        !
+        !###############
+        !# UPDATE DENSITIES
+        !# Remember: Density(x,y,z) is the first moment of the populations(x,y,z,v): it is the weighted sum over the velocities
+        !################
         density = SUM(n,4)
-
-        ! WRITE the total density
-        IF( write_total_mass_flux ) WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ])
 
         !
         ! backup moment density (velocities) to test convergence at the end of the timestep
@@ -299,12 +296,13 @@ SUBROUTINE equilibration( jx, jy, jz)
         jx_old = jx
         jy_old = jy
         jz_old = jz
+        IF( write_total_mass_flux ) WRITE(65,*) t, REAL([  SUM(jx), SUM(jy), SUM(jz)  ])
 
         call update_solventCurrent( jx, jy, jz, n, cx, cy, cz, F1, F2, F3)
 
         call advect( density, jx, jy, jz )
 
-        call sor    ! compute the electric potential phi with the Successive OverRelation method (SOR)
+        call sor               ! compute the electric potential phi with the Successive OverRelation method (SOR)
 
         call electrostatic_pot ! Ade: The routine is called in order to compute Phi_tot which is used in smolu
 
