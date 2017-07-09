@@ -296,9 +296,8 @@ SUBROUTINE equilibration( jx, jy, jz)
         jx_old = jx
         jy_old = jy
         jz_old = jz
-        if( write_total_mass_flux ) write(65,*) t, real([  sum(jx), sum(jy), sum(jz)  ])
 
-        call update_solventCurrent( jx, jy, jz, n, cx, cy, cz, F1, F2, F3)
+        call update_solventCurrent( jx, jy, jz, n, cx, cy, cz, F1, F2, F3, t, write_total_mass_flux)
         call advect( density, jx, jy, jz )
         call sor               ! compute the electric potential phi with the Successive OverRelation method (SOR)
         call electrostatic_pot ! Ade: The routine is called in order to compute Phi_tot which is used in smolu
@@ -351,38 +350,7 @@ SUBROUTINE equilibration( jx, jy, jz)
         !#####################
         !# check convergence #
         !#####################
-        open(13,file="./output/l2err.dat")
-        l2err = maxval([maxval(abs(jx-jx_old)), &
-                        maxval(abs(jy-jy_old)), &
-                        maxval(abs(jz-jz_old)) &
-                       ])
-        write(13,*) t, l2err
-
-! convergence_reached = .false. ! by default
-! if( t > 2 ) then
-!     if( check_convergence( jx, jx_old ) ) then
-!         if( check_convergence( jy, jy_old ) ) then
-!             if( check_convergence( jz, jz_old ) ) then
-!                 convergence_reached = .true.
-!             end if
-!         end if
-!     end if
-! end if
-
-! pure function check_convergence( A, A_old, criteria )
-!     implicit none
-!     logical :: convergence_reached
-!     real(dp) :: l2err
-!     if( maxval(abs(A-A_old)) <= criteria ) check_convergence = .true.
-! end function check_convergence
-
-        if( l2err <= target_error .and. t>2 ) then
-          convergence_reached = .true.
-        else
-          convergence_reached = .false.
-        end if
-
-
+        call check_convergence(t, target_error, l2err, jx, jy, jz, jx_old, jy_old, jz_old, convergence_reached )
 
         ! select your branch
         if(convergence_reached) then
@@ -689,13 +657,15 @@ END DO
 
 end subroutine equilibration
 
-subroutine update_solventCurrent( jx, jy, jz, n, cx, cy, cz, F1, F2, F3)
+subroutine update_solventCurrent( jx, jy, jz, n, cx, cy, cz, F1, F2, F3, timestep, write_total_mass_flux)
     use precision_kinds, only: dp
     implicit none
     real(dp), intent(inout), dimension(:,:,:) :: jx, jy, jz
     real(dp), intent(in) :: n(:,:,:,:), F1(:,:,:), F2(:,:,:), F3(:,:,:)
     integer, intent(in) :: cx(:), cy(:), cz(:)
+    integer, intent(in) :: timestep
     integer :: lmin, lmax, l
+    logical, intent(in) :: write_total_mass_flux
     lmin = lbound(cx,1)
     lmax = ubound(cx,1)
     ! update momentum densities after the propagation
@@ -715,6 +685,33 @@ subroutine update_solventCurrent( jx, jy, jz, n, cx, cy, cz, F1, F2, F3)
         jz = jz +n(:,:,:,l)*cz(l)
     end do
     !$OMP END PARALLEL DO
+    if( write_total_mass_flux ) write(65,*) timestep, real([  sum(jx), sum(jy), sum(jz)  ])
 end subroutine update_solventCurrent
+
+
+subroutine check_convergence( timestep, target_error, l2err, jx, jy, jz, jx_old, jy_old, jz_old, convergence_reached )
+    use precision_kinds, only: dp
+    implicit none
+    logical :: itIsOpen
+    real(dp) :: maxjx, maxjy, maxjz
+    real(dp), intent(inout) :: l2err
+    real(dp), intent(in), dimension(:,:,:) :: jx, jy, jz, jx_old, jy_old, jz_old
+    logical, intent(out) :: convergence_reached
+    character(18), parameter :: filename = "./output/l2err.dat"
+    integer, intent(in) :: timestep
+    real(dp), intent(in) :: target_error
+    inquire(file=filename, opened=itIsOpen)
+    if(.not. itIsOpen) open(13,file=filename)
+    maxjx = maxval(abs(jx-jx_old))
+    maxjy = maxval(abs(jy-jy_old))
+    maxjz = maxval(abs(jz-jz_old))
+    l2err = max(maxjx, maxjy, maxjz)
+    write(13,*) timestep, l2err
+    if( l2err <= target_error .and. timestep > 2 ) then
+        convergence_reached = .true.
+    else
+        convergence_reached = .false.
+    end if
+end subroutine check_convergence
 
 end module module_equilibration
