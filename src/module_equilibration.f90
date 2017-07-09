@@ -24,7 +24,7 @@ SUBROUTINE equilibration( jx, jy, jz)
     real(dp), allocatable, dimension(:,:,:) :: density, jx_old, jy_old, jz_old, f_ext_x, f_ext_y, f_ext_z, F1, F2, F3
     real(dp), allocatable, dimension(:) :: a0, a1
     integer, allocatable, dimension(:) :: cx, cy, cz
-    logical :: convergence_reached, compensate_f_ext, convergence_reached_without_fext, convergence_reached_with_fext, err
+    logical :: convergenceIsReached, compensate_f_ext, convergenceIsReached_without_fext, convergenceIsReached_with_fext, err
     REAL(dp), PARAMETER :: eps=EPSILON(1._dp)
     LOGICAL :: write_total_mass_flux
     integer, allocatable :: il(:,:), jl(:,:), kl(:,:), l_inv(:)
@@ -144,8 +144,8 @@ SUBROUTINE equilibration( jx, jy, jz)
         kl(l,:) = [( pbc(k+cz(l),z) ,k=1,lz )]
     end do
 
-    convergence_reached_without_fext = .false.
-    convergence_reached_with_fext = .false.
+    convergenceIsReached_without_fext = .false.
+    convergenceIsReached_with_fext = .false.
     
     compensate_f_ext = getinput%log( "compensate_f_ext", defaultvalue = .false.)
     if(compensate_f_ext) then
@@ -232,7 +232,7 @@ SUBROUTINE equilibration( jx, jy, jz)
         ! Ade: By doing so, we can apply a force fx or fy in order to analyse and observe the velocity streamlines around
         ! the particle in the output file v_centralnode.dat.
         !
-        if( compensate_f_ext .and. convergence_reached_without_fext) then
+        if( compensate_f_ext .and. convergenceIsReached_without_fext) then
             if(px<=0 .or. py<=0 .or. pz<=0) error stop "px, py or pz is not valid in equilibration.f90"
             write(79,*)t-tfext, jx(px,py,pz), jy(px,py,pz), jz(px,py,pz)
             write(80,*)t-tfext, density(px,py,pz)
@@ -320,7 +320,7 @@ SUBROUTINE equilibration( jx, jy, jz)
         !##################
         !# SINGULAR FORCE #
         !##################
-        if( compensate_f_ext .and. convergence_reached_without_fext ) then
+        if( compensate_f_ext .and. convergenceIsReached_without_fext ) then
             block
                 character(27) :: filename1
                 character(33) :: filename2
@@ -350,14 +350,14 @@ SUBROUTINE equilibration( jx, jy, jz)
         !#####################
         !# check convergence #
         !#####################
-        call check_convergence(t, target_error, l2err, jx, jy, jz, jx_old, jy_old, jz_old, convergence_reached )
+        call check_convergence(t, target_error, l2err, jx, jy, jz, jx_old, jy_old, jz_old, convergenceIsReached )
 
         ! select your branch
-        if(convergence_reached) then
-          if( .not.convergence_reached_without_fext ) then
-            convergence_reached_without_fext = .true.
-          else if( convergence_reached_without_fext ) then
-            convergence_reached_with_fext = .true.
+        if(convergenceIsReached) then
+          if( .not.convergenceIsReached_without_fext ) then
+            convergenceIsReached_without_fext = .true.
+          else if( convergenceIsReached_without_fext ) then
+            convergenceIsReached_with_fext = .true.
           else
             print*,"ERROR: l.530 of equilibration.f90"
             print*,"=====  I did not anticipate this possibility. Review your if tree."
@@ -368,14 +368,14 @@ SUBROUTINE equilibration( jx, jy, jz)
         !############################################
         !# Apply external contraints (f_ext) or not #
         !############################################
-        if( convergence_reached ) then
+        if( convergenceIsReached ) then
 
           ! if you are already converged without then with f_ext then quit time loop. Stationary state is found.
-          if( convergence_reached_without_fext .and. convergence_reached_with_fext .and. t>2) then
+          if( convergenceIsReached_without_fext .and. convergenceIsReached_with_fext .and. t>2) then
             exit ! loop over time steps
 
           ! if you have already converged without fext, but not yet with fext, then enable fext
-          else if(convergence_reached_without_fext .and. .not.convergence_reached_with_fext) then
+          else if(convergenceIsReached_without_fext .and. .not.convergenceIsReached_with_fext) then
             tfext=t+1
             !################
             !## READ f_ext ##
@@ -689,14 +689,14 @@ subroutine update_solventCurrent( jx, jy, jz, n, cx, cy, cz, F1, F2, F3, timeste
 end subroutine update_solventCurrent
 
 
-subroutine check_convergence( timestep, target_error, l2err, jx, jy, jz, jx_old, jy_old, jz_old, convergence_reached )
+subroutine check_convergence( timestep, target_error, l2err, jx, jy, jz, jx_old, jy_old, jz_old, convergenceIsReached )
     use precision_kinds, only: dp
     implicit none
     logical :: itIsOpen
     real(dp) :: maxjx, maxjy, maxjz
     real(dp), intent(inout) :: l2err
     real(dp), intent(in), dimension(:,:,:) :: jx, jy, jz, jx_old, jy_old, jz_old
-    logical, intent(out) :: convergence_reached
+    logical, intent(out) :: convergenceIsReached
     character(18), parameter :: filename = "./output/l2err.dat"
     integer, intent(in) :: timestep
     real(dp), intent(in) :: target_error
@@ -708,9 +708,9 @@ subroutine check_convergence( timestep, target_error, l2err, jx, jy, jz, jx_old,
     l2err = max(maxjx, maxjy, maxjz)
     write(13,*) timestep, l2err
     if( l2err <= target_error .and. timestep > 2 ) then
-        convergence_reached = .true.
+        convergenceIsReached = .true.
     else
-        convergence_reached = .false.
+        convergenceIsReached = .false.
     end if
 end subroutine check_convergence
 
