@@ -309,6 +309,7 @@ SUBROUTINE equilibration( jx, jy, jz)
         call smolu
 
         call charge_test
+
         write(1325,*) '# Iteration ', t
         write(1326,*) '# Iteration ', t
         write(1327,*) '# Iteration ', t
@@ -322,36 +323,33 @@ SUBROUTINE equilibration( jx, jy, jz)
 
 
 
-        !--------------------------------- ADE -----------------------------------------------------------------
-
-
         !##################
         !# SINGULAR FORCE #
         !##################
         if( compensate_f_ext .and. convergence_reached_without_fext ) then
-            if( t==tfext ) then
-                open(90,file="./output/f_ext-field_t0.dat")
-                open(91,file="./output/vel-field_central_t0.dat")
-                do i=1,lx
-                    do k=1,lz
-                        WRITE(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
-                        WRITE(91,*) i, k, jx(i,py,k), jz(i,py,k)
+            block
+                character(27) :: filename1
+                character(33) :: filename2
+                if( t==tfext ) then
+                    filename1 = "./output/f_ext-field_t0.dat"
+                    filename2 = "./output/vel-field_central_t0.dat"
+                else if( t==tfext+1 ) then
+                    filename1 = "./output/f_ext-field_t1.dat"
+                    filename2 = "./output/vel-field_central_t1.dat"
+                end if
+                if( t==tfext .or. t==tfext+1 ) then
+                    open(90, file=filename1 )
+                    open(91, file=filename2 )
+                    do i=1,lx
+                        do k=1,lz
+                            write(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
+                            write(91,*) i, k, jx(i,py,k), jz(i,py,k)
+                        end do
                     end do
-                end do
-                close(90)
-                close(91)
-            else if( t==tfext+1 ) then
-                open(90,file="./output/f_ext-field_t1.dat")
-                open(91,file="./output/vel-field_central_t1.dat")
-                do i=1,lx
-                    do k=1,lz
-                        WRITE(90,*) i, k, f_ext_x(i,py,k), f_ext_z(i,py,k)
-                        WRITE(91,*) i, k, jx(i,py,k), jz(i,py,k)
-                    end do
-                end do
-                close(90)
-                close(91)
-            end if
+                    close(90)
+                    close(91)
+                end if
+            end block
         end if
 
 
