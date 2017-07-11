@@ -45,7 +45,6 @@ SUBROUTINE equilibration( jx, jy, jz)
     open(1325, file = "output/SFXtime.dat")
     open(1326, file = "output/SFYtime.dat")
     open(1327, file = "output/SFZtime.dat")
-    open(1328, file = "output/Ligne2Courant.dat")
     open(325, file = "output/phi.dat")
     open(387, file = "output/phiAVANT.dat")
     open(388, file = "output/phiAPRES.dat")
@@ -167,29 +166,16 @@ SUBROUTINE equilibration( jx, jy, jz)
     l2err = -1
 
 
-    maxEquilibrationTimestep = getinput%int( 't_equil' , defaultvalue = -1)
-    ! We start by equilibrating the densities, fluxes and other moments without the external forces.
-    ! This equilibration step is done up to equilibration 
-    ! or if the timestep t gets higher than a maximum value called maxEquilibrationTimestep
 
 
     !
     ! TIME STEPS (in lb units)
     !
     do t = 1, huge(t)
-        if( t < maxEquilibrationTimestep ) then
-            fextx = zerodp
-            fexty = zerodp
-            fextz = zerodp
-        ! else
-        !     fextx = fext_tmp(1) ! Max: as I understand this, fext_tmp(1:3)=0 but if convergence is reached. Once convergence is reached, we read fext_tmp from input file.
-        !     fexty = fext_tmp(2)
-        !     fextz = fext_tmp(3)
-        endif
 
-        ! !
-        ! ! Print sdtout timestep, etc.
-        ! !
+        ! 
+        ! Print sdtout timestep, etc.
+        ! 
         if( modulo(t, print_frequency) == 0) PRINT*, t, real(l2err),"(target",real(target_error,4),")"
 
         !
@@ -227,37 +213,8 @@ SUBROUTINE equilibration( jx, jy, jz)
         ! the particle in the output file v_centralnode.dat.
         !
         
-        ! if( compensate_f_ext .and. convergenceIsReached_without_fext) then
-        !     block
-        !         integer :: particleCoordinates(3), px, pz, py
-        !         particleCoordinates = getinput%int3("particle_coordinates", defaultvalue=[lx/2+1,ly/2+1,lz/2+1] )
-        !         px = particleCoordinates(1)
-        !         py = particleCoordinates(2)
-        !         pz = particleCoordinates(3)
-        !         if(px<=0 .or. py<=0 .or. pz<=0) error stop "px, py or pz is not valid in equilibration.f90"
-        !         write(79,*)t-tfext, jx(px,py,pz), jy(px,py,pz), jz(px,py,pz)
-        !         write(80,*)t-tfext, density(px,py,pz)
-        !     end block
-        ! end if
-
-
-        !--------------------------------- ADE -----------------------------------------------------------------
-        ! Ade : BEGIN OF MODIF 17/01/17
-
         ! f_ext is obtained reading input file lb.in (=> pressure gradient)
         ! solute_force is computed in smolu.f90
-
-        ! write(316,*) 't =', t
-        ! write(323,*) 't =', t
-        ! write(324,*) 't =', t
-        ! DO k=1,lz
-        !     write(316,*) k, SUM(solute_force(:,:,k,1)) ! Ade : The fluid is moving in the y-direction whenever a slit 
-        !                                                 ! case is imposed, as the walls are located at z = 0 and z = L
-        !                                                 ! which is the reason why we are observing F_y(z). 2=>y and k=>z
-        !     write(323,*) k, SUM(solute_force(:,:,k,2)) ! Ade : The fluid is moving in the y-direction whenever a slit 
-        !     write(324,*) k, SUM(solute_force(:,:,k,3)) ! Ade : The fluid is moving in the y-direction whenever a slit 
-        ! END DO
-
 
         F1(:,:,:)  = fextx(:,:,:) + solute_force(:,:,:,1)
         F2(:,:,:)  = fexty(:,:,:) + solute_force(:,:,:,2)
@@ -304,49 +261,6 @@ SUBROUTINE equilibration( jx, jy, jz)
         call smolu
         call check_charge_conservation
 
-        ! write(1325,*) '# Iteration ', t
-        ! write(1326,*) '# Iteration ', t
-        ! write(1327,*) '# Iteration ', t
-        ! DO k=1,lz
-        !     write(1325,*) k, SUM(solute_force(:,:,k,1)) ! Ade : The fluid is moving in the y-direction whenever a slit 
-        !                                                 ! case is imposed, as the walls are located at z = 0 and z = L
-        !                                                 ! which is the reason why we are observing F_y(z). 2=>y and k=>z
-        !     write(1326,*) k, SUM(solute_force(:,:,k,2)) 
-        !     write(1327,*) k, SUM(solute_force(:,:,k,3)) 
-        ! ENDDO 
-
-
-
-        !##################
-        !# SINGULAR FORCE #
-        !##################
-        ! if( compensate_f_ext .and. convergenceIsReached_without_fext ) then
-        !     block
-        !         character(27) :: filename1
-        !         character(33) :: filename2
-        !         if( t==tfext ) then
-        !             filename1 = "./output/f_ext-field_t0.dat"
-        !             filename2 = "./output/vel-field_central_t0.dat"
-        !         else if( t==tfext+1 ) then
-        !             filename1 = "./output/f_ext-field_t1.dat"
-        !             filename2 = "./output/vel-field_central_t1.dat"
-        !         end if
-        !         if( t==tfext .or. t==tfext+1 ) then
-        !             open(90, file=filename1 )
-        !             open(91, file=filename2 )
-        !             do i=1,lx
-        !                 do k=1,lz
-        !                     write(90,*) i, k, fextx(i,py,k), fextz(i,py,k)
-        !                     write(91,*) i, k, jx(i,py,k), jz(i,py,k)
-        !                 end do
-        !             end do
-        !             close(90)
-        !             close(91)
-        !         end if
-        !     end block
-        ! end if
-
-
         !#####################
         !# check convergence #
         !#####################
@@ -378,41 +292,6 @@ SUBROUTINE equilibration( jx, jy, jz)
             end if  ! else if(convergenceIsReached_without_fext .and. .not.convergenceIsReached_with_fext) then
         end if ! if( convergenceIsReached ) then
         
-        ! print whatever you want        
-        ! if ((print_every.gt.0).and.(mod(t,print_every)==0)) then 
-        !     ! ADE : I added the following lines in order to write every so often the flux/velocity field values
-        !     ! (j = rho*v), so that we can observe the trainsient time behaviour of the flow field.
-        !     ! print*, 't=',t,'mod=',mod(t,print_every) 
-        !     ! we divide "print_every" by the iteration time step. When remainder is zero
-        !     ! the velocity field is written on vel-fieldTIME_*.dat (*=1,2,3,4,....)
-        !     if( compensate_f_ext ) then
-        !         write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
-        !         open(92,file=TRIM(ADJUSTL(ifile)))
-        !         do i=1,lx
-        !             do k=1,lz
-        !                 WRITE(92,*) i, k, jx(i,py,k), jz(i,py,k)
-        !                 !print*, i, k, jx(i,py,k), jz(i,py,k)
-        !             end do
-        !         end do
-        !         close(92)
-        !     else
-        !         write(ifile,'(a,i0,a)') './output/vel-fieldTIME_', t,'.dat'
-        !         !print*,TRIM(ADJUSTL(ifile))
-        !         open(92,file=TRIM(ADJUSTL(ifile)))
-        !         GL = getinput%int("geometryLabel", defaultvalue=0) ! if GL=-1 =>bulk case
-        !         if(GL==2) then 
-        !             do j=1,ly
-        !                 WRITE(92,*) j, sum(jx(:,j,:)), sum(jy(:,j,:)), sum(jz(:,j,:))
-        !             end do
-        !         else
-        !             do k=1,lz
-        !                 WRITE(92,*) k, sum(jx(:,:,k)), sum(jy(:,:,k)), sum(jz(:,:,k))
-        !             end do
-        !         end if 
-        !         close(92)
-        !     end if
-        ! endif
-
   end do ! end of temporal loop
 
 
@@ -476,42 +355,41 @@ end if
     CLOSE(56)
  
  ! 2. Solute Force
- DO k=1,lz
-     write(1316,*) k, SUM(solute_force(:,:,k,1)) ! Ade : The fluid is moving in the y-direction whenever a slit 
+DO k=1,lz
+    write(1316,*) k, SUM(solute_force(:,:,k,1)) ! Ade : The fluid is moving in the y-direction whenever a slit 
                                                  ! case is imposed, as the walls are located at z = 0 and z = L
                                                  ! which is the reason why we are observing F_y(z). 2=>y and k=>z
-     write(1323,*) k, SUM(solute_force(:,:,k,2)) 
-     write(1324,*) k, SUM(solute_force(:,:,k,3)) 
- ENDDO 
-  close(1316)
-  close(1323)
-  close(1324)
+    write(1323,*) k, SUM(solute_force(:,:,k,2)) 
+    write(1324,*) k, SUM(solute_force(:,:,k,3)) 
+ENDDO 
+close(1316)
+close(1323)
+close(1324)
 
  ! 3. Potential PHI
 DO k=1,lz
     write(325,*) k, SUM(phi(:,:,k)) 
 END DO
-  close(325)
+close(325)
 
-  close(79)
-  close(80)
-  CLOSE(65)
-  CLOSE(89)
-  CLOSE(90)
-  CLOSE(91)
-  close(316)
-  close(323)
-  close(324)
- close(387)
- close(388)
- close(389)
-  close(1325)
-  close(1326)
-  close(1327)
-  close(1328)
-  close(1389)
-  close(1390)
-  close(1391)
+close(79)
+close(80)
+CLOSE(65)
+CLOSE(89)
+CLOSE(90)
+CLOSE(91)
+close(316)
+close(323)
+close(324)
+close(387)
+close(388)
+close(389)
+close(1325)
+close(1326)
+close(1327)
+close(1389)
+close(1390)
+close(1391)
 
 
   !
@@ -576,6 +454,7 @@ end subroutine update_solventCurrent
 
 subroutine check_convergence( timestep, target_error, l2err, jx, jy, jz, jx_old, jy_old, jz_old, convergenceIsReached )
     use precision_kinds, only: dp
+    use module_input, only: getinput
     implicit none
     logical :: itIsOpen
     real(dp) :: maxjx, maxjy, maxjz
@@ -585,6 +464,15 @@ subroutine check_convergence( timestep, target_error, l2err, jx, jy, jz, jx_old,
     character(18), parameter :: filename = "./output/l2err.dat"
     integer, intent(in) :: timestep
     real(dp), intent(in) :: target_error
+    integer :: maxEquilibrationTimestep
+
+    maxEquilibrationTimestep = getinput%int( 'maxEquilibrationTimestep' , defaultvalue = huge(1))
+    if( timestep > maxEquilibrationTimestep ) then
+        error stop "You reached the maximum number of iterations allowed before convergence, as defined in input"
+    end if
+    ! We start by equilibrating the densities, fluxes and other moments without the external forces.
+    ! This equilibration step is done up to equilibration 
+    ! or if the timestep t gets higher than a maximum value called maxEquilibrationTimestep
     inquire(file=filename, opened=itIsOpen)
     if(.not. itIsOpen) open(13,file=filename)
     maxjx = maxval(abs(jx-jx_old))
