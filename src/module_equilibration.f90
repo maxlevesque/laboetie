@@ -7,7 +7,7 @@ contains
 SUBROUTINE equilibration( jx, jy, jz)
 
     USE precision_kinds, only: dp
-    USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, phi
+    USE system, only: fluid, supercell, node, lbm, n, pbc, solute_force, phi, c_plus, c_minus
     use module_collision, only: collide
     use module_input, only: getinput
     USE constants, only: x, y, z
@@ -30,7 +30,7 @@ SUBROUTINE equilibration( jx, jy, jz)
     LOGICAL :: write_total_mass_flux
     integer, allocatable :: il(:,:), jl(:,:), kl(:,:)
     character(200) :: ifile
-    LOGICAL :: RestartPNP = .TRUE.
+    LOGICAL :: RestartPNP, i_exist
     integer :: maxEquilibrationTimestep
     real(dp), parameter :: zerodp = 0._dp
 
@@ -50,6 +50,20 @@ SUBROUTINE equilibration( jx, jy, jz)
     open(388, file = "output/phiAPRES.dat")
     open(389, file = "output/c_plusTimeEquil.dat")
     open(390, file = "output/PHITimeEquil.dat")
+
+
+    RestartPNP = getinput%log("RestartPNP", defaultValue=.TRUE.)
+    if( .not. RestartPNP) then
+        inquire( file='output/phi.bin'    , exist=i_exist); if( .not. i_exist) error stop "output/phi.bin does not exist"
+        inquire( file='output/c_plus.bin' , exist=i_exist); if( .not. i_exist) error stop "output/c_plus.bin does not exist"
+        inquire( file='output/c_minus.bin', exist=i_exist); if( .not. i_exist) error stop "output/c_minus.bin does not exist"
+
+        open(731, file='output/phi.bin'    , form="unformatted"); read(731) phi    ; close(731)
+        open(731, file='output/c_plus.bin' , form="unformatted"); read(731) c_plus ; close(731)
+        open(731, file='output/c_minus.bin', form="unformatted"); read(731) c_minus; close(731)
+    end if
+
+
     !------------------------------------------------
     ! Ade : For restart purposes
     !open(1389, file = "output/PHIijk.dat")

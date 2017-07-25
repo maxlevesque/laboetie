@@ -144,51 +144,31 @@ SUBROUTINE poisson_nernst_planck
         END IF
         time = time + 1 ! Ade : missing incrementing number
     END DO
-    ! ---------------------------------------------------
-    ! Ade : POSTPROCESSING AT EQUILIBRIUM 
-    ! ---------------------------------------------------
-    ! Cations density profile
 
-    ! Ade : For restart
-    DO i=1,supercell%geometry%dimensions%indiceMax(x)
-        DO j=1,supercell%geometry%dimensions%indiceMax(y)
-            DO k=1,supercell%geometry%dimensions%indiceMax(z)
-               WRITE(283, *) c_plus(i,j,k)
-               WRITE(284, *) c_minus(i,j,k)
-            ENDDO
-        ENDDO
-    ENDDO
+    ! ---------------------------------------------------
+    ! POSTPROCESSING AT EQUILIBRIUM 
+    ! ---------------------------------------------------
+
+    !
+    ! First, backup the arrays phi, c_plus and c_minus for restarts
+    !
+    open(731, file='output/phi.bin'    , form="unformatted"); write(731) phi    ; close(731)
+    open(731, file='output/c_plus.bin' , form="unformatted"); write(731) c_plus ; close(731)
+    open(731, file='output/c_minus.bin', form="unformatted"); write(731) c_minus; close(731)
+
     if (geometrie==2) then ! Cylindrical geometry
-     DO j=1,ly
-       WRITE(314,*) j, c_plus(j,ly/2,lz/2)
-       WRITE(315,*) j, c_minus(j,ly/2,lz/2)
-     ENDDO
+        DO j=1,ly
+            WRITE(281,*) j, phi(j,ly/2,lz/2)
+            WRITE(314,*) j, c_plus(j,ly/2,lz/2)
+            WRITE(315,*) j, c_minus(j,ly/2,lz/2)
+        END DO
     else
-      DO k=supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
-         WRITE(314,*) k, SUM(c_plus(:,:,k))
-         WRITE(315,*) k, SUM(c_minus(:,:,k))
-      ENDDO
-    endif
-    ! Potential PHI profile
-     
-    ! Ade : For restart
-    !DO i=1,supercell%geometry%dimensions%indiceMax(x)
-    !    DO j=1,supercell%geometry%dimensions%indiceMax(y)
-    !        DO k=1,supercell%geometry%dimensions%indiceMax(z)
-    !            write(282,*) phi(i,j,k) 
-    !        ENDDO
-    !    ENDDO
-    !ENDDO
-
-   if (geometrie==2) then ! Cylindrical geometry
-     DO j=1,ly
-       WRITE(281,*) j, phi(j,ly/2,lz/2)
-     ENDDO
-   else
-     DO k=1,supercell%geometry%dimensions%indiceMax(z)
-      write(281,*) k, SUM(phi(:,:,k)), phi(1,1,k)
-     ENDDO
-   endif
+        DO k=supercell%geometry%dimensions%indiceMin(z), supercell%geometry%dimensions%indiceMax(z)
+            write(281,*) k, SUM(phi(:,:,k)), phi(1,1,k)
+            WRITE(314,*) k, SUM(c_plus(:,:,k))
+            WRITE(315,*) k, SUM(c_minus(:,:,k))
+        END DO
+    end if
 
     ! Ade : remove comments below. This is a debugging test!!!!!!
     !call charge_test ! check charge conservation ! TODO rename to call check_charge_conservation ! check charge conservation every 1000 steps (arbitrary number)
