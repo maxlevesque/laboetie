@@ -46,10 +46,21 @@ We are researchers: our work is evaluated on the basis of citations to our publi
 
 ## Installation instructions
 
+The prefered way is to use CMake.  If you have CMake on your computer, then: 
 ```sh
 git clone https://github.com/maxlevesque/laboetie
 cd laboetie
-make
+mkdir build
+cd build
+cmake ..
+make -j
+```
+
+If you don't have CMake:
+```sh
+git clone https://github.com/maxlevesque/laboetie
+cd laboetie
+make -j
 ```
 
 ## Git, github, issues etc.
