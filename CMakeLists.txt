@@ -106,7 +106,8 @@ set(laboetie_SRCS
 #
 # Create a symlink to the input folder
 #
-EXECUTE_PROCESS(COMMAND "${CMAKE_COMMAND}" -E create_symlink "${CMAKE_SOURCE_DIR}/lb.in" "${CMAKE_BINARY_DIR}/lb.in")
+#EXECUTE_PROCESS(COMMAND "${CMAKE_COMMAND}" -E create_symlink "${CMAKE_SOURCE_DIR}/lb.in" "${CMAKE_BINARY_DIR}/lb.in")
+EXECUTE_PROCESS(COMMAND "cp" "${CMAKE_SOURCE_DIR}/lb.in" "${CMAKE_BINARY_DIR}/lb.in")
 
 
 if (UNIX)
