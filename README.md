@@ -28,7 +28,11 @@ We are researchers: our work is evaluated on the basis of citations to our publi
   2. **Unexpected coupling between flow and adsorption in porous media**  
      Jean-Mathieu Vanson, François-Xavier Coudert, Benjamin Rotenberg, Maximilien Levesque, Caroline Tardivat, Michaela Klotz and Anne Boutin  
      Soft Matter 11, 6125-6133 (2015)  
-     http://dx.doi.org/10.1039/C5SM01348H  
+     http://dx.doi.org/10.1039/C5SM01348H   
+  3. **Computational Chemistry Methods for Nanoporous Materials**   
+     Jack D. Evans, Guillaume Fraux, Romain Gaillac, Daniela Kohen, Fabien Trousselet, Jean-Mathieu Vanson and François-Xavier Coudert   
+     Chemistry of Materials 29, 199 (2017)   
+     http://dx.doi.org/10.1021/acs.chemmater.6b02994    
   3. **Transport and adsorption under liquid flow: the role of pore geometry**  
       Jean-Mathieu Vanson, Anne Boutin, Michaela Klotz and François-Xavier Coudert  
       Soft Matter 13, 875-885 (2017)  
@@ -36,11 +40,12 @@ We are researchers: our work is evaluated on the basis of citations to our publi
   4. **Kinetic Accessibility of Porous Material Adsorption Sites Studied through the Lattice Boltzmann Method**  
       Jean-Mathieu Vanson, François-Xavier Coudert, Michaela Klotz and Anne Boutin  
       Langmuir 33, 1405-1411 (2017)  
-      http://dx.doi.org/10.1021/acs.langmuir.6b04472  
+      http://dx.doi.org/10.1021/acs.langmuir.6b04472   
   5. **Transient hydrodynamic finite size effects in simulations under periodic boundary conditions**  
       Adelchi J. Asta, Maximilien Levesque, Rodolphe Vuilleumier and Benjamin Rotenberg  
       Phys. Rev. E 95, 061301 (2017)  
-      https://dx.doi.org/10.1103/PhysRevE.95.061301
+      https://dx.doi.org/10.1103/PhysRevE.95.061301     
+     
 
 ---
 
