@@ -31,14 +31,19 @@ SUBROUTINE drop_tracers( solventCurrentx, solventCurrenty, solventCurrentz)
     PRINT*,'       ----------------------------------------------------------------------------------'
 
     allocate( solventDensity(size(n,1),size(n,2),size(n,3)) , source=sum(n,4) )
+    print*, 'STEP1'
 
     CALL update_tracer_population( solventDensity, solventCurrentx, solventCurrenty, solventCurrentz) ! include elec_slope in population n
+    PRINT*, 'STEP2'
     elec_slope = 0.0_dp ! turn the electric field off for the rest of mom_prop (included in n)
 
     ! add electrostatic potential computed by the SOR routine an external contribution
     ! elec_pot(singlx,ly,lz, ch, phi, phi2, t, t_equil);
     ! call elec_pot
     CALL init( solventDensity) ! init moment propagation
+    print*, '+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+'
+    print*, 'init called'
+    print*, '+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+'
 
     !
     ! Propagation in time

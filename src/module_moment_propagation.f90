@@ -13,6 +13,7 @@ MODULE moment_propagation
     REAL(dp), ALLOCATABLE, DIMENSION(:,:,:,:,:) :: Propagated_Quantity, Propagated_Quantity_Adsorbed
     INTEGER(1), PARAMETER :: now=0, next=1, past=-1, tini=past
     REAL(dp), DIMENSION(x:z, past:next) :: vacf
+    REAL(dp), DIMENSION(x:z) :: Convergence, vacfOLD
     REAL(dp) :: lambda, lambda_s ! lambda bulk and surface
     TYPE type_tracer
       REAL(dp) :: ka, kd, K, z, Db, Ds !K=ka/kd, z=tracer charge
@@ -44,6 +45,10 @@ SUBROUTINE init( solventDensity )
     IF (tracer%ka < -eps) ERROR STOP 'I detected tracer%ka to be <0 in module moment_propagation. STOP.'
     IF (tracer%kd < -eps) ERROR STOP 'I detected tracer%kd to be <0 in module moment_propagation. STOP.'
 
+    print*, '+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+'
+    print*, 'init called 2'
+    print*, '+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+'
+
     if ( abs(tracer%kd)<= eps ) then ! if kd=0
       tracer%K = 0.0_dp
     else
@@ -70,17 +75,17 @@ SUBROUTINE init( solventDensity )
     lambda_s = calc_lambda(tracer%Ds)    ! surface diffusion. is 0 for Ds=0
 
     tracer%z = getinput%dp('tracer_z', 0._dp) ! tracer's charge
-    IF( ABS(tracer%z)>eps ) THEN
-        IF( ALLOCATED(phi) ) THEN
-            PRINT*,"Something is wrong (buuuug) line 79 of module_moment_propagation.f90"
-            ERROR STOP
-        END IF
-        tracer_is_neutral = .FALSE.
-        PRINT*,"charged tracers are not implemented"
-        ERROR STOP "line 85 of module_moment_propagation.f90"
-    ELSE
-        tracer_is_neutral = .TRUE.
-    END IF
+    !IF( ABS(tracer%z)>eps ) THEN
+    !    IF( ALLOCATED(phi) ) THEN
+    !        PRINT*,"Something is wrong (buuuug) line 79 of module_moment_propagation.f90"
+    !        ERROR STOP
+    !    END IF
+    !    tracer_is_neutral = .FALSE.
+    !    PRINT*,"charged tracers are not implemented"
+    !    ERROR STOP "line 85 of module_moment_propagation.f90"
+    !ELSE
+    !    tracer_is_neutral = .TRUE.
+    !END IF
 
 
     vacf = 0.0_dp ! vacf(x:z, past:next)
@@ -92,7 +97,8 @@ SUBROUTINE init( solventDensity )
 
 
 
-    ! the sum of all boltzman weights is the sum over all exp(-z*phi) where node%nature == fluid. Note that is_interfacial == fluid + at interface
+    ! the sum of all boltzman weights is the sum over all exp(-z*phi) where node%nature == fluid. 
+    ! Note that is_interfacial == fluid + at interface
 
     IF( tracer_is_neutral ) THEN
         Pstat = COUNT( node%nature == fluid ) + tracer%K*COUNT(node%nature==fluid .AND. node%isinterfacial)
@@ -184,6 +190,8 @@ SUBROUTINE init( solventDensity )
 
       error=.false.
 
+      vacfOLD = 0.0_dp ! Ade : 13/09/17 Initialisation of vacfOLD
+
       ll = lbm%lmin
       lu = lbm%lmax
       if (.not. allocated(c)) then
@@ -231,6 +239,8 @@ SUBROUTINE init( solventDensity )
             end do
             Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity_loc(:)
             vacf(:,now) = vacf(:,now) + Propagated_Quantity(:,i,j,k,now)*u_star(:)
+          Convergence = abs(vacf(:,now) - vacfOLD) ! Ade : 13/09/17 I introduced this variable to change the convergence criterion
+          vacfOLD = vacf(:,now) ! Ade : Update of vacfOLD
 
             ! NOW, UPDATE THE PROPAGATED QUANTITIES
             if (   (.not.Interfacial(i,j,k) .and. considerAdsorption) &
@@ -257,7 +267,11 @@ SUBROUTINE init( solventDensity )
 
       if(error) stop 'somewhere restpart is negative' ! TODO one should find a better function for ads and des, as did Benjamin for pi
 
-      if(modulo(it,10000)==0) print*,it,REAL(vacf(:,now),sp)
+      !if(modulo(it,10000)==0) print*,it,REAL(vacf(:,now),sp)
+      !if(modulo(it,10000)==0) print*,it,REAL(vacf(:,now),sp)
+      if(modulo(it,10000)==0) print*,it,vacf(1,now),' one'
+      if(modulo(it,10000)==0) print*,it,REAL(vacf(2,now),sp), ' two'
+      if(modulo(it,10000)==0) print*,it,REAL(vacf(3,now),sp), 'three'
 
       ! back to the futur: the futur is now, and reinit futur
       Propagated_Quantity(:,:,:,:,now) = Propagated_Quantity(:,:,:,:,next)
@@ -279,10 +293,18 @@ SUBROUTINE init( solventDensity )
       !~         END DO; END DO; END DO;
       !~     CLOSE(100)
 
+      !Convergence = Convergence + abs(vacf(:,now) - vacfOLD) ! Ade : 13/09/17 I introduced this variable to change the convergence criterion
+      !print*,
+      !print*, '************************************************************************'
+      !print*, 'Convergence =', Convergence(:)
+      !print*, '************************************************************************'
+    
+      !vacfOLD = vacf(:,now) ! Ade : Update of vacfOLD
       vacf(:,past) = vacf(:,now)
       vacf(:,now) = 0.0_dp
 
-      IF( it>2 .and. all(abs(vacf)<1._dp/(2._dp*lx*ly*lz/tracer%Db)) .and. all(abs(vacf)<1.e-12) ) then ! TODO MAGIC NUMBER REMOVE THAT SOON
+      !IF( it>2 .and. all(abs(vacf)<1._dp/(2._dp*lx*ly*lz/tracer%Db)) .and. all(abs(vacf)<1.e-12) ) then ! TODO MAGIC NUMBER REMOVE THAT SOON
+      IF( it>2 .and. all(abs(vacf)<1._dp/(2._dp*lx*ly*lz/tracer%Db)) .and. all(abs(Convergence)<1.e-10) ) then ! TODO MAGIC NUMBER REMOVE THAT SOON
         is_converged = .true.
       ELSE
         is_converged = .false.
