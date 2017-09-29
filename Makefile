@@ -7,9 +7,9 @@ FCFLAGS = -J $(MODDIR)
 LDFLAGS =
 
 
-DEBUG =  -mcmodel=large -march=native -ffree-line-length-none -O1             -pedantic -ffpe-trap=zero,underflow,overflow -Wall -fcheck=bounds -g
+DEBUG = -mcmodel=large -march=native -ffree-line-length-none -O1             -pedantic -ffpe-trap=zero,underflow,overflow -Wall -fcheck=bounds -g  
 
-OPTIM = -mcmodel=large -march=native -ffree-line-length-none -O3 -ffast-math -pedantic -fopenmp
+OPTIM = -mcmodel=large -march=native -ffree-line-length-none -O3 -ffast-math -pedantic # -fopenmp   OpenMP does not work anymore since 28/9/2017
 
 #-g turns on debugging
 #-p turns on profiling

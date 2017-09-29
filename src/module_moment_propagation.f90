@@ -237,8 +237,8 @@ SUBROUTINE init( solventDensity )
             end do
             Propagated_Quantity(:,i,j,k,next) = Propagated_Quantity_loc(:)
             vacf(:,now) = vacf(:,now) + Propagated_Quantity(:,i,j,k,now)*u_star(:)
-          Convergence = abs(vacf(:,now) - vacfOLD) ! Ade : 13/09/17 I introduced this variable to change the convergence criterion
-          vacfOLD = vacf(:,now) ! Ade : Update of vacfOLD
+            Convergence = abs(vacf(:,now) - vacfOLD) ! Ade : 13/09/17 I introduced this variable to change the convergence criterion
+            vacfOLD = vacf(:,now) ! Ade : Update of vacfOLD
 
             ! NOW, UPDATE THE PROPAGATED QUANTITIES
             if (   (.not.Interfacial(i,j,k) .and. considerAdsorption) &
