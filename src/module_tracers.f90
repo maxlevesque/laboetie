@@ -20,6 +20,7 @@ SUBROUTINE drop_tracers( solventCurrentx, solventCurrenty, solventCurrentz)
     integer :: it, maximum_moment_propagation_steps
     logical :: is_converged
     real(dp), allocatable :: solventDensity(:,:,:)
+    integer :: ifail
 
     maximum_moment_propagation_steps = getinput%int("maximum_moment_propagation_steps", 0) ! negative value means make it converge
     IF( maximum_moment_propagation_steps == 0) RETURN
@@ -30,7 +31,11 @@ SUBROUTINE drop_tracers( solventCurrentx, solventCurrenty, solventCurrentz)
     PRINT*,'       step           VACF(x)                   VACF(y)                   VACF(z)'
     PRINT*,'       ----------------------------------------------------------------------------------'
 
-    allocate( solventDensity(size(n,1),size(n,2),size(n,3)) , source=sum(n,4) )
+    allocate( solventDensity(size(n,1),size(n,2),size(n,3)) , source=sum(n,4), STAT=ifail )
+    if( ifail /= 0 ) then
+      print*, "error during allocate(solventDensity) in module_tracers.f90", ifail
+      error stop
+    end if
     print*, 'STEP1'
 
     CALL update_tracer_population( solventDensity, solventCurrentx, solventCurrenty, solventCurrentz) ! include elec_slope in population n

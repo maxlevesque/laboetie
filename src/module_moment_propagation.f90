@@ -40,10 +40,8 @@ SUBROUTINE init( solventDensity )
     real(dp) :: n_loc(lbm%lmin:lbm%lmax)
     integer :: i, j, k, l, l_inv, ip, jp, kp, i_sum
 
-    tracer%ka = getinput%dp('tracer_ka', 0._dp) ! Adsorption coefficient of the tracer
-    tracer%kd = getinput%dp('tracer_kd', 0._dp) ! Desorption coefficient of the tracer
-    IF (tracer%ka < -eps) ERROR STOP 'I detected tracer%ka to be <0 in module moment_propagation. STOP.'
-    IF (tracer%kd < -eps) ERROR STOP 'I detected tracer%kd to be <0 in module moment_propagation. STOP.'
+    tracer%ka = getinput%dp('tracer_ka', defaultValue=0._dp, assert=">=0") ! Adsorption coefficient of the tracer
+    tracer%kd = getinput%dp('tracer_kd', defaultValue=0._dp, assert=">=0") ! Desorption coefficient of the tracer
 
     print*, '+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+'
     print*, 'init called 2'
@@ -61,9 +59,9 @@ SUBROUTINE init( solventDensity )
       considerAdsorption = .false.
     end if
 
-    tracer%Db = getinput%dp('tracer_Db', 0._dp) ! bulk diffusion coefficient of tracer, i.e. the molecular diffusion coefficient
+    tracer%Db = getinput%dp('tracer_Db', defaultValue=0._dp, assert=">=0") ! bulk diffusion coefficient of tracer, i.e. the molecular diffusion coefficient
 
-    tracer%Ds = getinput%dp('tracer_Ds', 0._dp) ! surface diffusion coefficient of tracer
+    tracer%Ds = getinput%dp('tracer_Ds', defaultValue=0._dp, assert=">=0") ! surface diffusion coefficient of tracer
 
     IF ( ABS(tracer%Ds) > eps ) THEN
         PRINT*,"Tracers you defined have non-zero surface diffusion coefficient"
@@ -74,7 +72,7 @@ SUBROUTINE init( solventDensity )
     lambda = calc_lambda(tracer%Db)      ! bulk diffusion
     lambda_s = calc_lambda(tracer%Ds)    ! surface diffusion. is 0 for Ds=0
 
-    tracer%z = getinput%dp('tracer_z', 0._dp) ! tracer's charge
+    tracer%z = getinput%dp('tracer_z', defaultValue=0._dp, assert=">=0") ! tracer's charge
     !IF( ABS(tracer%z)>eps ) THEN
     !    IF( ALLOCATED(phi) ) THEN
     !        PRINT*,"Something is wrong (buuuug) line 79 of module_moment_propagation.f90"
