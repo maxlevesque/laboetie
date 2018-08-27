@@ -2,8 +2,8 @@
 
 ---
 
-laboetie is the fluid dynamics code for chemical applications.  
-It is based on the Lattice-Boltzmann algorithm to solve fluid dynamics equations.  
+laboetie is a computational fluid dynamics code for chemical applications.  
+It uses the Lattice-Boltzmann algorithm.  
 [more to come]
 
 It is written by Maximilien Levesque¹ and Benjamin Rotenberg²  
@@ -19,7 +19,7 @@ We are researchers: our work is evaluated on the basis of citations to our publi
 
 ------
 
-## Science done with laboetie
+## Research papers about or using laboetie
 
   1. **Accounting for adsorption and desorption in lattice Boltzmann simulations**  
       Maximilien Levesque, Magali Duvail, Ignacio Pagonabarraga, Daan Frenkel and Benjamin Rotenberg  
@@ -45,7 +45,11 @@ We are researchers: our work is evaluated on the basis of citations to our publi
       Adelchi J. Asta, Maximilien Levesque, Rodolphe Vuilleumier and Benjamin Rotenberg  
       Phys. Rev. E 95, 061301 (2017)  
       https://dx.doi.org/10.1103/PhysRevE.95.061301     
-     
+  6. **Moment propagation method for the dynamics of charged adsorbing/desorbing species at solid-liquid interfaces**  
+      Adelchi Asta, Maximilien Levesque and Benjamin Rotenberg  
+      Molecular Physics, Frenkel Special Issue (2018)  
+      https://doi.org/10.1080/00268976.2018.1461944     
+           
 
 ---
 
@@ -57,17 +61,7 @@ cd laboetie
 make
 ```
 
-## How to develop in laboetie or report a bug
-
-### Our git workflow
-
-[A successful git branching model](http://nvie.com/posts/a-successful-git-branching-model/)
-
-### How to Report Bugs Effectively
-
-[A blogpost by Simon Tatham](http://www.chiark.greenend.org.uk/~sgtatham/bugs.html)
-
-### Parallelism
+## Parallelism
 
 The moment propagation is parallelized. It uses the OPENMP API. It is enabled by default (see `-fopenmp` in the Makefile).  
 To disable openmp parallelism, remove `-fopenmp` from line 13 of Makefile.
@@ -160,3 +154,15 @@ The color code is:
 * `pink` Solid nodes
 * `green` Interfacial fluid nodes, i.e., fluid nodes close to a solid node
 * `white` Non-interfacial fluid nodes
+
+
+## How to develop in laboetie or report a bug
+
+### Our git workflow
+
+[A successful git branching model](http://nvie.com/posts/a-successful-git-branching-model/)
+
+### How to Report Bugs Effectively
+
+[A blogpost by Simon Tatham](http://www.chiark.greenend.org.uk/~sgtatham/bugs.html)
+
